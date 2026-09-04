@@ -92,6 +92,23 @@ Hands-free MagSafe mounting.
         self.assertIn("google.com/search?tbm=shop&q=", first_prod["google_shopping_url"])
         self.assertIn("flipkart.com/search?q=", first_prod["flipkart_url"])
 
+    def test_parse_extracted_content_with_affiliate_tags(self):
+        sample = """
+[CATEGORY]: GENERAL
+[TITLE]: 3 Underrated Gadgets
+[SUMMARY]: Gadget summary.
+
+[PRODUCTS]:
+- PRODUCT: Portronics 65W GaN Charger | PRICE: ₹999 | SEARCH: Portronics 65W GaN Charger
+"""
+        affiliate_tags = {"amazon": "testtag-21", "flipkart": "testaffid"}
+        meta = parse_extracted_content(sample, affiliate_tags=affiliate_tags)
+        self.assertEqual(len(meta["products"]), 1)
+        prod = meta["products"][0]
+        self.assertIn("&tag=testtag-21", prod["amazon_url"])
+        self.assertIn("&tag=testtag-21", prod["amazon_global_url"])
+        self.assertIn("&affid=testaffid", prod["flipkart_url"])
+
     def test_parse_extracted_content_no_products(self):
         sample = """
 [CATEGORY]: RECIPE
@@ -110,6 +127,7 @@ NONE
         meta = parse_extracted_content(sample)
         self.assertEqual(meta["category"], "RECIPE")
         self.assertEqual(len(meta["products"]), 0)
+
 
 
 class TestWhatsAppService(unittest.TestCase):
@@ -157,5 +175,24 @@ class TestWhatsAppService(unittest.TestCase):
         self.assertIn("https://api.whatsapp.com/send", msg)
 
 
+class TestConfigAndGuardrails(unittest.TestCase):
+    def test_max_video_duration_constant(self):
+        from config import MAX_VIDEO_DURATION
+        self.assertEqual(MAX_VIDEO_DURATION, 90)
+
+    def test_affiliate_tags_retrieval(self):
+        from config import get_affiliate_tags
+        tags = get_affiliate_tags()
+        self.assertIsInstance(tags, dict)
+        self.assertIn("amazon", tags)
+        self.assertIn("flipkart", tags)
+
+    def test_cleanup_old_downloads(self):
+        from config import cleanup_old_downloads, get_download_dir
+        # Should execute safely without errors
+        cleanup_old_downloads(max_age_minutes=60)
+
+
 if __name__ == "__main__":
     unittest.main()
+

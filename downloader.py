@@ -24,7 +24,7 @@ def safe_print(msg: str):
         except Exception:
             pass
 
-from config import get_download_dir
+from config import get_download_dir, MAX_VIDEO_DURATION, cleanup_old_downloads
 
 
 def detect_platform(url: str) -> str:
@@ -44,6 +44,7 @@ def detect_platform(url: str) -> str:
 def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
     """
     Downloads Instagram Reel, YouTube Short, or other web video directly using yt-dlp.
+    Validates that video duration is under MAX_VIDEO_DURATION to prevent abuse.
     Uses 'best[ext=mp4]/best' to download pre-merged single video streams without requiring ffmpeg.
     """
     try:
@@ -59,6 +60,14 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Check duration before downloading full stream
+            info_dict = ydl.extract_info(video_url, download=False)
+            if info_dict:
+                duration = info_dict.get('duration')
+                if duration and duration > MAX_VIDEO_DURATION:
+                    return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
+
+            # Download stream
             info_dict = ydl.extract_info(video_url, download=True)
             filename = ydl.prepare_filename(info_dict)
             if not os.path.exists(filename):
@@ -155,12 +164,15 @@ def get_video_from_url(video_url: str, preferred_engine: str = "ytdlp") -> Tuple
     """
     Main entry point for downloading Reel, Short, or web video.
     Defaults to yt-dlp for universal cloud and local compatibility.
+    Runs automated disk cleanup before new downloads.
     """
+    cleanup_old_downloads()
     output_dir = get_download_dir()
     platform = detect_platform(video_url)
     
     safe_print(f"[Downloader] Detected platform: {platform} ({video_url})")
     success, result = download_via_ytdlp(video_url, output_dir)
+
     if success:
         return True, result
     

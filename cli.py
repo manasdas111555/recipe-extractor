@@ -10,7 +10,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-from config import save_api_key, get_api_key
+from config import save_api_key, get_api_key, get_affiliate_tags
 from downloader import get_video_from_url
 from gemini_processor import process_video_and_generate_recipe
 from whatsapp_service import dispatch_whatsapp
@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--url", required=True, help="Instagram Reel or YouTube Shorts URL")
     parser.add_argument("--phone", required=False, default="", help="WhatsApp Phone Number with country code")
     parser.add_argument("--key", required=False, help="Gemini API Key")
+    parser.add_argument("--tag", required=False, default="", help="Amazon Associates Affiliate Tag (e.g. yourtag-21)")
     parser.add_argument("--mode", default="Auto-Detect", help="Extraction Mode: Auto-Detect, Recipe, Workout, Tech, Summary")
     parser.add_argument("--engine", choices=["indownloader", "ytdlp"], default="ytdlp", help="Video downloader engine choice")
 
@@ -32,6 +33,10 @@ def main():
 
     if args.key:
         save_api_key(args.key)
+
+    affiliate_tags = get_affiliate_tags()
+    if args.tag:
+        affiliate_tags["amazon"] = args.tag.strip()
 
     print("==================================================")
     print("⚡ Universal Reel & Shorts AI Extractor CLI")
@@ -46,7 +51,13 @@ def main():
     print(f"-> Video downloaded to: {video_path}")
 
     print(f"2. Uploading video to Gemini & extracting intelligence (Mode: {args.mode})...")
-    res = process_video_and_generate_recipe(video_path, custom_api_key=api_key, extraction_mode=args.mode)
+    res = process_video_and_generate_recipe(
+        video_path, 
+        custom_api_key=api_key, 
+        extraction_mode=args.mode,
+        affiliate_tags=affiliate_tags
+    )
+
     gen_success = res[0]
     txt_path = res[1]
     recipe_text = res[2]

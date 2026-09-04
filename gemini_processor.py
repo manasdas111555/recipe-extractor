@@ -25,7 +25,8 @@ def safe_print(msg: str):
         except Exception:
             pass
 
-from config import get_api_key, ensure_download_dir
+from config import get_api_key, ensure_download_dir, get_affiliate_tags
+
 
 CATEGORY_EMOJIS = {
     "RECIPE": "🍳",
@@ -169,10 +170,14 @@ If no specific purchasable products or equipment are featured, write:
 Be thorough, precise, and practical. Do not omit crucial steps or product names.
 """
 
-def parse_extracted_content(raw_text: str) -> dict:
+def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     """
     Parses structured Gemini response into clean fields: category, title, summary, products, details, and safe filename.
+    Attaches affiliate tracking tags to Amazon and Flipkart links if configured.
     """
+    if affiliate_tags is None:
+        affiliate_tags = get_affiliate_tags()
+
     category = "RECIPE"
     title = "Extracted_Content"
     summary = ""
@@ -237,16 +242,22 @@ def parse_extracted_content(raw_text: str) -> dict:
                 if not p_name_clean:
                     continue
 
+                amz_tag = (affiliate_tags.get("amazon") or "").strip()
+                amz_param = f"&tag={urllib.parse.quote_plus(amz_tag)}" if amz_tag else ""
+                flp_tag = (affiliate_tags.get("flipkart") or "").strip()
+                flp_param = f"&affid={urllib.parse.quote_plus(flp_tag)}" if flp_tag else ""
+
                 encoded_q = urllib.parse.quote_plus(p_search_clean)
                 products.append({
                     "name": p_name_clean,
                     "price": p_price if p_price and p_price.upper() not in ["N/A", "NONE", "NOT SPECIFIED"] else "",
                     "query": p_search_clean,
-                    "amazon_url": f"https://www.amazon.in/s?k={encoded_q}",
-                    "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}",
+                    "amazon_url": f"https://www.amazon.in/s?k={encoded_q}{amz_param}",
+                    "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}{amz_param}",
                     "google_shopping_url": f"https://www.google.com/search?tbm=shop&q={encoded_q}",
-                    "flipkart_url": f"https://www.flipkart.com/search?q={encoded_q}"
+                    "flipkart_url": f"https://www.flipkart.com/search?q={encoded_q}{flp_param}"
                 })
+
 
     details_match = re.search(r'(?:\[DETAILS\]:|---\s*\n\[DETAILS\]:)\s*(.+)', raw_text, re.DOTALL | re.IGNORECASE)
     if details_match:
@@ -314,8 +325,10 @@ def process_video_and_generate_recipe(
     custom_api_key: str = None, 
     status_callback=None, 
     model_preference: str = None,
-    extraction_mode: str = "Auto-Detect"
+    extraction_mode: str = "Auto-Detect",
+    affiliate_tags: dict = None
 ) -> Tuple[bool, str, str, str, dict]:
+
     """
     Uploads video to Gemini API, runs intelligent prompt based on extraction mode,
     auto-classifies content, saves structured .txt file, and renames video file to match.
@@ -444,7 +457,8 @@ def process_video_and_generate_recipe(
             return False, "", f"Gemini API Error: {error_details}", str(video_file_path), {}
 
         raw_content = response.text.strip()
-        meta = parse_extracted_content(raw_content)
+        meta = parse_extracted_content(raw_content, affiliate_tags=affiliate_tags)
+
 
         apt_title = meta["clean_filename"]
         txt_filename = output_dir / f"{apt_title}.txt"

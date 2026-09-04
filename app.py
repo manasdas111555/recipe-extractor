@@ -11,10 +11,21 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-from config import get_api_key, save_api_key, get_download_dir
+from config import (
+    get_api_key, 
+    save_api_key, 
+    get_download_dir, 
+    get_affiliate_tags, 
+    save_affiliate_tags, 
+    cleanup_old_downloads,
+    MAX_VIDEO_DURATION
+)
 from downloader import get_video_from_url, detect_platform
 from gemini_processor import process_video_and_generate_recipe
 from whatsapp_service import generate_whatsapp_deep_link, send_via_callmebot_api, get_recipe_display_name
+
+# Purge old downloads upon session start to keep cloud storage lean
+cleanup_old_downloads()
 
 st.set_page_config(
     page_title="Universal Reel & Shorts AI Extractor",
@@ -74,10 +85,20 @@ st.markdown("""
 st.sidebar.image("https://img.icons8.com/color/96/instagram-reel.png", width=64)
 st.sidebar.title("App Settings")
 
-api_key_input = st.sidebar.text_input("Gemini API Key", value=get_api_key(), type="password", help="Get free key at aistudio.google.com")
-if api_key_input and api_key_input != get_api_key():
-    save_api_key(api_key_input)
-    st.sidebar.success("API Key saved!")
+# Zero-Friction AI Key: If server already has key configured, keep it frictionless
+server_key = get_api_key()
+if server_key:
+    st.sidebar.success("🟢 AI Engine: Active (Zero Setup)")
+    with st.sidebar.expander("⚙️ Override with Custom API Key", expanded=False):
+        api_key_input = st.text_input("Custom Gemini API Key", value=server_key, type="password", help="Get free key at aistudio.google.com")
+        if api_key_input and api_key_input != server_key:
+            save_api_key(api_key_input)
+            st.success("Custom API Key saved!")
+else:
+    api_key_input = st.sidebar.text_input("Gemini API Key", value="", type="password", help="Get free key at aistudio.google.com")
+    if api_key_input:
+        save_api_key(api_key_input)
+        st.sidebar.success("API Key saved!")
 
 phone_number_input = st.sidebar.text_input("WhatsApp Phone Number", value="", placeholder="919876543210")
 callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)", value="", type="password", help="Get free key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp")
@@ -103,8 +124,21 @@ model_choice = st.sidebar.selectbox(
     help="Default is gemini-3.8-flash (latest frontier model). You can also toggle gemini-3.1-pro-preview or gemini-2.5-flash."
 )
 
+# Affiliate Monetization Tags Expander
+with st.sidebar.expander("💼 Monetization & Affiliate IDs", expanded=False):
+    st.caption("Earn 3%-10% commission whenever users click product links.")
+    curr_tags = get_affiliate_tags()
+    amz_tag_val = st.text_input("Amazon Associates Tag", value=curr_tags.get("amazon", ""), placeholder="yourtag-21")
+    flp_tag_val = st.text_input("Flipkart Affiliate ID", value=curr_tags.get("flipkart", ""), placeholder="your_affid")
+    if st.button("Save Affiliate Tags", use_container_width=True):
+        save_affiliate_tags(amz_tag_val, flp_tag_val)
+        st.success("Affiliate tags updated!")
+
 st.sidebar.markdown("---")
-st.sidebar.markdown("☁️ **Deployment**: Hosted on **Streamlit Community Cloud** (100% Free Domain)")
+st.sidebar.markdown(f"⏱️ **Limit**: Shorts & Reels <= {MAX_VIDEO_DURATION}s")
+st.sidebar.markdown("☁️ **Deployment**: Hosted on **Streamlit Community Cloud** (100% Free)")
+
+
 
 # Main UI
 st.markdown("<div class='main-header'>Universal Reel & Shorts AI Extractor ⚡</div>", unsafe_allow_html=True)
@@ -159,8 +193,10 @@ if process_btn:
                 custom_api_key=api_key_input,
                 status_callback=status_box.write,
                 model_preference=model_choice,
-                extraction_mode=mode_choice
+                extraction_mode=mode_choice,
+                affiliate_tags=get_affiliate_tags()
             )
+
             gemini_success = gemini_res[0]
             txt_filepath = gemini_res[1]
             recipe_text = gemini_res[2]
