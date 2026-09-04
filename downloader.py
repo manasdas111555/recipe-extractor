@@ -1,11 +1,31 @@
 import os
+import sys
 import time
 import re
 import requests
 from pathlib import Path
 from typing import Tuple
 
+# Configure Windows console to UTF-8 to prevent 'charmap' codec errors
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+def safe_print(msg: str):
+    """Safely print strings with Unicode/emoji/currency characters on any terminal."""
+    try:
+        print(msg)
+    except Exception:
+        try:
+            print(str(msg).encode("ascii", errors="replace").decode("ascii"))
+        except Exception:
+            pass
+
 from config import get_download_dir
+
 
 def detect_platform(url: str) -> str:
     """Detect platform from video URL."""
@@ -58,7 +78,7 @@ def download_via_indownloader(reel_url: str, output_dir: Path) -> Tuple[bool, st
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        print("[Downloader] Playwright not installed in cloud. Using yt-dlp engine...")
+        safe_print("[Downloader] Playwright not installed in cloud. Using yt-dlp engine...")
         return download_via_ytdlp(reel_url, output_dir)
 
     try:
@@ -127,7 +147,7 @@ def download_via_indownloader(reel_url: str, output_dir: Path) -> Tuple[bool, st
                 return download_via_ytdlp(reel_url, output_dir)
 
     except Exception as e:
-        print(f"[Downloader] Playwright error ({e}). Using yt-dlp engine...")
+        safe_print(f"[Downloader] Playwright error ({e}). Using yt-dlp engine...")
         return download_via_ytdlp(reel_url, output_dir)
 
 
@@ -139,17 +159,18 @@ def get_video_from_url(video_url: str, preferred_engine: str = "ytdlp") -> Tuple
     output_dir = get_download_dir()
     platform = detect_platform(video_url)
     
-    print(f"[Downloader] Detected platform: {platform} ({video_url})")
+    safe_print(f"[Downloader] Detected platform: {platform} ({video_url})")
     success, result = download_via_ytdlp(video_url, output_dir)
     if success:
         return True, result
     
     # Only try Instagram web scraper fallback if it is an Instagram URL
     if "Instagram" in platform:
-        print(f"[Warning] yt-dlp failed ({result}). Trying indownloader fallback...")
+        safe_print(f"[Warning] yt-dlp failed ({result}). Trying indownloader fallback...")
         return download_via_indownloader(video_url, output_dir)
     
     return False, f"Failed downloading {platform}: {result}"
+
 
 # Alias for backwards compatibility
 get_recipe_video = get_video_from_url

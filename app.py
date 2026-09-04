@@ -301,7 +301,12 @@ if process_btn:
                 }});
                 </script>
                 """
-                st.components.v1.html(share_html, height=65)
+                if hasattr(st, "html"):
+                    st.html(share_html)
+                else:
+                    st.components.v1.html(share_html, height=65)
+
+
 
                 st.caption(f"ℹ️ **Sending Video + {cat_name} to WhatsApp**: Download both the `.txt` notes and `.mp4` video above and drag them into WhatsApp Web. On mobile, tap the green **Share .TXT Document** button!")
 

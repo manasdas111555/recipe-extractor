@@ -85,3 +85,16 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
     except Exception as e:
         return False, f"CallMeBot API Request Error: {str(e)}"
 
+def dispatch_whatsapp(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, callmebot_api_key: str = None) -> Tuple[bool, str]:
+    """
+    Unified WhatsApp dispatcher for CLI and automated workflows.
+    If callmebot_api_key is provided, attempts direct API message.
+    Otherwise, generates and returns the pre-filled WhatsApp deep link.
+    """
+    if callmebot_api_key:
+        return send_via_callmebot_api(phone_number, recipe_txt_path, recipe_content, callmebot_api_key, category=category, products=products)
+    
+    deep_link = generate_whatsapp_deep_link(phone_number, recipe_txt_path, recipe_content, category=category, products=products)
+    return True, f"WhatsApp link generated: {deep_link}"
+
+
