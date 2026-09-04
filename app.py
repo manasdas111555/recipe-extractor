@@ -362,6 +362,59 @@ st.markdown("""
         -webkit-backdrop-filter: blur(24px) !important;
         border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
     }
+
+    /* Mobile & Responsive Breakpoints */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.15rem !important;
+            line-height: 1.18 !important;
+            letter-spacing: -0.025em !important;
+            margin-bottom: 0.5rem !important;
+        }
+        .sub-header {
+            font-size: 0.94rem !important;
+            line-height: 1.55 !important;
+            margin-bottom: 1.2rem !important;
+        }
+        .hero-badge {
+            font-size: 0.68rem !important;
+            padding: 5px 11px !important;
+            letter-spacing: 0.05em !important;
+        }
+        .glass-card {
+            padding: 16px 14px !important;
+            border-radius: 14px !important;
+        }
+        .feature-tile {
+            padding: 11px 12px !important;
+            gap: 10px !important;
+        }
+        .feature-icon-box {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 1.05rem !important;
+        }
+        .feature-title {
+            font-size: 0.88rem !important;
+        }
+        .feature-desc {
+            font-size: 0.76rem !important;
+        }
+        div.stButton > button[kind="primary"] {
+            font-size: 0.98rem !important;
+            padding: 12px 18px !important;
+        }
+        .micro-chips {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 6px !important;
+        }
+        .product-box-luxury {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -515,7 +568,7 @@ with col1:
 
     process_btn = st.button("⚡ Extract Intelligence in Seconds", type="primary", use_container_width=True)
 
-    st.markdown("""<div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:10px 14px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.05); font-size:0.76rem; color:#94A3B8;">
+    st.markdown("""<div class="micro-chips" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:10px 14px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.05); font-size:0.76rem; color:#94A3B8;">
 <span>⚡ <b>Instant Processing</b> (≤90s)</span>
 <span>🔒 <b>Zero Data Retained</b></span>
 <span>📱 <b>1-Click WhatsApp Sync</b></span>
