@@ -105,8 +105,11 @@ if process_btn:
             status_box.write("✅ Video downloaded successfully!")
 
             # Step 3, 4 & 5: Upload to Gemini & Generate TXT
-            status_box.write("⏳ **Step 3, 4 & 5**: Uploading to Gemini AI & generating recipe `.txt` file...")
-            gemini_success, txt_filepath, recipe_text = process_video_and_generate_recipe(video_result, custom_api_key=api_key_input)
+            gemini_success, txt_filepath, recipe_text = process_video_and_generate_recipe(
+                video_result, 
+                custom_api_key=api_key_input,
+                status_callback=status_box.write
+            )
 
             if not gemini_success:
                 status_box.update(label="❌ Gemini AI Processing Failed", state="error")

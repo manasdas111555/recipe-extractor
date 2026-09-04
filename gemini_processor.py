@@ -39,7 +39,7 @@ def extract_apt_recipe_title(recipe_text: str) -> str:
     return sanitized if sanitized else "Recipe"
 
 
-def process_video_and_generate_recipe(video_path: str, custom_api_key: str = None) -> Tuple[bool, str, str]:
+def process_video_and_generate_recipe(video_path: str, custom_api_key: str = None, status_callback=None) -> Tuple[bool, str, str]:
     """
     Uploads video to Gemini API, runs prompt, extracts apt recipe title,
     saves .txt file with apt name, and optionally renames video file to match.
@@ -56,13 +56,21 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
 
     output_dir = ensure_download_dir()
 
+    def notify(msg: str):
+        print(f"[Gemini] {msg}")
+        if status_callback:
+            try:
+                status_callback(msg)
+            except Exception:
+                pass
+
     try:
         from google import genai
         client = genai.Client(api_key=api_key)
 
-        print(f"[Gemini] Uploading video: {video_path}...")
+        notify(f"Uploading video: `{video_file_path.name}` to Gemini...")
         uploaded_file = client.files.upload(file=str(video_file_path))
-        print(f"[Gemini] File uploaded ({uploaded_file.name}). Waiting for processing...")
+        notify(f"Video uploaded ({uploaded_file.name}). Waiting for file processing...")
 
         while uploaded_file.state.name == "PROCESSING":
             time.sleep(3)
@@ -71,40 +79,59 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
         if uploaded_file.state.name == "FAILED":
             return False, "", "Gemini API failed to process video file."
 
-        # Resilient Model Cascade:
-        # If gemini-2.5-flash experiences 503 high demand spikes, automatically retry and fall back to gemini-2.0-flash / gemini-1.5-flash
-        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        # Dynamically discover active models supported on this API key to prevent 404s
+        available_model_names = []
+        try:
+            for m in client.models.list():
+                name = getattr(m, 'name', '') or ''
+                cleaned = name.replace('models/', '').strip()
+                if cleaned:
+                    available_model_names.append(cleaned)
+        except Exception as list_err:
+            print(f"[Gemini] Note: could not query model list dynamically: {list_err}")
+
+        # Preferred candidates in priority order
+        preferred_candidates = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
+        if available_model_names:
+            models_to_try = [m for m in preferred_candidates if m in available_model_names]
+            if not models_to_try:
+                # Fallback to any active flash or pro model in the user's account
+                models_to_try = [m for m in available_model_names if any(k in m for k in ["2.5", "flash", "pro"])]
+        else:
+            models_to_try = preferred_candidates
+
         response = None
         last_err = None
 
         for model_name in models_to_try:
-            print(f"[Gemini] Requesting recipe generation with model: {model_name}...")
-            for attempt in range(2):
+            notify(f"Requesting recipe generation with `{model_name}`...")
+            # Try up to 3 attempts with exponential backoff for 503 high-demand traffic spikes
+            for attempt in range(1, 4):
                 try:
                     response = client.models.generate_content(
                         model=model_name,
                         contents=[uploaded_file, PROMPT_TEXT]
                     )
                     if response and response.text:
-                        print(f"[Gemini] Successfully generated recipe with {model_name}!")
+                        notify(f"Successfully generated recipe with `{model_name}`!")
                         break
                 except Exception as gen_err:
                     last_err = gen_err
                     err_str = str(gen_err)
-                    print(f"[Gemini] Model {model_name} (attempt {attempt + 1}) error: {err_str}")
-                    # If model is overloaded (503 / 429 / high demand), pause and retry or fallback
-                    if any(code in err_str.lower() for code in ["503", "unavailable", "high demand", "resourceexhausted", "429"]):
-                        if attempt == 0:
-                            time.sleep(2)
-                            continue
-                        else:
-                            break
+                    print(f"[Gemini] Model {model_name} (attempt {attempt}) error: {err_str}")
+                    is_busy = any(k in err_str.lower() for k in ["503", "unavailable", "high demand", "capacity", "resourceexhausted", "429"])
+                    if is_busy and attempt < 3:
+                        wait_sec = attempt * 3
+                        notify(f"⚠️ `{model_name}` is experiencing high traffic (503). Retrying in {wait_sec}s (attempt {attempt}/3)...")
+                        time.sleep(wait_sec)
+                        continue
                     else:
-                        # Other non-transient error, break to next model
                         break
 
             if response and response.text:
                 break
+            elif len(models_to_try) > 1:
+                notify(f"🔄 `{model_name}` unavailable, switching to next fallback model...")
 
         # Best-effort cleanup of temporary uploaded video from Gemini File API
         try:
@@ -140,3 +167,4 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
 
     except Exception as e:
         return False, "", f"Gemini Processing Error: {str(e)}"
+
