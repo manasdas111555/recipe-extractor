@@ -127,80 +127,57 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# Sidebar Settings
+# Sidebar Settings - Consumer Experience
 st.sidebar.image("https://img.icons8.com/color/96/instagram-reel.png", width=64)
-st.sidebar.title("App Settings")
+st.sidebar.title("Quick Settings")
 
-# Multi-Provider AI Keys Management
+# Backend Keys (Loaded securely on server - Never rendered in public DOM)
 gemini_key = get_api_key()
 mistral_key = get_mistral_api_key()
 groq_key = get_groq_api_key()
 nvidia_key = get_nvidia_api_key()
 aionlabs_key = get_aionlabs_api_key()
+has_any_key = bool(gemini_key or mistral_key or groq_key or nvidia_key or aionlabs_key)
 
-active_providers = []
-if gemini_key: active_providers.append("Gemini")
-if mistral_key: active_providers.append("Mistral")
-if groq_key: active_providers.append("Groq")
-if nvidia_key: active_providers.append("NVIDIA")
-if aionlabs_key: active_providers.append("AionLabs")
+# Admin Mode (Only visible if owner visits with ?admin=1)
+query_params = getattr(st, "query_params", {})
+is_admin = query_params.get("admin") == "1"
 
-if active_providers:
-    st.sidebar.success(f"🟢 Active Engines: {', '.join(active_providers)}")
-else:
-    st.sidebar.warning("⚠️ No AI API Key detected")
+if is_admin:
+    with st.sidebar.expander("🛠️ Admin / Server Key Vault", expanded=False):
+        st.caption("Admin view only (hidden from consumers):")
+        g_in = st.text_input("Gemini Key", value=gemini_key, type="password")
+        m_in = st.text_input("Mistral Key", value=mistral_key, type="password")
+        gr_in = st.text_input("Groq Key", value=groq_key, type="password")
+        nv_in = st.text_input("NVIDIA Key", value=nvidia_key, type="password")
+        curr_tags = get_affiliate_tags()
+        amz_in = st.text_input("Amazon Tag", value=curr_tags.get("amazon", ""))
+        flp_in = st.text_input("Flipkart Tag", value=curr_tags.get("flipkart", ""))
+        if st.button("Save Admin Config"):
+            if g_in: set_env_var("GEMINI_API_KEY", g_in)
+            if m_in: set_env_var("MISTRALAI_API_KEY", m_in)
+            if gr_in: set_env_var("GROQ_API_KEY", gr_in)
+            if nv_in: set_env_var("NVIDIA_API_KEY", nv_in)
+            save_affiliate_tags(amz_in, flp_in)
+            st.success("Admin configuration updated!")
+            st.rerun()
 
-with st.sidebar.expander("🔑 Multi-Model API Keys", expanded=not bool(gemini_key or mistral_key or groq_key or nvidia_key)):
-    st.caption("Configure free API keys for multi-model fallback:")
-    g_input = st.text_input("Google Gemini API Key", value=gemini_key, type="password", help="Free tier from aistudio.google.com")
-    m_input = st.text_input("Mistral AI API Key", value=mistral_key, type="password", help="Free tier from console.mistral.ai")
-    gr_input = st.text_input("Groq API Key (Whisper + Llama)", value=groq_key, type="password", help="Free tier from console.groq.com")
-    nv_input = st.text_input("NVIDIA API Key", value=nvidia_key, type="password", help="Free tier from build.nvidia.com")
-    a_input = st.text_input("AionLabs API Key", value=aionlabs_key, type="password", help="API key from aionlabs.ai")
-
-    if st.button("💾 Save All API Keys", use_container_width=True):
-        if g_input: set_env_var("GEMINI_API_KEY", g_input)
-        if m_input: set_env_var("MISTRALAI_API_KEY", m_input)
-        if gr_input: set_env_var("GROQ_API_KEY", gr_input)
-        if nv_input: set_env_var("NVIDIA_API_KEY", nv_input)
-        if a_input: set_env_var("AIONLABS_AI_API_KEY", a_input)
-        st.success("API keys saved and synced to .env!")
-        st.rerun()
-
-has_any_key = bool(gemini_key or mistral_key or groq_key or nvidia_key or aionlabs_key or g_input or m_input or gr_input or nv_input or a_input)
-
-# WhatsApp Destination: Split into Country Code (defaulted by locale) + Mobile Number
-st.sidebar.markdown("**WhatsApp Destination**")
-col_cc, col_num = st.sidebar.columns([1, 2.3])
+# 1. WhatsApp Destination (Primary Consumer Setting)
+st.sidebar.markdown("### 📱 WhatsApp Delivery")
+st.sidebar.caption("Receive structured recipes, workout steps & buy links directly on WhatsApp.")
+col_cc, col_num = st.sidebar.columns([1.1, 2.4])
 with col_cc:
     default_cc = get_default_country_code()
-    country_code_input = st.text_input("Code", value=default_cc, help="Country calling code")
+    country_code_input = st.text_input("Code", value=default_cc, help="Country calling code (e.g. +91)")
 with col_num:
     local_phone_input = st.text_input("Phone Number", value="", placeholder="8056804940", help="Mobile number without country code")
 
 phone_number_input = f"{country_code_input.strip()}{local_phone_input.strip()}" if local_phone_input.strip() else ""
 
-callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)", value="", type="password", help="Get free key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp")
-
-provider_choice = st.sidebar.selectbox(
-    "AI Intelligence Provider",
-    options=AI_PROVIDERS,
-    index=0,
-    help="Choose your AI pipeline. Google Gemini handles raw video natively. Mistral and Groq process extracted keyframes & audio."
-)
-
-if "gemini" in provider_choice.lower() or "auto" in provider_choice.lower():
-    model_choice = st.sidebar.selectbox(
-        "Gemini Model",
-        options=["gemini-3.7-flash", "gemini-2.5-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
-        index=0,
-        help="Default is gemini-3.7-flash (ultra-fast frontier model). If congested, it automatically cascades to fallback models."
-    )
-else:
-    model_choice = "gemini-3.7-flash"
-
+# 2. Content Intelligence Mode
+st.sidebar.markdown("### 🎯 Content Type")
 mode_choice = st.sidebar.selectbox(
-    "Content Intelligence Mode",
+    "Select Video Category",
     options=[
         "Auto-Detect (Universal AI)",
         "Cooking Recipe",
@@ -213,19 +190,18 @@ mode_choice = st.sidebar.selectbox(
     help="Auto-Detect intelligently determines whether the video is a recipe, fitness routine, tech tutorial, or knowledge summary."
 )
 
-# Affiliate Monetization Tags Expander
-with st.sidebar.expander("💼 Monetization & Affiliate IDs", expanded=False):
-    st.caption("Earn 3%-10% commission whenever users click product links.")
-    curr_tags = get_affiliate_tags()
-    amz_tag_val = st.text_input("Amazon Associates Tag", value=curr_tags.get("amazon", ""), placeholder="yourtag-21")
-    flp_tag_val = st.text_input("Flipkart Affiliate ID", value=curr_tags.get("flipkart", ""), placeholder="your_affid")
-    if st.button("Save Affiliate Tags", use_container_width=True):
-        save_affiliate_tags(amz_tag_val, flp_tag_val)
-        st.success("Affiliate tags updated!")
+# Backend defaults for high performance
+provider_choice = "Auto-Universal (Gemini with Multi-Model Fallback)"
+model_choice = "gemini-3.7-flash"
 
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"⏱️ **Limit**: Shorts & Reels <= {MAX_VIDEO_DURATION}s")
-st.sidebar.markdown("☁️ **Deployment**: Hosted on **Streamlit Community Cloud** (100% Free)")
+st.sidebar.markdown("""
+<div style="font-size:0.85rem; color:#94A3B8; line-height:1.6;">
+    <div>⚡ <b>Instant 1-Click Extraction</b></div>
+    <div>🔒 <b>Private & Free</b> (No account needed)</div>
+    <div>⏱️ <b>Supported</b>: Reels & Shorts ≤ 90s</div>
+</div>
+""", unsafe_allow_html=True)
 
 
 
@@ -247,13 +223,12 @@ with col1:
     process_btn = st.button("⚡ Extract Intelligence & Generate .TXT Notes", type="primary", use_container_width=True)
 
 with col2:
-    st.markdown("### 📋 Automation Workflow")
+    st.markdown("### 📋 How It Works")
     st.markdown("""
     1. 🌐 **Paste URL** (Instagram Reel or YouTube Short)
-    2. 📥 **Download HD Stream** (Native single-pass download)
-    3. ⚡ **Gemini 2.5 Multi-Modal AI** (Auto-classifies content with instant fallback)
-    4. 📝 **Generate Structured Notes** (Apt title & `.txt` file)
-    5. 📱 **Forward to WhatsApp** (File download + direct sharing)
+    2. 📱 **Enter Phone** (Optional for instant WhatsApp delivery)
+    3. ⚡ **1-Click AI Extraction** (Zero setup, powered by AI)
+    4. 🍳 **Get Recipes, Steps & Buy Links** (Direct download & share)
     """)
 
 if process_btn:
@@ -283,9 +258,9 @@ if process_btn:
             gemini_res = route_video_intelligence(
                 video_path=video_result,
                 provider=provider_choice,
-                custom_gemini_key=gemini_key or g_input,
-                custom_mistral_key=mistral_key or m_input,
-                custom_groq_key=groq_key or gr_input,
+                custom_gemini_key=gemini_key,
+                custom_mistral_key=mistral_key,
+                custom_groq_key=groq_key,
                 status_callback=status_box.write,
                 gemini_model_preference=model_choice,
                 extraction_mode=mode_choice,
