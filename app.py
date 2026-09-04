@@ -130,31 +130,91 @@ if process_btn:
 
                 st.markdown("---")
                 
-                # WhatsApp Action Buttons
-                st.subheader("📱 Forward to WhatsApp")
+                # WhatsApp & Download Action Buttons
+                st.subheader("📱 Forward & Download Recipe")
+
+                txt_filename = os.path.basename(txt_filepath)
+                with open(txt_filepath, "r", encoding="utf-8") as file_data:
+                    file_bytes = file_data.read()
+
+                col_btn1, col_btn2 = st.columns([1, 1])
+
+                with col_btn1:
+                    st.download_button(
+                        label=f"💾 Download `{txt_filename}`",
+                        data=file_bytes,
+                        file_name=txt_filename,
+                        mime="text/plain",
+                        type="primary",
+                        use_container_width=True
+                    )
+
+                with col_btn2:
+                    if phone_number_input:
+                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text)
+                        st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn" style="text-align:center; display:block; margin-top:0; padding:10px 18px;">📲 Send Recipe Text to WhatsApp</a>', unsafe_allow_html=True)
+                    else:
+                        st.info("💡 Enter your WhatsApp Phone Number in sidebar to pre-fill chat!")
+
+                # Native Mobile Document Share (Android & iOS)
+                import json
+                safe_filename = json.dumps(txt_filename)
+                safe_content = json.dumps(recipe_text)
+                safe_caption = json.dumps(f"Here is recipe file for - {recipe_name} !")
                 
+                share_html = f"""
+                <div style="margin: 10px 0;">
+                    <button id="mobileShareBtn" style="
+                        background: linear-gradient(135deg, #25D366, #128C7E);
+                        color: white;
+                        border: none;
+                        padding: 12px 20px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        font-size: 0.95rem;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        width: 100%;
+                        justify-content: center;
+                        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+                    ">
+                        📎 Share .TXT Document Directly to WhatsApp (Mobile)
+                    </button>
+                </div>
+                <script>
+                document.getElementById("mobileShareBtn").addEventListener("click", async () => {{
+                    try {{
+                        const file = new File([{safe_content}], {safe_filename}, {{ type: "text/plain" }});
+                        if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
+                            await navigator.share({{
+                                files: [file],
+                                title: {safe_filename},
+                                text: {safe_caption}
+                            }});
+                        }} else {{
+                            alert("Native file sharing is supported on mobile devices (Android / iOS). On PC, please click the Download button above and drag the file into WhatsApp Web!");
+                        }}
+                    }} catch (err) {{
+                        if (err.name !== 'AbortError') {{
+                            console.error("Share error:", err);
+                        }}
+                    }}
+                }});
+                </script>
+                """
+                st.components.v1.html(share_html, height=65)
+
+                st.caption("ℹ️ **Why .txt files don't auto-attach on Web**: Browsers restrict websites from automatically attaching local files into WhatsApp via web links. On PC, download the `.txt` above and drag it into WhatsApp Web. On phone, tap the green **Share .TXT Document** button!")
+
                 if callmebot_key and phone_number_input:
                     wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key)
                     if wa_sent:
                         st.success(wa_msg)
                     else:
                         st.warning(f"CallMeBot API Notice: {wa_msg}")
-                
-                if phone_number_input:
-                    wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text)
-                    st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn">📲 Tap to Send Recipe File & Caption on WhatsApp</a>', unsafe_allow_html=True)
-                else:
-                    st.info("💡 Enter your WhatsApp Phone Number in the sidebar to send directly to your phone!")
 
                 st.markdown("---")
                 st.subheader("📖 Extracted Recipe Text Preview")
                 st.text_area("Recipe Content", recipe_text, height=300)
-
-                with open(txt_filepath, "r", encoding="utf-8") as file_data:
-                    st.download_button(
-                        label=f"💾 Download {os.path.basename(txt_filepath)}",
-                        data=file_data.read(),
-                        file_name=os.path.basename(txt_filepath),
-                        mime="text/plain",
-                        type="secondary"
-                    )
