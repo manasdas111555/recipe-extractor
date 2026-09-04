@@ -39,7 +39,7 @@ def extract_apt_recipe_title(recipe_text: str) -> str:
     return sanitized if sanitized else "Recipe"
 
 
-def process_video_and_generate_recipe(video_path: str, custom_api_key: str = None, status_callback=None) -> Tuple[bool, str, str]:
+def process_video_and_generate_recipe(video_path: str, custom_api_key: str = None, status_callback=None, model_preference: str = None) -> Tuple[bool, str, str]:
     """
     Uploads video to Gemini API, runs prompt, extracts apt recipe title,
     saves .txt file with apt name, and optionally renames video file to match.
@@ -90,21 +90,36 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
         except Exception as list_err:
             print(f"[Gemini] Note: could not query model list dynamically: {list_err}")
 
-        # Preferred candidates in priority order
-        preferred_candidates = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
+        # Preferred modern candidate models (gemini-2.5-flash & gemini-3.1-pro-preview recommended by Google)
+        preferred_candidates = ["gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash-lite"]
+        
+        # Exclude known deprecated models
+        deprecated_models = {"gemini-2.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"}
+
         if available_model_names:
-            models_to_try = [m for m in preferred_candidates if m in available_model_names]
+            models_to_try = [
+                m for m in preferred_candidates 
+                if m in available_model_names and m not in deprecated_models
+            ]
             if not models_to_try:
-                # Fallback to any active flash or pro model in the user's account
-                models_to_try = [m for m in available_model_names if any(k in m for k in ["2.5", "flash", "pro"])]
+                models_to_try = [
+                    m for m in available_model_names 
+                    if m not in deprecated_models and any(k in m for k in ["3.1", "2.5", "flash", "pro"])
+                ]
         else:
             models_to_try = preferred_candidates
 
+        # If user explicitly preferred a model, ensure it's tried first
+        if model_preference and model_preference in models_to_try:
+            models_to_try.remove(model_preference)
+            models_to_try.insert(0, model_preference)
+
         response = None
-        last_err = None
+        attempt_log = []
 
         for model_name in models_to_try:
             notify(f"Requesting recipe generation with `{model_name}`...")
+            model_succeeded = False
             # Try up to 3 attempts with exponential backoff for 503 high-demand traffic spikes
             for attempt in range(1, 4):
                 try:
@@ -114,9 +129,9 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
                     )
                     if response and response.text:
                         notify(f"Successfully generated recipe with `{model_name}`!")
+                        model_succeeded = True
                         break
                 except Exception as gen_err:
-                    last_err = gen_err
                     err_str = str(gen_err)
                     print(f"[Gemini] Model {model_name} (attempt {attempt}) error: {err_str}")
                     is_busy = any(k in err_str.lower() for k in ["503", "unavailable", "high demand", "capacity", "resourceexhausted", "429"])
@@ -126,12 +141,13 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
                         time.sleep(wait_sec)
                         continue
                     else:
+                        attempt_log.append(f"{model_name}: {err_str}")
                         break
 
-            if response and response.text:
+            if model_succeeded and response and response.text:
                 break
             elif len(models_to_try) > 1:
-                notify(f"🔄 `{model_name}` unavailable, switching to next fallback model...")
+                notify(f"🔄 `{model_name}` unavailable, trying next model...")
 
         # Best-effort cleanup of temporary uploaded video from Gemini File API
         try:
@@ -140,7 +156,8 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
             pass
 
         if not response or not response.text:
-            return False, "", f"Gemini API Error: {str(last_err)}"
+            error_details = " | ".join(attempt_log) if attempt_log else "No response generated."
+            return False, "", f"Gemini API Error: {error_details}"
 
         recipe_content = response.text.strip()
 

@@ -63,6 +63,13 @@ if api_key_input and api_key_input != get_api_key():
 phone_number_input = st.sidebar.text_input("WhatsApp Phone Number", value="", placeholder="919876543210")
 callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)", value="", type="password", help="Get free key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp")
 
+model_choice = st.sidebar.selectbox(
+    "Gemini Model",
+    options=["gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash-lite"],
+    index=0,
+    help="Default is gemini-2.5-flash. If Google servers report 503 high demand, switch to gemini-3.1-pro-preview."
+)
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("☁️ **Deployment**: Hosted on **Streamlit Community Cloud** (100% Free Domain)")
 
@@ -108,7 +115,8 @@ if process_btn:
             gemini_success, txt_filepath, recipe_text = process_video_and_generate_recipe(
                 video_result, 
                 custom_api_key=api_key_input,
-                status_callback=status_box.write
+                status_callback=status_box.write,
+                model_preference=model_choice
             )
 
             if not gemini_success:
