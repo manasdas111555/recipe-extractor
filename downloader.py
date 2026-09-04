@@ -7,14 +7,28 @@ from typing import Tuple
 
 from config import get_download_dir
 
-def download_via_ytdlp(reel_url: str, output_dir: Path) -> Tuple[bool, str]:
+def detect_platform(url: str) -> str:
+    """Detect platform from video URL."""
+    clean = url.lower()
+    if "instagram.com" in clean:
+        return "Instagram Reel"
+    elif "youtube.com/shorts" in clean or "youtu.be" in clean:
+        return "YouTube Short"
+    elif "youtube.com" in clean:
+        return "YouTube Video"
+    elif "tiktok.com" in clean:
+        return "TikTok"
+    else:
+        return "Web Video"
+
+def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
     """
-    Downloads Instagram Reel video directly using yt-dlp.
+    Downloads Instagram Reel, YouTube Short, or other web video directly using yt-dlp.
     Uses 'best[ext=mp4]/best' to download pre-merged single video streams without requiring ffmpeg.
     """
     try:
         import yt_dlp
-        output_template = str(output_dir / "recipe_video_%(id)s.%(ext)s")
+        output_template = str(output_dir / "video_%(id)s.%(ext)s")
         
         ydl_opts = {
             'outtmpl': output_template,
@@ -25,7 +39,7 @@ def download_via_ytdlp(reel_url: str, output_dir: Path) -> Tuple[bool, str]:
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(reel_url, download=True)
+            info_dict = ydl.extract_info(video_url, download=True)
             filename = ydl.prepare_filename(info_dict)
             if not os.path.exists(filename):
                 base_name = os.path.splitext(filename)[0]
@@ -117,16 +131,25 @@ def download_via_indownloader(reel_url: str, output_dir: Path) -> Tuple[bool, st
         return download_via_ytdlp(reel_url, output_dir)
 
 
-def get_recipe_video(reel_url: str, preferred_engine: str = "ytdlp") -> Tuple[bool, str]:
+def get_video_from_url(video_url: str, preferred_engine: str = "ytdlp") -> Tuple[bool, str]:
     """
-    Main entry point for downloading reel video.
+    Main entry point for downloading Reel, Short, or web video.
     Defaults to yt-dlp for universal cloud and local compatibility.
     """
     output_dir = get_download_dir()
+    platform = detect_platform(video_url)
     
-    success, result = download_via_ytdlp(reel_url, output_dir)
+    print(f"[Downloader] Detected platform: {platform} ({video_url})")
+    success, result = download_via_ytdlp(video_url, output_dir)
     if success:
         return True, result
     
-    print(f"[Warning] yt-dlp failed ({result}). Trying indownloader fallback...")
-    return download_via_indownloader(reel_url, output_dir)
+    # Only try Instagram web scraper fallback if it is an Instagram URL
+    if "Instagram" in platform:
+        print(f"[Warning] yt-dlp failed ({result}). Trying indownloader fallback...")
+        return download_via_indownloader(video_url, output_dir)
+    
+    return False, f"Failed downloading {platform}: {result}"
+
+# Alias for backwards compatibility
+get_recipe_video = get_video_from_url

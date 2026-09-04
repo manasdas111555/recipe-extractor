@@ -13,37 +13,51 @@ def get_recipe_display_name(txt_file_path: str) -> str:
     stem = Path(txt_file_path).stem
     return stem.replace("_", " ").strip()
 
-def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str) -> str:
+def get_category_header(recipe_name: str, category: str = "RECIPE") -> Tuple[str, str]:
+    """Returns (header_caption, emoji_icon) based on category."""
+    cat = (category or "RECIPE").upper()
+    if "WORKOUT" in cat or "FITNESS" in cat:
+        return f"Here is workout routine for - {recipe_name} !", "🏋️"
+    elif "TECH" in cat or "TUTORIAL" in cat or "CODE" in cat:
+        return f"Here is tutorial notes for - {recipe_name} !", "💻"
+    elif "TRAVEL" in cat or "PLACE" in cat:
+        return f"Here is travel guide for - {recipe_name} !", "✈️"
+    elif "KNOWLEDGE" in cat or "SUMMARY" in cat:
+        return f"Here is summary notes for - {recipe_name} !", "💡"
+    elif "GENERAL" in cat:
+        return f"Here is key takeaways for - {recipe_name} !", "📝"
+    else:
+        return f"Here is recipe file for - {recipe_name} !", "🍳"
+
+def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE") -> str:
     """
     Generates a WhatsApp Deep Link (wa.me / api.whatsapp.com).
-    When opened on mobile or web, it opens WhatsApp with the caption & recipe pre-filled!
+    When opened on mobile or web, it opens WhatsApp with the caption & content pre-filled!
     """
     clean_phone = format_phone_number(phone_number)
     recipe_name = get_recipe_display_name(recipe_txt_path)
+    header, icon = get_category_header(recipe_name, category)
     
-    # Message format
-    header = f"Here is recipe file for - {recipe_name} !"
-    full_message = f"🍳 *{header}*\n\n{recipe_content}"
+    full_message = f"{icon} *{header}*\n\n{recipe_content}"
     
     # Truncate if exceptionally long for URL safety
     if len(full_message) > 3000:
-        full_message = full_message[:2950] + "\n\n...(Full recipe available in downloadable .txt file)"
+        full_message = full_message[:2950] + "\n\n...(Full text available in downloadable .txt file)"
         
     encoded_text = urllib.parse.quote(full_message)
     return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_text}"
 
-def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_content: str, api_key: str) -> Tuple[bool, str]:
+def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_content: str, api_key: str, category: str = "RECIPE") -> Tuple[bool, str]:
     """
     Sends WhatsApp message directly via free CallMeBot API.
-    Get free API key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp.
     """
     if not api_key:
         return False, "CallMeBot API key not provided."
         
     clean_phone = format_phone_number(phone_number)
     recipe_name = get_recipe_display_name(recipe_txt_path)
-    header = f"Here is recipe file for - {recipe_name} !"
-    full_message = f"🍳 *{header}*\n\n{recipe_content[:1500]}"
+    header, icon = get_category_header(recipe_name, category)
+    full_message = f"{icon} *{header}*\n\n{recipe_content[:1500]}"
     
     encoded_text = urllib.parse.quote(full_message)
     url = f"https://api.callmebot.com/whatsapp.php?phone={clean_phone}&text={encoded_text}&apikey={api_key}"

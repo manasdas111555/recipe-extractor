@@ -3,13 +3,13 @@ import os
 from pathlib import Path
 
 from config import get_api_key, save_api_key, get_download_dir
-from downloader import get_recipe_video
+from downloader import get_video_from_url, detect_platform
 from gemini_processor import process_video_and_generate_recipe
 from whatsapp_service import generate_whatsapp_deep_link, send_via_callmebot_api, get_recipe_display_name
 
 st.set_page_config(
-    page_title="Instagram Reel Recipe AI Extractor",
-    page_icon="🍳",
+    page_title="Universal Reel & Shorts AI Extractor",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -19,10 +19,10 @@ st.markdown("""
 <style>
     .main-header {
         font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #FF512F 0%, #DD2476 100%);
+        background: linear-gradient(135deg, #FF512F 0%, #DD2476 50%, #8E2DE2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.5rem;
+        font-size: 2.6rem;
         font-weight: 800;
         margin-bottom: 0.2rem;
     }
@@ -31,11 +31,13 @@ st.markdown("""
         font-size: 1.05rem;
         margin-bottom: 1.5rem;
     }
-    .stCard {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 1.5rem;
+    .badge-pill {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 10px;
     }
     .wa-btn {
         display: inline-block;
@@ -45,7 +47,7 @@ st.markdown("""
         padding: 12px 24px;
         border-radius: 8px;
         text-decoration: none;
-        font-size: 1.1rem;
+        font-size: 1rem;
         margin-top: 10px;
     }
 </style>
@@ -63,6 +65,20 @@ if api_key_input and api_key_input != get_api_key():
 phone_number_input = st.sidebar.text_input("WhatsApp Phone Number", value="", placeholder="919876543210")
 callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)", value="", type="password", help="Get free key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp")
 
+mode_choice = st.sidebar.selectbox(
+    "Content Intelligence Mode",
+    options=[
+        "Auto-Detect (Universal AI)",
+        "Cooking Recipe",
+        "Fitness & Workout",
+        "Tech & Coding Tutorial",
+        "Travel & Food Guide",
+        "Summary & Key Takeaways"
+    ],
+    index=0,
+    help="Auto-Detect intelligently determines whether the video is a recipe, fitness routine, tech tutorial, or knowledge summary."
+)
+
 model_choice = st.sidebar.selectbox(
     "Gemini Model",
     options=["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
@@ -74,68 +90,89 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("☁️ **Deployment**: Hosted on **Streamlit Community Cloud** (100% Free Domain)")
 
 # Main UI
-st.markdown("<div class='main-header'>Instagram Reel Recipe Extractor</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-header'>Automated recipe downloading, Gemini AI transcription, `.txt` file generation, and WhatsApp sharing</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-header'>Universal Reel & Shorts AI Extractor ⚡</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-header'>Turn any Instagram Reel or YouTube Short into structured recipes, workouts, tech tutorials, or knowledge notes!</div>", unsafe_allow_html=True)
 
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    reel_url = st.text_input("🔗 Paste Instagram Reel Link", placeholder="https://www.instagram.com/reel/C3abc123xyz/")
-    process_btn = st.button("🚀 Extract Recipe & Generate .TXT File", type="primary", use_container_width=True)
+    reel_url = st.text_input(
+        "🔗 Paste Instagram Reel or YouTube Shorts URL",
+        placeholder="https://www.instagram.com/reel/... or https://youtube.com/shorts/..."
+    )
+    if reel_url and reel_url.strip():
+        platform = detect_platform(reel_url.strip())
+        st.caption(f"🎯 **Platform Detected**: `{platform}`")
+
+    process_btn = st.button("⚡ Extract Intelligence & Generate .TXT Notes", type="primary", use_container_width=True)
 
 with col2:
     st.markdown("### 📋 Automation Workflow")
     st.markdown("""
-    1. 🌐 Paste Instagram Reel Link
-    2. 📥 Download HD Video
-    3. 🤖 Upload to Gemini AI & process prompt
-    4. 📝 Save `.txt` recipe file with dish name
-    5. 📱 Send recipe & caption to WhatsApp
+    1. 🌐 **Paste URL** (Instagram Reel or YouTube Short)
+    2. 📥 **Download HD Stream** (Native single-pass download)
+    3. 🤖 **Gemini 3.8 Multi-Modal AI** (Auto-classifies content)
+    4. 📝 **Generate Structured Notes** (Apt title & `.txt` file)
+    5. 📱 **Forward to WhatsApp** (File download + direct sharing)
     """)
 
 if process_btn:
-    if not reel_url or "instagram.com" not in reel_url:
-        st.error("Please enter a valid Instagram Reel URL.")
+    if not reel_url or not reel_url.strip().startswith("http"):
+        st.error("Please enter a valid video URL (e.g. Instagram Reel or YouTube Short).")
     elif not api_key_input:
         st.error("Please enter your Gemini API Key in the sidebar.")
     else:
-        status_box = st.status("Processing Recipe Request...", expanded=True)
+        clean_url = reel_url.strip()
+        detected_plat = detect_platform(clean_url)
+        status_box = st.status(f"Processing {detected_plat} Request...", expanded=True)
 
         # Step 1 & 2: Download Video
-        status_box.write("⏳ **Step 1 & 2**: Downloading Reel video...")
-        success, video_result = get_recipe_video(reel_url, preferred_engine="ytdlp")
+        status_box.write(f"⏳ **Step 1 & 2**: Downloading {detected_plat} stream...")
+        success, video_result = get_video_from_url(clean_url, preferred_engine="ytdlp")
 
         if not success:
             status_box.update(label="❌ Video Download Failed", state="error")
             st.error(f"Download Error: {video_result}")
         else:
-            status_box.write("✅ Video downloaded successfully!")
+            status_box.write("✅ Video stream downloaded successfully!")
 
-            # Step 3, 4 & 5: Upload to Gemini & Generate TXT
+            # Step 3, 4 & 5: Upload to Gemini & Generate Structured Notes
             gemini_res = process_video_and_generate_recipe(
                 video_result, 
                 custom_api_key=api_key_input,
                 status_callback=status_box.write,
-                model_preference=model_choice
+                model_preference=model_choice,
+                extraction_mode=mode_choice
             )
             gemini_success = gemini_res[0]
             txt_filepath = gemini_res[1]
             recipe_text = gemini_res[2]
             final_video_path = gemini_res[3] if len(gemini_res) > 3 else video_result
+            meta = gemini_res[4] if len(gemini_res) > 4 else {}
 
             if not gemini_success:
                 status_box.update(label="❌ Gemini AI Processing Failed", state="error")
                 st.error(f"Gemini Error: {recipe_text}")
             else:
-                recipe_name = get_recipe_display_name(txt_filepath)
-                status_box.update(label=f"🎉 Recipe extracted for: {recipe_name}!", state="complete")
+                cat_name = meta.get("category_name", "Extracted Content")
+                cat_emoji = meta.get("emoji", "📝")
+                cat_code = meta.get("category", "RECIPE")
+                item_title = meta.get("title", get_recipe_display_name(txt_filepath))
+
+                status_box.update(label=f"🎉 {cat_name} Extracted: {item_title}!", state="complete")
                 st.balloons()
-                st.success(f"Recipe extracted successfully: **{recipe_name}**!")
+                
+                # Category Header Banner
+                st.markdown(f"### {cat_emoji} {item_title}")
+                st.markdown(f"<span class='badge-pill' style='background-color:#1E293B; color:#38BDF8; border:1px solid #38BDF8;'>🏷️ Detected Domain: {cat_name}</span>", unsafe_allow_html=True)
+                
+                if meta.get("summary"):
+                    st.info(f"**Executive Summary**: {meta['summary']}")
 
                 st.markdown("---")
                 
                 # WhatsApp & Download Action Buttons
-                st.subheader("📱 Forward & Download Recipe + Video")
+                st.subheader(f"📱 Forward & Download {cat_name}")
 
                 txt_filename = os.path.basename(txt_filepath)
                 with open(txt_filepath, "r", encoding="utf-8") as file_data:
@@ -146,7 +183,7 @@ if process_btn:
 
                 with col_btn1:
                     st.download_button(
-                        label=f"💾 Download `.txt` Recipe",
+                        label=f"💾 Download `.txt` Notes",
                         data=file_bytes,
                         file_name=txt_filename,
                         mime="text/plain",
@@ -160,7 +197,7 @@ if process_btn:
                         with open(final_video_path, "rb") as vf:
                             video_bytes = vf.read()
                         st.download_button(
-                            label=f"🎬 Download Reel `.mp4`",
+                            label=f"🎬 Download Video `.mp4`",
                             data=video_bytes,
                             file_name=video_filename,
                             mime="video/mp4",
@@ -170,8 +207,8 @@ if process_btn:
 
                 with col_btn3:
                     if phone_number_input:
-                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text)
-                        st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn" style="text-align:center; display:block; margin-top:0; padding:10px 14px; font-size:0.95rem;">📲 Send Text to WhatsApp</a>', unsafe_allow_html=True)
+                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code)
+                        st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn" style="text-align:center; display:block; margin-top:0; padding:10px 14px; font-size:0.95rem;">📲 Send to WhatsApp</a>', unsafe_allow_html=True)
                     else:
                         st.info("💡 Enter WhatsApp Number in sidebar!")
 
@@ -179,7 +216,7 @@ if process_btn:
                 import json
                 safe_filename = json.dumps(txt_filename)
                 safe_content = json.dumps(recipe_text)
-                safe_caption = json.dumps(f"Here is recipe file for - {recipe_name} !")
+                safe_caption = json.dumps(f"Here is {cat_name.lower()} file for - {item_title} !")
                 
                 share_html = f"""
                 <div style="margin: 10px 0;">
@@ -225,14 +262,14 @@ if process_btn:
                 """
                 st.components.v1.html(share_html, height=65)
 
-                st.caption("ℹ️ **Sending Video + Recipe to WhatsApp**: Download both the `.txt` recipe and `.mp4` video using the buttons above and drag them directly into WhatsApp Web. On mobile devices, tap the green **Share .TXT Document** button!")
+                st.caption(f"ℹ️ **Sending Video + {cat_name} to WhatsApp**: Download both the `.txt` notes and `.mp4` video above and drag them into WhatsApp Web. On mobile, tap the green **Share .TXT Document** button!")
 
                 # Local vs Cloud Storage Location Info
                 storage_folder = os.path.dirname(txt_filepath)
                 st.info(f"📂 **Stored Files Location**: `{storage_folder}`\n- `.txt` File: `{txt_filename}`\n- `.mp4` Video: `{os.path.basename(final_video_path) if final_video_path else 'Downloaded video'}`")
 
                 if callmebot_key and phone_number_input:
-                    wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key)
+                    wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key, category=cat_code)
                     if wa_sent:
                         st.success(wa_msg)
                     else:
@@ -241,10 +278,10 @@ if process_btn:
                 st.markdown("---")
                 col_preview1, col_preview2 = st.columns([1, 1])
                 with col_preview1:
-                    st.subheader("📖 Extracted Recipe Text")
-                    st.text_area("Recipe Content", recipe_text, height=360)
+                    st.subheader(f"📖 Extracted {cat_name} Notes")
+                    st.text_area("Detailed Content", recipe_text, height=380)
                 with col_preview2:
-                    st.subheader("🎬 Reel Video Preview")
+                    st.subheader(f"🎬 {detected_plat} Preview")
                     if final_video_path and os.path.exists(final_video_path):
                         st.video(final_video_path)
                     else:
