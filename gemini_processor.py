@@ -464,13 +464,21 @@ def process_video_and_generate_recipe(
 
         notify(f"Video ready in {prep_duration:.1f}s. Beginning multi-modal AI reasoning...")
 
-        # Step 3: Model execution priority - Gemini 3.5 Flash / 3.6 Flash / 3.7 Flash
+        # Step 3: Model execution priority covering all Gemini models in your account
         preferred_candidates = [
-            "gemini-3.5-flash",       # Verified ultra-fast (1.5s - 8.7s) with full multimodal video & product extraction
-            "gemini-3.6-flash",       # Verified active in user AI Studio account
-            "gemini-3.7-flash",       # Active in user AI Studio account
-            "gemini-2.5-flash",       # Legacy backward-compatibility fallback
-            "gemini-3.5-flash-lite",  # Fallback: lightweight
+            "gemini-3.5-flash",       # Verified ultra-fast (1.5s - 13.5s) with full multimodal video & product extraction
+            "gemini-3.6-flash",       # Gemini 3.6 Flash
+            "gemini-3.7-flash",       # Gemini 3.7 Flash
+            "gemini-3.8-flash",       # Gemini 3.8 Flash
+            "gemini-3.5-flash-lite",  # Gemini 3.5 Flash Lite
+            "gemini-3.1-pro",         # Gemini 3.1 Pro
+            "gemini-3.1-flash-lite",  # Gemini 3.1 Flash Lite
+            "gemini-3-flash",         # Gemini 3 Flash
+            "gemini-2.5-flash",       # Gemini 2.5 Flash
+            "gemini-2.5-pro",         # Gemini 2.5 Pro
+            "gemini-2.5-flash-lite",  # Gemini 2.5 Flash Lite
+            "gemini-2.0-flash",       # Gemini 2.0 Flash
+            "gemini-2.0-flash-lite",  # Gemini 2.0 Flash Lite
         ]
 
         models_to_try = list(preferred_candidates)
