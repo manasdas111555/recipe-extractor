@@ -1,8 +1,27 @@
 import os
+import sys
 import re
 import time
 from pathlib import Path
 from typing import Tuple
+
+# Configure Windows console to UTF-8 to prevent 'charmap' codec errors with ₹ and emojis
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+def safe_print(msg: str):
+    """Safely print strings with Unicode/emoji/currency characters on any terminal."""
+    try:
+        print(msg)
+    except Exception:
+        try:
+            print(str(msg).encode("ascii", errors="replace").decode("ascii"))
+        except Exception:
+            pass
 
 from config import get_api_key, ensure_download_dir
 
@@ -156,8 +175,9 @@ def parse_extracted_content(raw_text: str) -> dict:
     if details_match:
         details = details_match.group(1).strip()
 
-    # Sanitize title for filename
-    clean_title = re.sub(r'[\\/*?:"<>|]', '', title)
+    # Sanitize title for filename & normalize currency symbols
+    clean_title = title.replace('₹', 'Rs_').replace('$', 'USD_').replace('€', 'EUR_').replace('£', 'GBP_')
+    clean_title = re.sub(r'[\\/*?:"<>|]', '', clean_title)
     clean_title = re.sub(r'^[#*_\-\s]+', '', clean_title)
     clean_title = re.sub(r'[#*_\-\s]+$', '', clean_title)
     clean_title = re.sub(r'\s+', '_', clean_title)
@@ -198,7 +218,8 @@ def extract_apt_recipe_title(recipe_text: str) -> str:
             raw_title = cleaned
             break
 
-    sanitized = re.sub(r'[\\/*?:"<>|]', '', raw_title)
+    sanitized = raw_title.replace('₹', 'Rs_').replace('$', 'USD_').replace('€', 'EUR_').replace('£', 'GBP_')
+    sanitized = re.sub(r'[\\/*?:"<>|]', '', sanitized)
     sanitized = re.sub(r'\s+', '_', sanitized)
     sanitized = re.sub(r'_+', '_', sanitized).strip('_')
 
@@ -232,7 +253,7 @@ def process_video_and_generate_recipe(
     output_dir = ensure_download_dir()
 
     def notify(msg: str):
-        print(f"[Gemini] {msg}")
+        safe_print(f"[Gemini] {msg}")
         if status_callback:
             try:
                 status_callback(msg)
@@ -265,7 +286,7 @@ def process_video_and_generate_recipe(
                 if cleaned:
                     available_model_names.append(cleaned)
         except Exception as list_err:
-            print(f"[Gemini] Note: could not query model list dynamically: {list_err}")
+            safe_print(f"[Gemini] Note: could not query model list dynamically: {list_err}")
 
         # Preferred modern candidate models (Gemini 3.8 Flash, 3.1 Pro Preview, 2.5 Flash)
         preferred_candidates = [
@@ -316,7 +337,7 @@ def process_video_and_generate_recipe(
                         break
                 except Exception as gen_err:
                     err_str = str(gen_err)
-                    print(f"[Gemini] Model {model_name} (attempt {attempt}) error: {err_str}")
+                    safe_print(f"[Gemini] Model {model_name} (attempt {attempt}) error: {err_str}")
                     is_busy = any(k in err_str.lower() for k in ["503", "unavailable", "high demand", "capacity", "resourceexhausted", "429"])
                     if is_busy and attempt < 3:
                         wait_sec = attempt * 3
@@ -357,11 +378,11 @@ def process_video_and_generate_recipe(
             formatted_file_content += f"\n📋 Summary:\n{meta['summary']}\n"
         formatted_file_content += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{meta['details']}\n"
 
-        # Save TXT file
+        # Save TXT file with utf-8 encoding
         with open(txt_filename, "w", encoding="utf-8") as f:
             f.write(formatted_file_content)
 
-        print(f"[Gemini] Saved {meta['category_name']} txt as: {txt_filename.name}")
+        safe_print(f"[Gemini] Saved {meta['category_name']} txt as: {txt_filename.name}")
 
         # Rename video file to match apt title
         new_video_filename = output_dir / f"{apt_title}{video_file_path.suffix}"
@@ -370,11 +391,11 @@ def process_video_and_generate_recipe(
             if video_file_path.exists() and not new_video_filename.exists():
                 video_file_path.rename(new_video_filename)
                 final_video_path = str(new_video_filename)
-                print(f"[Storage] Renamed video to match title: {new_video_filename.name}")
+                safe_print(f"[Storage] Renamed video to match title: {new_video_filename.name}")
             elif new_video_filename.exists():
                 final_video_path = str(new_video_filename)
         except Exception as rename_err:
-            print(f"[Warning] Could not rename video file: {rename_err}")
+            safe_print(f"[Warning] Could not rename video file: {rename_err}")
 
         return True, str(txt_filename), formatted_file_content, final_video_path, meta
 
