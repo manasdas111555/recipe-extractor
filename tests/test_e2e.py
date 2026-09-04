@@ -135,10 +135,47 @@ class TestWhatsAppService(unittest.TestCase):
         self.assertEqual(format_phone_number("+91 98765-43210"), "919876543210")
         self.assertEqual(format_phone_number("  8056804940  "), "8056804940")
 
+    def test_parse_extracted_content_kitchen_finds_and_fallback_products(self):
+        sample = """
+[CATEGORY]: KITCHEN_FINDS
+[TITLE]: 5 Smart Amazon Kitchen Gadgets
+[SUMMARY]: Unboxing essential smart kitchen gadgets found on Amazon.
+
+---
+[DETAILS]:
+1. **Electric Spice Grinder**:
+Effortless push-button pepper and salt grinder.
+Price: Under ₹499
+
+2. **Oil Dispenser with Silicone Brush**:
+Drizzle or brush cooking oil with zero mess.
+Price: ₹299
+
+3. **Multi-Blade Herb Scissors**:
+Quickly snip fresh herbs directly into food.
+Price: ₹349
+"""
+        meta = parse_extracted_content(sample)
+        self.assertEqual(meta["category"], "KITCHEN_FINDS")
+        self.assertEqual(meta["title"], "5 Smart Amazon Kitchen Gadgets")
+        self.assertEqual(len(meta["products"]), 3)
+        self.assertEqual(meta["products"][0]["name"], "Electric Spice Grinder")
+        self.assertIn("amazon.in/s?k=", meta["products"][0]["amazon_url"])
+        self.assertIn("flipkart.com/search?q=", meta["products"][0]["flipkart_url"])
+        self.assertEqual(meta["products"][1]["name"], "Oil Dispenser with Silicone Brush")
+
     def test_category_headers(self):
         h, icon = get_category_header("Pasta", "RECIPE")
         self.assertIn("recipe", h.lower())
         self.assertEqual(icon, "🍳")
+
+        h, icon = get_category_header("Smart Chopper", "KITCHEN_FINDS")
+        self.assertIn("kitchen", h.lower())
+        self.assertEqual(icon, "🛍️")
+
+        h, icon = get_category_header("Amazon Unboxing", "PRODUCT_FINDS")
+        self.assertIn("product", h.lower())
+        self.assertEqual(icon, "📦")
 
         h, icon = get_category_header("Leg Workout", "WORKOUT")
         self.assertIn("workout", h.lower())

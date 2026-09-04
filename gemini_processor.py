@@ -29,6 +29,8 @@ from config import get_api_key, ensure_download_dir, get_affiliate_tags
 
 
 CATEGORY_EMOJIS = {
+    "KITCHEN_FINDS": "🛍️",
+    "PRODUCT_FINDS": "📦",
     "RECIPE": "🍳",
     "WORKOUT": "🏋️",
     "TECH_TUTORIAL": "💻",
@@ -38,6 +40,8 @@ CATEGORY_EMOJIS = {
 }
 
 CATEGORY_NAMES = {
+    "KITCHEN_FINDS": "Kitchen & Home Finds",
+    "PRODUCT_FINDS": "Product Unboxing & Finds",
     "RECIPE": "Cooking Recipe",
     "WORKOUT": "Fitness Workout",
     "TECH_TUTORIAL": "Tech Tutorial",
@@ -49,7 +53,48 @@ CATEGORY_NAMES = {
 def get_prompt_for_mode(mode: str) -> str:
     """Returns specialized prompt based on selected extraction mode."""
     clean_mode = (mode or "Auto-Detect").lower()
-    if "recipe" in clean_mode:
+    if "kitchen" in clean_mode or "home find" in clean_mode or "gadget" in clean_mode:
+        return """
+Analyze this video and extract all kitchen finds, tools, organizers, and home gadgets showcased.
+Structure your response strictly as follows:
+[CATEGORY]: KITCHEN_FINDS
+[TITLE]: <Clear, descriptive title of the kitchen finds, max 6-8 words>
+[SUMMARY]: <A 2-3 sentence overview of the products demonstrated and their primary benefits>
+
+[PRODUCTS]:
+For EVERY kitchen gadget, tool, organizer, cookware, or appliance featured or demonstrated, list each one in this exact line format:
+- PRODUCT: <Exact Brand & Product Name> | PRICE: <Price if stated or estimated, e.g. Under ₹1000, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+
+---
+[DETAILS]:
+For each item showcased:
+- Product Name:
+- Key Features & Material:
+- Everyday Uses in the Kitchen:
+- Practical Usability Tips:
+- Pros & Cons:
+"""
+    elif "unboxing" in clean_mode or "haul" in clean_mode or "product" in clean_mode:
+        return """
+Analyze this video and extract all products, unboxings, reviews, and gadgets showcased.
+Structure your response strictly as follows:
+[CATEGORY]: PRODUCT_FINDS
+[TITLE]: <Clear product haul or unboxing title, max 6-8 words>
+[SUMMARY]: <A 2-3 sentence overview of the items reviewed>
+
+[PRODUCTS]:
+For EVERY product, gadget, or item unboxed or demonstrated, list each one in this exact line format:
+- PRODUCT: <Exact Brand & Product Name> | PRICE: <Price if stated or estimated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+
+---
+[DETAILS]:
+For each product:
+- Item Name & Brand:
+- Specifications & Build Quality:
+- Key Functionality & Value Proposition:
+- Buyer Advice & Verdict:
+"""
+    elif "recipe" in clean_mode:
         return """
 Analyze this video and extract a comprehensive cooking recipe.
 Structure your response as follows:
@@ -139,20 +184,26 @@ You are an expert Content Intelligence AI.
 Analyze the uploaded video thoroughly and automatically classify and extract structured information tailored to its actual domain.
 
 First, determine the CATEGORY of the video:
-- RECIPE (cooking, baking, food prep, drinks)
+- KITCHEN_FINDS (kitchen gadgets, home organizers, kitchen tools, cookware reviews, Amazon kitchen finds)
+- PRODUCT_FINDS (product unboxings, gadget hauls, Amazon finds, tool reviews, lifestyle gear)
+- RECIPE (actual cooking, baking, dish preparation, edible recipes with ingredients)
 - WORKOUT (exercises, fitness routines, gym, yoga)
 - TECH_TUTORIAL (coding, software tools, computer guides, engineering)
 - TRAVEL_GUIDE (places to visit, restaurants, travel itineraries, travel tips)
 - KNOWLEDGE_SUMMARY (finance, business, life hacks, book summaries, educational)
-- GENERAL (any other informative content, gadget reviews, product showcases)
+- GENERAL (any other informative content)
+
+CRITICAL INSTRUCTION FOR CLASSIFICATION:
+If the video demonstrates kitchen utensils, storage organizers, gadgets, or Amazon finds, DO NOT classify it as RECIPE. Classify it as KITCHEN_FINDS or PRODUCT_FINDS!
+Only classify as RECIPE if someone is actually preparing, seasoning, cooking, or baking food/drinks with edible ingredients.
 
 Structure your response strictly as follows:
-[CATEGORY]: <RECIPE | WORKOUT | TECH_TUTORIAL | TRAVEL_GUIDE | KNOWLEDGE_SUMMARY | GENERAL>
+[CATEGORY]: <KITCHEN_FINDS | PRODUCT_FINDS | RECIPE | WORKOUT | TECH_TUTORIAL | TRAVEL_GUIDE | KNOWLEDGE_SUMMARY | GENERAL>
 [TITLE]: <A clear, descriptive title-cased name for this video, max 6-8 words>
-[SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates or teaches>
+[SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates or reviews>
 
 [PRODUCTS]:
-If the video showcases, mentions, reviews, or uses any specific products, gadgets, gear, equipment, appliances, books, or ingredients that can be purchased, list EACH one in this exact line format:
+For EVERY item, gadget, or product showcased, reviewed, or unboxed in this video, list each one in this exact line format:
 - PRODUCT: <Brand & Model / Item Name> | PRICE: <Price if stated or estimated, e.g. Under ₹1000, or 'N/A'> | SEARCH: <Targeted search query to find and buy this exact item online>
 
 If no specific purchasable products or equipment are featured, write:
@@ -161,11 +212,12 @@ If no specific purchasable products or equipment are featured, write:
 ---
 [DETAILS]:
 (Provide rich, comprehensive, actionable details depending on the category):
+- If KITCHEN_FINDS or PRODUCT_FINDS: List each item with its key features, what it is used for, usability tips, and pros/cons.
 - If RECIPE: Full ingredients with exact measurements, equipment needed, prep & cook time, step-by-step instructions, serving tips, and nutrition/calories if mentioned.
 - If WORKOUT: Target muscles, equipment needed, warm-up, each exercise with sets x reps and rest intervals, and technique/form cues.
 - If TECH_TUTORIAL: Tools & prerequisites, exact commands/code snippets, step-by-step walkthrough, and key notes.
 - If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing/costs, and itinerary tips.
-- If KNOWLEDGE_SUMMARY or GENERAL: Product reviews, core principles, bulleted step-by-step breakdown, key insights, and actionable takeaways.
+- If KNOWLEDGE_SUMMARY or GENERAL: Core principles, bulleted step-by-step breakdown, key insights, and actionable takeaways.
 
 Be thorough, precise, and practical. Do not omit crucial steps or product names.
 """
@@ -187,7 +239,11 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     cat_match = re.search(r'\[CATEGORY\]:\s*([A-Za-z_]+)', raw_text, re.IGNORECASE)
     if cat_match:
         found_cat = cat_match.group(1).upper().strip()
-        if any(c in found_cat for c in ["WORKOUT", "FITNESS", "EXERCISE"]):
+        if any(c in found_cat for c in ["KITCHEN_FINDS", "KITCHEN_FIND", "KITCHEN_GADGET", "HOME_FIND"]):
+            category = "KITCHEN_FINDS"
+        elif any(c in found_cat for c in ["PRODUCT_FINDS", "PRODUCT_FIND", "UNBOXING", "PRODUCT_REVIEW", "HAUL", "AMAZON_FIND"]):
+            category = "PRODUCT_FINDS"
+        elif any(c in found_cat for c in ["WORKOUT", "FITNESS", "EXERCISE"]):
             category = "WORKOUT"
         elif any(c in found_cat for c in ["TECH", "CODE", "PROGRAMMING", "TUTORIAL"]):
             category = "TECH_TUTORIAL"
@@ -252,6 +308,27 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                     "name": p_name_clean,
                     "price": p_price if p_price and p_price.upper() not in ["N/A", "NONE", "NOT SPECIFIED"] else "",
                     "query": p_search_clean,
+                    "amazon_url": f"https://www.amazon.in/s?k={encoded_q}{amz_param}",
+                    "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}{amz_param}",
+                    "google_shopping_url": f"https://www.google.com/search?tbm=shop&q={encoded_q}",
+                    "flipkart_url": f"https://www.flipkart.com/search?q={encoded_q}{flp_param}"
+                })
+
+    # Secondary Fallback: If no products were captured via [PRODUCTS] section but items are described in details
+    if len(products) == 0 and category in ["KITCHEN_FINDS", "PRODUCT_FINDS", "GENERAL"]:
+        fallback_matches = re.findall(r'(?:^|\n)(?:###\s*\d+\.|\d+\.|\*)\s*\*\*([^*\n:]+)\*\*', raw_text)
+        for f_item in fallback_matches:
+            item_clean = f_item.strip()
+            if len(item_clean) > 3 and not any(k in item_clean.lower() for k in ["features", "uses", "tips", "pros", "cons", "details", "summary", "instructions"]):
+                amz_tag = (affiliate_tags.get("amazon") or "").strip()
+                amz_param = f"&tag={urllib.parse.quote_plus(amz_tag)}" if amz_tag else ""
+                flp_tag = (affiliate_tags.get("flipkart") or "").strip()
+                flp_param = f"&affid={urllib.parse.quote_plus(flp_tag)}" if flp_tag else ""
+                encoded_q = urllib.parse.quote_plus(item_clean)
+                products.append({
+                    "name": item_clean,
+                    "price": "",
+                    "query": item_clean,
                     "amazon_url": f"https://www.amazon.in/s?k={encoded_q}{amz_param}",
                     "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}{amz_param}",
                     "google_shopping_url": f"https://www.google.com/search?tbm=shop&q={encoded_q}",
@@ -355,7 +432,12 @@ def process_video_and_generate_recipe(
 
     try:
         from google import genai
-        client = genai.Client(api_key=api_key)
+        from google.genai import types
+
+        # Disable internal SDK retries (attempts=1) and set 25s timeout to prevent 155s hangs on congested models
+        retry_opt = types.HttpRetryOptions(attempts=1)
+        http_opt = types.HttpOptions(timeout=25000, retry_options=retry_opt)
+        client = genai.Client(api_key=api_key, http_options=http_opt)
         prompt_text = get_prompt_for_mode(extraction_mode)
 
         # Step 1: Upload video to Gemini File API
@@ -382,14 +464,13 @@ def process_video_and_generate_recipe(
 
         notify(f"Video ready in {prep_duration:.1f}s. Beginning multi-modal AI reasoning...")
 
-        # Step 3: Model execution priority - Gemini 3.7 Flash / 2.5 Flash as primary
+        # Step 3: Model execution priority - Gemini 3.5 Flash / 3.6 Flash / 3.7 Flash
         preferred_candidates = [
-            "gemini-3.7-flash",       # Ultra-fast (2.4s) & active on new accounts
-            "gemini-2.5-flash",       # Production-ready video reasoning
-            "gemini-3.6-flash",       # Frontier Flash model
-            "gemini-2.5-flash-lite",  # Fallback: ultra-lightweight, lowest latency
-            "gemini-3.8-flash",       # Frontier flash model
-            "gemini-3.1-pro-preview"  # Frontier reasoning model
+            "gemini-3.5-flash",       # Verified ultra-fast (1.5s - 8.7s) with full multimodal video & product extraction
+            "gemini-3.6-flash",       # Verified active in user AI Studio account
+            "gemini-3.7-flash",       # Active in user AI Studio account
+            "gemini-2.5-flash",       # Legacy backward-compatibility fallback
+            "gemini-3.5-flash-lite",  # Fallback: lightweight
         ]
 
         models_to_try = list(preferred_candidates)
@@ -465,7 +546,7 @@ def process_video_and_generate_recipe(
             "prep_s": round(prep_duration, 2),
             "inference_s": round(inference_duration, 2),
             "total_ai_s": round(time.perf_counter() - t_gemini_start, 2),
-            "model_used": successful_model or "gemini-2.5-flash"
+            "model_used": successful_model or "gemini-3.5-flash"
         }
 
 

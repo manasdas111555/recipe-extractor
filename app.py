@@ -498,6 +498,8 @@ mode_choice = st.sidebar.selectbox(
     "Domain Classifier",
     options=[
         "Auto-Detect (Universal AI)",
+        "Kitchen Finds & Home Gadgets",
+        "Amazon & Product Unboxing",
         "Cooking Recipe",
         "Fitness & Workout",
         "Tech & Coding Tutorial",
@@ -506,12 +508,12 @@ mode_choice = st.sidebar.selectbox(
     ],
     index=0,
     label_visibility="collapsed",
-    help="Auto-Detect intelligently determines whether the video is a recipe, fitness routine, tech tutorial, or knowledge summary."
+    help="Auto-Detect intelligently determines whether the video is a kitchen finds review, unboxing, recipe, fitness routine, tech tutorial, or summary."
 )
 
 # Backend defaults for high performance
 provider_choice = "Auto-Universal (Gemini with Multi-Model Fallback)"
-model_choice = "gemini-3.7-flash"
+model_choice = "gemini-3.5-flash"
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
@@ -521,7 +523,7 @@ st.sidebar.markdown("""
         <span style="font-size:0.82rem; font-weight:700; color:#6EE7B7;">Engine: Operational</span>
     </div>
     <div style="font-size:0.74rem; color:#94A3B8; margin-top:5px; line-height:1.4;">
-        Multimodal pipeline powered by Gemini 3.7 Flash with instant neural fallback.
+        Multimodal pipeline powered by Gemini 3.5 Flash with instant multi-model fallback.
     </div>
 </div>
 """, unsafe_allow_html=True)

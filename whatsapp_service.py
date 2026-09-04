@@ -44,7 +44,11 @@ def get_recipe_display_name(txt_file_path: str) -> str:
 def get_category_header(recipe_name: str, category: str = "RECIPE") -> Tuple[str, str]:
     """Returns (header_caption, emoji_icon) based on category."""
     cat = (category or "RECIPE").upper()
-    if "WORKOUT" in cat or "FITNESS" in cat:
+    if "KITCHEN" in cat:
+        return f"Here is kitchen finds & product buy links for - {recipe_name} !", "🛍️"
+    elif "PRODUCT" in cat or "UNBOXING" in cat or "HAUL" in cat:
+        return f"Here is product finds & buy links for - {recipe_name} !", "📦"
+    elif "WORKOUT" in cat or "FITNESS" in cat:
         return f"Here is workout routine for - {recipe_name} !", "🏋️"
     elif "TECH" in cat or "TUTORIAL" in cat or "CODE" in cat:
         return f"Here is tutorial notes for - {recipe_name} !", "💻"
