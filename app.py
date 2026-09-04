@@ -11,23 +11,51 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-from config import (
-    get_api_key, 
-    save_api_key, 
-    get_download_dir, 
-    get_affiliate_tags, 
-    save_affiliate_tags, 
-    cleanup_old_downloads,
-    MAX_VIDEO_DURATION
-)
+import importlib
+
+try:
+    from config import (
+        get_api_key, 
+        save_api_key, 
+        get_download_dir, 
+        get_affiliate_tags, 
+        save_affiliate_tags, 
+        cleanup_old_downloads,
+        MAX_VIDEO_DURATION
+    )
+except ImportError:
+    import config
+    importlib.reload(config)
+    from config import (
+        get_api_key, 
+        save_api_key, 
+        get_download_dir, 
+        get_affiliate_tags, 
+        save_affiliate_tags, 
+        cleanup_old_downloads,
+        MAX_VIDEO_DURATION
+    )
+
 from downloader import get_video_from_url, detect_platform
 from gemini_processor import process_video_and_generate_recipe
-from whatsapp_service import (
-    generate_whatsapp_deep_link, 
-    send_via_callmebot_api, 
-    get_recipe_display_name,
-    get_default_country_code
-)
+
+try:
+    from whatsapp_service import (
+        generate_whatsapp_deep_link, 
+        send_via_callmebot_api, 
+        get_recipe_display_name,
+        get_default_country_code
+    )
+except ImportError:
+    import whatsapp_service
+    importlib.reload(whatsapp_service)
+    from whatsapp_service import (
+        generate_whatsapp_deep_link, 
+        send_via_callmebot_api, 
+        get_recipe_display_name,
+        get_default_country_code
+    )
+
 
 
 # Purge old downloads upon session start to keep cloud storage lean
