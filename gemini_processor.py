@@ -382,12 +382,14 @@ def process_video_and_generate_recipe(
 
         notify(f"Video ready in {prep_duration:.1f}s. Beginning multi-modal AI reasoning...")
 
-        # Step 3: Model execution priority - Gemini 2.5 Flash first as primary, followed by fallbacks
+        # Step 3: Model execution priority - Gemini 3.7 Flash / 2.5 Flash as primary
         preferred_candidates = [
-            "gemini-2.5-flash",       # Primary: production-ready, ultra-fast video reasoning
-            "gemini-2.5-flash-lite",  # Fallback 1: ultra-lightweight, lowest latency
-            "gemini-3.8-flash",       # Fallback 2: frontier flash model
-            "gemini-3.1-pro-preview"  # Fallback 3: frontier reasoning model
+            "gemini-3.7-flash",       # Ultra-fast (2.4s) & active on new accounts
+            "gemini-2.5-flash",       # Production-ready video reasoning
+            "gemini-3.6-flash",       # Frontier Flash model
+            "gemini-2.5-flash-lite",  # Fallback: ultra-lightweight, lowest latency
+            "gemini-3.8-flash",       # Frontier flash model
+            "gemini-3.1-pro-preview"  # Frontier reasoning model
         ]
 
         models_to_try = list(preferred_candidates)

@@ -106,6 +106,10 @@ def get_groq_api_key() -> str:
     """Retrieve Groq API Key from environment or secrets."""
     return get_env_var("GROQ_API_KEY")
 
+def get_nvidia_api_key() -> str:
+    """Retrieve NVIDIA API Key from environment or secrets."""
+    return get_env_var("NVIDIA_API_KEY")
+
 def get_affiliate_tags() -> dict:
     """
     Retrieve Amazon Associates and Flipkart affiliate tags

@@ -25,6 +25,7 @@ try:
         get_mistral_api_key,
         get_aionlabs_api_key,
         get_groq_api_key,
+        get_nvidia_api_key,
         set_env_var,
         MAX_VIDEO_DURATION
     )
@@ -41,6 +42,7 @@ except ImportError:
         get_mistral_api_key,
         get_aionlabs_api_key,
         get_groq_api_key,
+        get_nvidia_api_key,
         set_env_var,
         MAX_VIDEO_DURATION
     )
@@ -133,12 +135,14 @@ st.sidebar.title("App Settings")
 gemini_key = get_api_key()
 mistral_key = get_mistral_api_key()
 groq_key = get_groq_api_key()
+nvidia_key = get_nvidia_api_key()
 aionlabs_key = get_aionlabs_api_key()
 
 active_providers = []
 if gemini_key: active_providers.append("Gemini")
 if mistral_key: active_providers.append("Mistral")
 if groq_key: active_providers.append("Groq")
+if nvidia_key: active_providers.append("NVIDIA")
 if aionlabs_key: active_providers.append("AionLabs")
 
 if active_providers:
@@ -146,22 +150,24 @@ if active_providers:
 else:
     st.sidebar.warning("⚠️ No AI API Key detected")
 
-with st.sidebar.expander("🔑 Multi-Model API Keys", expanded=not bool(gemini_key or mistral_key or groq_key)):
+with st.sidebar.expander("🔑 Multi-Model API Keys", expanded=not bool(gemini_key or mistral_key or groq_key or nvidia_key)):
     st.caption("Configure free API keys for multi-model fallback:")
     g_input = st.text_input("Google Gemini API Key", value=gemini_key, type="password", help="Free tier from aistudio.google.com")
     m_input = st.text_input("Mistral AI API Key", value=mistral_key, type="password", help="Free tier from console.mistral.ai")
     gr_input = st.text_input("Groq API Key (Whisper + Llama)", value=groq_key, type="password", help="Free tier from console.groq.com")
+    nv_input = st.text_input("NVIDIA API Key", value=nvidia_key, type="password", help="Free tier from build.nvidia.com")
     a_input = st.text_input("AionLabs API Key", value=aionlabs_key, type="password", help="API key from aionlabs.ai")
 
     if st.button("💾 Save All API Keys", use_container_width=True):
         if g_input: set_env_var("GEMINI_API_KEY", g_input)
         if m_input: set_env_var("MISTRALAI_API_KEY", m_input)
         if gr_input: set_env_var("GROQ_API_KEY", gr_input)
+        if nv_input: set_env_var("NVIDIA_API_KEY", nv_input)
         if a_input: set_env_var("AIONLABS_AI_API_KEY", a_input)
         st.success("API keys saved and synced to .env!")
         st.rerun()
 
-has_any_key = bool(gemini_key or mistral_key or groq_key or aionlabs_key or g_input or m_input or gr_input or a_input)
+has_any_key = bool(gemini_key or mistral_key or groq_key or nvidia_key or aionlabs_key or g_input or m_input or gr_input or nv_input or a_input)
 
 # WhatsApp Destination: Split into Country Code (defaulted by locale) + Mobile Number
 st.sidebar.markdown("**WhatsApp Destination**")
@@ -186,12 +192,12 @@ provider_choice = st.sidebar.selectbox(
 if "gemini" in provider_choice.lower() or "auto" in provider_choice.lower():
     model_choice = st.sidebar.selectbox(
         "Gemini Model",
-        options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
+        options=["gemini-3.7-flash", "gemini-2.5-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
         index=0,
-        help="Default is gemini-2.5-flash (fastest, production-ready video reasoning). If congested, it automatically cascades to fallback models."
+        help="Default is gemini-3.7-flash (ultra-fast frontier model). If congested, it automatically cascades to fallback models."
     )
 else:
-    model_choice = "gemini-2.5-flash"
+    model_choice = "gemini-3.7-flash"
 
 mode_choice = st.sidebar.selectbox(
     "Content Intelligence Mode",
