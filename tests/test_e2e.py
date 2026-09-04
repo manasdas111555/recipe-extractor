@@ -193,6 +193,30 @@ class TestConfigAndGuardrails(unittest.TestCase):
         cleanup_old_downloads(max_age_minutes=60)
 
 
+class TestMultiProviderAndMedia(unittest.TestCase):
+    def test_ffmpeg_available(self):
+        from media_utils import get_ffmpeg_path
+        path = get_ffmpeg_path()
+        self.assertTrue(bool(path))
+
+    def test_multi_provider_key_getters(self):
+        from config import get_mistral_api_key, get_aionlabs_api_key, get_groq_api_key
+        # Check getters execute without error
+        mistral_k = get_mistral_api_key()
+        aion_k = get_aionlabs_api_key()
+        groq_k = get_groq_api_key()
+        self.assertIsInstance(mistral_k, str)
+        self.assertIsInstance(aion_k, str)
+        self.assertIsInstance(groq_k, str)
+
+    def test_ai_router_providers_list(self):
+        from ai_router import AI_PROVIDERS
+        self.assertIn("Google Gemini (Native Video AI)", AI_PROVIDERS)
+        self.assertIn("Mistral AI (Vision + Audio Keyframes)", AI_PROVIDERS)
+        self.assertIn("Groq (Whisper-v3 + Llama 3.3 70B)", AI_PROVIDERS)
+        self.assertIn("Auto-Universal (Gemini with Multi-Model Fallback)", AI_PROVIDERS)
+
+
 if __name__ == "__main__":
     unittest.main()
 

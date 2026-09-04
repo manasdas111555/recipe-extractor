@@ -24,6 +24,7 @@ try:
         cleanup_old_downloads,
         get_mistral_api_key,
         get_aionlabs_api_key,
+        get_groq_api_key,
         set_env_var,
         MAX_VIDEO_DURATION
     )
@@ -39,12 +40,14 @@ except ImportError:
         cleanup_old_downloads,
         get_mistral_api_key,
         get_aionlabs_api_key,
+        get_groq_api_key,
         set_env_var,
         MAX_VIDEO_DURATION
     )
 
 from downloader import get_video_from_url, detect_platform
 from gemini_processor import process_video_and_generate_recipe
+from ai_router import route_video_intelligence, AI_PROVIDERS
 
 try:
     from whatsapp_service import (
@@ -129,32 +132,36 @@ st.sidebar.title("App Settings")
 # Multi-Provider AI Keys Management
 gemini_key = get_api_key()
 mistral_key = get_mistral_api_key()
+groq_key = get_groq_api_key()
 aionlabs_key = get_aionlabs_api_key()
 
 active_providers = []
 if gemini_key: active_providers.append("Gemini")
 if mistral_key: active_providers.append("Mistral")
+if groq_key: active_providers.append("Groq")
 if aionlabs_key: active_providers.append("AionLabs")
 
 if active_providers:
-    st.sidebar.success(f"🟢 AI Engines: {', '.join(active_providers)}")
+    st.sidebar.success(f"🟢 Active Engines: {', '.join(active_providers)}")
 else:
     st.sidebar.warning("⚠️ No AI API Key detected")
 
-with st.sidebar.expander("🔑 Multi-Model API Keys", expanded=not bool(gemini_key)):
-    st.caption("Manage API keys for multi-model fallback and inference:")
+with st.sidebar.expander("🔑 Multi-Model API Keys", expanded=not bool(gemini_key or mistral_key or groq_key)):
+    st.caption("Configure free API keys for multi-model fallback:")
     g_input = st.text_input("Google Gemini API Key", value=gemini_key, type="password", help="Free tier from aistudio.google.com")
     m_input = st.text_input("Mistral AI API Key", value=mistral_key, type="password", help="Free tier from console.mistral.ai")
+    gr_input = st.text_input("Groq API Key (Whisper + Llama)", value=groq_key, type="password", help="Free tier from console.groq.com")
     a_input = st.text_input("AionLabs API Key", value=aionlabs_key, type="password", help="API key from aionlabs.ai")
 
     if st.button("💾 Save All API Keys", use_container_width=True):
         if g_input: set_env_var("GEMINI_API_KEY", g_input)
         if m_input: set_env_var("MISTRALAI_API_KEY", m_input)
+        if gr_input: set_env_var("GROQ_API_KEY", gr_input)
         if a_input: set_env_var("AIONLABS_AI_API_KEY", a_input)
         st.success("API keys saved and synced to .env!")
         st.rerun()
 
-api_key_input = gemini_key or g_input
+has_any_key = bool(gemini_key or mistral_key or groq_key or aionlabs_key or g_input or m_input or gr_input or a_input)
 
 # WhatsApp Destination: Split into Country Code (defaulted by locale) + Mobile Number
 st.sidebar.markdown("**WhatsApp Destination**")
@@ -169,6 +176,22 @@ phone_number_input = f"{country_code_input.strip()}{local_phone_input.strip()}" 
 
 callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)", value="", type="password", help="Get free key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp")
 
+provider_choice = st.sidebar.selectbox(
+    "AI Intelligence Provider",
+    options=AI_PROVIDERS,
+    index=0,
+    help="Choose your AI pipeline. Google Gemini handles raw video natively. Mistral and Groq process extracted keyframes & audio."
+)
+
+if "gemini" in provider_choice.lower() or "auto" in provider_choice.lower():
+    model_choice = st.sidebar.selectbox(
+        "Gemini Model",
+        options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
+        index=0,
+        help="Default is gemini-2.5-flash (fastest, production-ready video reasoning). If congested, it automatically cascades to fallback models."
+    )
+else:
+    model_choice = "gemini-2.5-flash"
 
 mode_choice = st.sidebar.selectbox(
     "Content Intelligence Mode",
@@ -182,13 +205,6 @@ mode_choice = st.sidebar.selectbox(
     ],
     index=0,
     help="Auto-Detect intelligently determines whether the video is a recipe, fitness routine, tech tutorial, or knowledge summary."
-)
-
-model_choice = st.sidebar.selectbox(
-    "Gemini Model",
-    options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
-    index=0,
-    help="Default is gemini-2.5-flash (fastest, production-ready video reasoning). If congested, it automatically cascades to fallback models."
 )
 
 # Affiliate Monetization Tags Expander
@@ -237,13 +253,13 @@ with col2:
 if process_btn:
     if not reel_url or not reel_url.strip().startswith("http"):
         st.error("Please enter a valid video URL (e.g. Instagram Reel or YouTube Short).")
-    elif not api_key_input:
-        st.error("Please enter your Gemini API Key in the sidebar.")
+    elif not has_any_key:
+        st.error("Please configure at least one AI API Key in the sidebar (Gemini, Mistral, or Groq).")
     else:
         start_time = time.perf_counter()
         clean_url = reel_url.strip()
         detected_plat = detect_platform(clean_url)
-        status_box = st.status(f"Processing {detected_plat} Request...", expanded=True)
+        status_box = st.status(f"Processing {detected_plat} with {provider_choice.split('(')[0].strip()}...", expanded=True)
 
         # Step 1 & 2: Download Video
         t_dl_start = time.perf_counter()
@@ -257,12 +273,15 @@ if process_btn:
         else:
             status_box.write(f"✅ Video stream downloaded in **{dl_duration:.1f}s**!")
 
-            # Step 3, 4 & 5: Upload to Gemini & Generate Structured Notes
-            gemini_res = process_video_and_generate_recipe(
-                video_result, 
-                custom_api_key=api_key_input,
+            # Step 3, 4 & 5: AI Multimodal Processing via Central Router
+            gemini_res = route_video_intelligence(
+                video_path=video_result,
+                provider=provider_choice,
+                custom_gemini_key=gemini_key or g_input,
+                custom_mistral_key=mistral_key or m_input,
+                custom_groq_key=groq_key or gr_input,
                 status_callback=status_box.write,
-                model_preference=model_choice,
+                gemini_model_preference=model_choice,
                 extraction_mode=mode_choice,
                 affiliate_tags=get_affiliate_tags()
             )
@@ -276,8 +295,8 @@ if process_btn:
             total_elapsed = time.perf_counter() - start_time
 
             if not gemini_success:
-                status_box.update(label="❌ Gemini AI Processing Failed", state="error")
-                st.error(f"Gemini Error: {recipe_text}")
+                status_box.update(label="❌ AI Intelligence Extraction Failed", state="error")
+                st.error(f"Extraction Error: {recipe_text}")
             else:
                 cat_name = meta.get("category_name", "Extracted Content")
                 cat_emoji = meta.get("emoji", "📝")

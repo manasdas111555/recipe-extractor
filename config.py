@@ -102,6 +102,10 @@ def get_aionlabs_api_key() -> str:
     """Retrieve AionLabs API Key from environment or secrets."""
     return get_env_var("AIONLABS_AI_API_KEY")
 
+def get_groq_api_key() -> str:
+    """Retrieve Groq API Key from environment or secrets."""
+    return get_env_var("GROQ_API_KEY")
+
 def get_affiliate_tags() -> dict:
     """
     Retrieve Amazon Associates and Flipkart affiliate tags
