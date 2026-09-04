@@ -22,7 +22,13 @@ from config import (
 )
 from downloader import get_video_from_url, detect_platform
 from gemini_processor import process_video_and_generate_recipe
-from whatsapp_service import generate_whatsapp_deep_link, send_via_callmebot_api, get_recipe_display_name
+from whatsapp_service import (
+    generate_whatsapp_deep_link, 
+    send_via_callmebot_api, 
+    get_recipe_display_name,
+    get_default_country_code
+)
+
 
 # Purge old downloads upon session start to keep cloud storage lean
 cleanup_old_downloads()
@@ -100,8 +106,19 @@ else:
         save_api_key(api_key_input)
         st.sidebar.success("API Key saved!")
 
-phone_number_input = st.sidebar.text_input("WhatsApp Phone Number", value="", placeholder="919876543210")
+# WhatsApp Destination: Split into Country Code (defaulted by locale) + Mobile Number
+st.sidebar.markdown("**WhatsApp Destination**")
+col_cc, col_num = st.sidebar.columns([1, 2.3])
+with col_cc:
+    default_cc = get_default_country_code()
+    country_code_input = st.text_input("Code", value=default_cc, help="Country calling code")
+with col_num:
+    local_phone_input = st.text_input("Phone Number", value="", placeholder="8056804940", help="Mobile number without country code")
+
+phone_number_input = f"{country_code_input.strip()}{local_phone_input.strip()}" if local_phone_input.strip() else ""
+
 callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)", value="", type="password", help="Get free key by sending 'I allow callmebot to send me messages' to +34 644 44 20 70 on WhatsApp")
+
 
 mode_choice = st.sidebar.selectbox(
     "Content Intelligence Mode",

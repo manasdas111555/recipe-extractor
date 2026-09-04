@@ -3,10 +3,38 @@ import requests
 from pathlib import Path
 from typing import Tuple
 
+def get_default_country_code() -> str:
+    """
+    Detects default country calling code from system locale.
+    Defaults to +91 (India) if system locale is Indian or fallback.
+    """
+    try:
+        import locale
+        loc_tuple = locale.getlocale()
+        loc = (loc_tuple[0] or "").upper() if loc_tuple else ""
+        if "INDIA" in loc or "IN" in loc:
+            return "+91"
+        elif "US" in loc or "UNITED_STATES" in loc or "CANADA" in loc:
+            return "+1"
+        elif "UK" in loc or "UNITED_KINGDOM" in loc or "GB" in loc:
+            return "+44"
+        elif "AUSTRALIA" in loc or "AU" in loc:
+            return "+61"
+        elif "UAE" in loc or "AE" in loc:
+            return "+971"
+        elif "SINGAPORE" in loc or "SG" in loc:
+            return "+65"
+        elif "GERMANY" in loc or "DE" in loc:
+            return "+49"
+    except Exception:
+        pass
+    return "+91"
+
 def format_phone_number(phone: str) -> str:
     """Clean phone number and format with country code."""
     phone = phone.strip().replace(" ", "").replace("-", "").replace("+", "")
     return phone
+
 
 def get_recipe_display_name(txt_file_path: str) -> str:
     """Extract readable recipe title from filename."""

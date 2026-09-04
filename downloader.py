@@ -53,11 +53,13 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         
         ydl_opts = {
             'outtmpl': output_template,
-            'format': 'best[ext=mp4]/best',
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best[ext=mp4]/best',
+            'merge_output_format': 'mp4',
             'quiet': True,
             'no_warnings': True,
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         }
+
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Check duration before downloading full stream
