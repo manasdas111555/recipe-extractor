@@ -35,7 +35,8 @@ def main():
     print(f"-> Video downloaded to: {video_path}")
 
     print("2. Uploading video to Gemini & generating recipe txt...")
-    gen_success, txt_path, recipe_text = process_video_and_generate_recipe(video_path, custom_api_key=api_key)
+    res = process_video_and_generate_recipe(video_path, custom_api_key=api_key)
+    gen_success, txt_path, recipe_text = res[0], res[1], res[2]
 
     if not gen_success:
         print(f"[Error] Gemini processing failed: {recipe_text}")

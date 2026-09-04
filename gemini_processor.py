@@ -39,20 +39,20 @@ def extract_apt_recipe_title(recipe_text: str) -> str:
     return sanitized if sanitized else "Recipe"
 
 
-def process_video_and_generate_recipe(video_path: str, custom_api_key: str = None, status_callback=None, model_preference: str = None) -> Tuple[bool, str, str]:
+def process_video_and_generate_recipe(video_path: str, custom_api_key: str = None, status_callback=None, model_preference: str = None) -> Tuple[bool, str, str, str]:
     """
     Uploads video to Gemini API, runs prompt, extracts apt recipe title,
     saves .txt file with apt name, and optionally renames video file to match.
 
-    Returns (success, txt_filepath, recipe_text_or_error).
+    Returns (success, txt_filepath, recipe_text_or_error, final_video_path).
     """
     api_key = custom_api_key or get_api_key()
     if not api_key:
-        return False, "", "Gemini API Key is missing. Please enter your API Key in settings."
+        return False, "", "Gemini API Key is missing. Please enter your API Key in settings.", str(video_path)
 
     video_file_path = Path(video_path)
     if not video_file_path.exists():
-        return False, "", f"Video file not found at {video_path}"
+        return False, "", f"Video file not found at {video_path}", str(video_path)
 
     output_dir = ensure_download_dir()
 
@@ -77,7 +77,7 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
             uploaded_file = client.files.get(name=uploaded_file.name)
 
         if uploaded_file.state.name == "FAILED":
-            return False, "", "Gemini API failed to process video file."
+            return False, "", "Gemini API failed to process video file.", str(video_file_path)
 
         # Dynamically discover active models supported on this API key to prevent 404s
         available_model_names = []
@@ -163,7 +163,7 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
 
         if not response or not response.text:
             error_details = " | ".join(attempt_log) if attempt_log else "No response generated."
-            return False, "", f"Gemini API Error: {error_details}"
+            return False, "", f"Gemini API Error: {error_details}", str(video_file_path)
 
         recipe_content = response.text.strip()
 
@@ -179,15 +179,19 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
 
         # Rename video file to match apt recipe title as well
         new_video_filename = output_dir / f"{apt_title}{video_file_path.suffix}"
+        final_video_path = str(video_file_path)
         try:
             if video_file_path.exists() and not new_video_filename.exists():
                 video_file_path.rename(new_video_filename)
+                final_video_path = str(new_video_filename)
                 print(f"[Storage] Renamed video to match recipe title: {new_video_filename.name}")
+            elif new_video_filename.exists():
+                final_video_path = str(new_video_filename)
         except Exception as rename_err:
             print(f"[Warning] Could not rename video file: {rename_err}")
 
-        return True, str(txt_filename), recipe_content
+        return True, str(txt_filename), recipe_content, final_video_path
 
     except Exception as e:
-        return False, "", f"Gemini Processing Error: {str(e)}"
+        return False, "", f"Gemini Processing Error: {str(e)}", str(video_path)
 

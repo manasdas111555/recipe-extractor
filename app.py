@@ -112,12 +112,16 @@ if process_btn:
             status_box.write("✅ Video downloaded successfully!")
 
             # Step 3, 4 & 5: Upload to Gemini & Generate TXT
-            gemini_success, txt_filepath, recipe_text = process_video_and_generate_recipe(
+            gemini_res = process_video_and_generate_recipe(
                 video_result, 
                 custom_api_key=api_key_input,
                 status_callback=status_box.write,
                 model_preference=model_choice
             )
+            gemini_success = gemini_res[0]
+            txt_filepath = gemini_res[1]
+            recipe_text = gemini_res[2]
+            final_video_path = gemini_res[3] if len(gemini_res) > 3 else video_result
 
             if not gemini_success:
                 status_box.update(label="❌ Gemini AI Processing Failed", state="error")
@@ -131,17 +135,18 @@ if process_btn:
                 st.markdown("---")
                 
                 # WhatsApp & Download Action Buttons
-                st.subheader("📱 Forward & Download Recipe")
+                st.subheader("📱 Forward & Download Recipe + Video")
 
                 txt_filename = os.path.basename(txt_filepath)
                 with open(txt_filepath, "r", encoding="utf-8") as file_data:
                     file_bytes = file_data.read()
 
-                col_btn1, col_btn2 = st.columns([1, 1])
+                # Action columns
+                col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
 
                 with col_btn1:
                     st.download_button(
-                        label=f"💾 Download `{txt_filename}`",
+                        label=f"💾 Download `.txt` Recipe",
                         data=file_bytes,
                         file_name=txt_filename,
                         mime="text/plain",
@@ -150,11 +155,25 @@ if process_btn:
                     )
 
                 with col_btn2:
+                    if final_video_path and os.path.exists(final_video_path):
+                        video_filename = os.path.basename(final_video_path)
+                        with open(final_video_path, "rb") as vf:
+                            video_bytes = vf.read()
+                        st.download_button(
+                            label=f"🎬 Download Reel `.mp4`",
+                            data=video_bytes,
+                            file_name=video_filename,
+                            mime="video/mp4",
+                            type="secondary",
+                            use_container_width=True
+                        )
+
+                with col_btn3:
                     if phone_number_input:
                         wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text)
-                        st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn" style="text-align:center; display:block; margin-top:0; padding:10px 18px;">📲 Send Recipe Text to WhatsApp</a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn" style="text-align:center; display:block; margin-top:0; padding:10px 14px; font-size:0.95rem;">📲 Send Text to WhatsApp</a>', unsafe_allow_html=True)
                     else:
-                        st.info("💡 Enter your WhatsApp Phone Number in sidebar to pre-fill chat!")
+                        st.info("💡 Enter WhatsApp Number in sidebar!")
 
                 # Native Mobile Document Share (Android & iOS)
                 import json
@@ -194,7 +213,7 @@ if process_btn:
                                 text: {safe_caption}
                             }});
                         }} else {{
-                            alert("Native file sharing is supported on mobile devices (Android / iOS). On PC, please click the Download button above and drag the file into WhatsApp Web!");
+                            alert("Native file sharing is supported on mobile devices (Android / iOS). On PC, download the .txt and video files above and drag them into WhatsApp Web!");
                         }}
                     }} catch (err) {{
                         if (err.name !== 'AbortError') {{
@@ -206,7 +225,11 @@ if process_btn:
                 """
                 st.components.v1.html(share_html, height=65)
 
-                st.caption("ℹ️ **Why .txt files don't auto-attach on Web**: Browsers restrict websites from automatically attaching local files into WhatsApp via web links. On PC, download the `.txt` above and drag it into WhatsApp Web. On phone, tap the green **Share .TXT Document** button!")
+                st.caption("ℹ️ **Sending Video + Recipe to WhatsApp**: Download both the `.txt` recipe and `.mp4` video using the buttons above and drag them directly into WhatsApp Web. On mobile devices, tap the green **Share .TXT Document** button!")
+
+                # Local vs Cloud Storage Location Info
+                storage_folder = os.path.dirname(txt_filepath)
+                st.info(f"📂 **Stored Files Location**: `{storage_folder}`\n- `.txt` File: `{txt_filename}`\n- `.mp4` Video: `{os.path.basename(final_video_path) if final_video_path else 'Downloaded video'}`")
 
                 if callmebot_key and phone_number_input:
                     wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key)
@@ -216,5 +239,13 @@ if process_btn:
                         st.warning(f"CallMeBot API Notice: {wa_msg}")
 
                 st.markdown("---")
-                st.subheader("📖 Extracted Recipe Text Preview")
-                st.text_area("Recipe Content", recipe_text, height=300)
+                col_preview1, col_preview2 = st.columns([1, 1])
+                with col_preview1:
+                    st.subheader("📖 Extracted Recipe Text")
+                    st.text_area("Recipe Content", recipe_text, height=360)
+                with col_preview2:
+                    st.subheader("🎬 Reel Video Preview")
+                    if final_video_path and os.path.exists(final_video_path):
+                        st.video(final_video_path)
+                    else:
+                        st.write("Video preview unavailable.")
