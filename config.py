@@ -50,27 +50,57 @@ def cleanup_old_downloads(max_age_minutes: int = 60):
     except Exception:
         pass
 
-def get_api_key() -> str:
-    """Retrieve Gemini API Key from Streamlit Secrets or environment."""
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key:
+def get_env_var(var_name: str, default: str = "") -> str:
+    """Retrieve environment variable, checking .env, process environment, and Streamlit secrets."""
+    if env_path.exists():
         try:
-            import streamlit as st
-            key = st.secrets.get("GEMINI_API_KEY", "").strip()
+            load_dotenv(env_path, override=True)
         except Exception:
             pass
-    return key
+    val = os.environ.get(var_name, "").strip()
+    if not val:
+        try:
+            import streamlit as st
+            val = st.secrets.get(var_name, "").strip()
+        except Exception:
+            pass
+    return val or default
+
+def set_env_var(var_name: str, value: str):
+    """Safely updates or appends an environment variable in .env and active process environment."""
+    var_name = var_name.strip()
+    value = value.strip()
+    lines = []
+    found = False
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith(f"{var_name}="):
+                    lines.append(f"{var_name}={value}\n")
+                    found = True
+                else:
+                    lines.append(line)
+    if not found:
+        lines.append(f"{var_name}={value}\n")
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+    os.environ[var_name] = value
+
+def get_api_key() -> str:
+    """Retrieve Gemini API Key from Streamlit Secrets or environment."""
+    return get_env_var("GEMINI_API_KEY")
 
 def save_api_key(api_key: str):
     """Save Gemini API Key locally in .env."""
-    lines = []
-    if env_path.exists():
-        with open(env_path, "r", encoding="utf-8") as f:
-            lines = [l for l in f.readlines() if not l.startswith("GEMINI_API_KEY=")]
-    lines.append(f"GEMINI_API_KEY={api_key.strip()}\n")
-    with open(env_path, "w", encoding="utf-8") as f:
-        f.writelines(lines)
-    os.environ["GEMINI_API_KEY"] = api_key.strip()
+    set_env_var("GEMINI_API_KEY", api_key)
+
+def get_mistral_api_key() -> str:
+    """Retrieve Mistral API Key from environment or secrets."""
+    return get_env_var("MISTRALAI_API_KEY")
+
+def get_aionlabs_api_key() -> str:
+    """Retrieve AionLabs API Key from environment or secrets."""
+    return get_env_var("AIONLABS_AI_API_KEY")
 
 def get_affiliate_tags() -> dict:
     """

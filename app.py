@@ -22,6 +22,9 @@ try:
         get_affiliate_tags, 
         save_affiliate_tags, 
         cleanup_old_downloads,
+        get_mistral_api_key,
+        get_aionlabs_api_key,
+        set_env_var,
         MAX_VIDEO_DURATION
     )
 except ImportError:
@@ -34,6 +37,9 @@ except ImportError:
         get_affiliate_tags, 
         save_affiliate_tags, 
         cleanup_old_downloads,
+        get_mistral_api_key,
+        get_aionlabs_api_key,
+        set_env_var,
         MAX_VIDEO_DURATION
     )
 
@@ -120,20 +126,35 @@ st.markdown("""
 st.sidebar.image("https://img.icons8.com/color/96/instagram-reel.png", width=64)
 st.sidebar.title("App Settings")
 
-# Zero-Friction AI Key: If server already has key configured, keep it frictionless
-server_key = get_api_key()
-if server_key:
-    st.sidebar.success("🟢 AI Engine: Active (Zero Setup)")
-    with st.sidebar.expander("⚙️ Override with Custom API Key", expanded=False):
-        api_key_input = st.text_input("Custom Gemini API Key", value=server_key, type="password", help="Get free key at aistudio.google.com")
-        if api_key_input and api_key_input != server_key:
-            save_api_key(api_key_input)
-            st.success("Custom API Key saved!")
+# Multi-Provider AI Keys Management
+gemini_key = get_api_key()
+mistral_key = get_mistral_api_key()
+aionlabs_key = get_aionlabs_api_key()
+
+active_providers = []
+if gemini_key: active_providers.append("Gemini")
+if mistral_key: active_providers.append("Mistral")
+if aionlabs_key: active_providers.append("AionLabs")
+
+if active_providers:
+    st.sidebar.success(f"🟢 AI Engines: {', '.join(active_providers)}")
 else:
-    api_key_input = st.sidebar.text_input("Gemini API Key", value="", type="password", help="Get free key at aistudio.google.com")
-    if api_key_input:
-        save_api_key(api_key_input)
-        st.sidebar.success("API Key saved!")
+    st.sidebar.warning("⚠️ No AI API Key detected")
+
+with st.sidebar.expander("🔑 Multi-Model API Keys", expanded=not bool(gemini_key)):
+    st.caption("Manage API keys for multi-model fallback and inference:")
+    g_input = st.text_input("Google Gemini API Key", value=gemini_key, type="password", help="Free tier from aistudio.google.com")
+    m_input = st.text_input("Mistral AI API Key", value=mistral_key, type="password", help="Free tier from console.mistral.ai")
+    a_input = st.text_input("AionLabs API Key", value=aionlabs_key, type="password", help="API key from aionlabs.ai")
+
+    if st.button("💾 Save All API Keys", use_container_width=True):
+        if g_input: set_env_var("GEMINI_API_KEY", g_input)
+        if m_input: set_env_var("MISTRALAI_API_KEY", m_input)
+        if a_input: set_env_var("AIONLABS_AI_API_KEY", a_input)
+        st.success("API keys saved and synced to .env!")
+        st.rerun()
+
+api_key_input = gemini_key or g_input
 
 # WhatsApp Destination: Split into Country Code (defaulted by locale) + Mobile Number
 st.sidebar.markdown("**WhatsApp Destination**")
