@@ -65,9 +65,9 @@ callmebot_key = st.sidebar.text_input("CallMeBot API Key (Optional for Auto-SMS)
 
 model_choice = st.sidebar.selectbox(
     "Gemini Model",
-    options=["gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash-lite"],
+    options=["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
     index=0,
-    help="Default is gemini-2.5-flash. If Google servers report 503 high demand, switch to gemini-3.1-pro-preview."
+    help="Default is gemini-3.8-flash (latest frontier model). You can also toggle gemini-3.1-pro-preview or gemini-2.5-flash."
 )
 
 st.sidebar.markdown("---")

@@ -90,8 +90,13 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
         except Exception as list_err:
             print(f"[Gemini] Note: could not query model list dynamically: {list_err}")
 
-        # Preferred modern candidate models (gemini-2.5-flash & gemini-3.1-pro-preview recommended by Google)
-        preferred_candidates = ["gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash-lite"]
+        # Preferred modern candidate models (Gemini 3.8 Flash, 3.1 Pro Preview, 2.5 Flash)
+        preferred_candidates = [
+            "gemini-3.8-flash",
+            "gemini-3.1-pro-preview",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite"
+        ]
         
         # Exclude known deprecated models
         deprecated_models = {"gemini-2.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"}
@@ -104,14 +109,15 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
             if not models_to_try:
                 models_to_try = [
                     m for m in available_model_names 
-                    if m not in deprecated_models and any(k in m for k in ["3.1", "2.5", "flash", "pro"])
+                    if m not in deprecated_models and any(k in m for k in ["3.8", "3.1", "3", "2.5", "flash", "pro"])
                 ]
         else:
-            models_to_try = preferred_candidates
+            models_to_try = list(preferred_candidates)
 
-        # If user explicitly preferred a model, ensure it's tried first
-        if model_preference and model_preference in models_to_try:
-            models_to_try.remove(model_preference)
+        # If user explicitly preferred a model, ensure it's tried first regardless of list filter
+        if model_preference:
+            if model_preference in models_to_try:
+                models_to_try.remove(model_preference)
             models_to_try.insert(0, model_preference)
 
         response = None
