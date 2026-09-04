@@ -2,8 +2,10 @@ import os
 import sys
 import re
 import time
+import urllib.parse
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, List, Dict
+
 
 # Configure Windows console to UTF-8 to prevent 'charmap' codec errors with ₹ and emojis
 if sys.platform == "win32":
@@ -54,6 +56,12 @@ Structure your response as follows:
 [TITLE]: <Exact dish name, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence overview of the dish, taste profile, and prep time>
 
+[PRODUCTS]:
+If any special kitchen gadgets, appliances, cookware, or branded gourmet ingredients are featured or recommended to buy, list each one in this exact line format:
+- PRODUCT: <Brand/Item Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If no specific purchasable products/gadgets are featured, write:
+[PRODUCTS]: NONE
+
 ---
 [DETAILS]:
 - Servings & Prep/Cook Time:
@@ -68,6 +76,12 @@ Structure your response as follows:
 [CATEGORY]: WORKOUT
 [TITLE]: <Targeted workout title, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence overview of the targeted muscles and goal>
+
+[PRODUCTS]:
+If any specific workout gear, gym equipment, resistance bands, supplements, or shoes are featured or recommended to buy, list each one in this exact line format:
+- PRODUCT: <Brand/Item Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If no specific gear/equipment is featured, write:
+[PRODUCTS]: NONE
 
 ---
 [DETAILS]:
@@ -84,6 +98,12 @@ Structure your response as follows:
 [TITLE]: <Clear tech topic or tutorial title, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence overview of what is taught or built>
 
+[PRODUCTS]:
+If any specific tech gadgets, hardware, devices, tools, or peripherals are featured or recommended to buy, list each one in this exact line format:
+- PRODUCT: <Brand/Model Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If no hardware or physical products are featured, write:
+[PRODUCTS]: NONE
+
 ---
 [DETAILS]:
 - Prerequisites & Tools Used:
@@ -98,6 +118,12 @@ Structure your response as follows:
 [CATEGORY]: KNOWLEDGE_SUMMARY
 [TITLE]: <Core topic title, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary>
+
+[PRODUCTS]:
+If any specific books, gadgets, planners, tools, or hardware are featured or recommended to buy, list each one in this exact line format:
+- PRODUCT: <Item/Book Name> | PRICE: <Price if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If no purchasable products are mentioned, write:
+[PRODUCTS]: NONE
 
 ---
 [DETAILS]:
@@ -117,12 +143,19 @@ First, determine the CATEGORY of the video:
 - TECH_TUTORIAL (coding, software tools, computer guides, engineering)
 - TRAVEL_GUIDE (places to visit, restaurants, travel itineraries, travel tips)
 - KNOWLEDGE_SUMMARY (finance, business, life hacks, book summaries, educational)
-- GENERAL (any other informative content)
+- GENERAL (any other informative content, gadget reviews, product showcases)
 
 Structure your response strictly as follows:
 [CATEGORY]: <RECIPE | WORKOUT | TECH_TUTORIAL | TRAVEL_GUIDE | KNOWLEDGE_SUMMARY | GENERAL>
 [TITLE]: <A clear, descriptive title-cased name for this video, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates or teaches>
+
+[PRODUCTS]:
+If the video showcases, mentions, reviews, or uses any specific products, gadgets, gear, equipment, appliances, books, or ingredients that can be purchased, list EACH one in this exact line format:
+- PRODUCT: <Brand & Model / Item Name> | PRICE: <Price if stated or estimated, e.g. Under ₹1000, or 'N/A'> | SEARCH: <Targeted search query to find and buy this exact item online>
+
+If no specific purchasable products or equipment are featured, write:
+[PRODUCTS]: NONE
 
 ---
 [DETAILS]:
@@ -131,19 +164,20 @@ Structure your response strictly as follows:
 - If WORKOUT: Target muscles, equipment needed, warm-up, each exercise with sets x reps and rest intervals, and technique/form cues.
 - If TECH_TUTORIAL: Tools & prerequisites, exact commands/code snippets, step-by-step walkthrough, and key notes.
 - If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing/costs, and itinerary tips.
-- If KNOWLEDGE_SUMMARY or GENERAL: Core principles, bulleted step-by-step breakdown, key quotes or insights, and actionable takeaways.
+- If KNOWLEDGE_SUMMARY or GENERAL: Product reviews, core principles, bulleted step-by-step breakdown, key insights, and actionable takeaways.
 
-Be thorough, precise, and practical. Do not omit crucial steps or measurements.
+Be thorough, precise, and practical. Do not omit crucial steps or product names.
 """
 
 def parse_extracted_content(raw_text: str) -> dict:
     """
-    Parses structured Gemini response into clean fields: category, title, summary, details, and safe filename.
+    Parses structured Gemini response into clean fields: category, title, summary, products, details, and safe filename.
     """
     category = "RECIPE"
     title = "Extracted_Content"
     summary = ""
     details = raw_text
+    products = []
 
     cat_match = re.search(r'\[CATEGORY\]:\s*([A-Za-z_]+)', raw_text, re.IGNORECASE)
     if cat_match:
@@ -167,13 +201,57 @@ def parse_extracted_content(raw_text: str) -> dict:
     else:
         title = extract_apt_recipe_title(raw_text)
 
-    summary_match = re.search(r'\[SUMMARY\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+    summary_match = re.search(r'\[SUMMARY\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|\[PRODUCTS\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
     if summary_match:
         summary = summary_match.group(1).strip()
+
+    # Extract Products section
+    prod_section_match = re.search(r'\[PRODUCTS\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|\[CATEGORY\]|\[TITLE\]|\[SUMMARY\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+    if not prod_section_match:
+        prod_section_match = re.search(r'\[PRODUCTS\]:\s*(.+)', raw_text, re.DOTALL | re.IGNORECASE)
+
+    if prod_section_match:
+        prod_text = prod_section_match.group(1).strip()
+        if prod_text.upper() != "NONE" and not prod_text.upper().startswith("NONE"):
+            for line in prod_text.splitlines():
+                line = line.strip()
+                if not line or line.startswith(('#', '=')) or line.upper() == "NONE":
+                    continue
+
+                p_match = re.search(r'PRODUCT:\s*([^|]+)(?:\|\s*PRICE:\s*([^|]+))?(?:\|\s*SEARCH:\s*(.+))?', line, re.IGNORECASE)
+                if p_match:
+                    p_name = p_match.group(1).strip()
+                    p_price = (p_match.group(2) or "").strip()
+                    p_search = (p_match.group(3) or "").strip() or p_name
+                else:
+                    cleaned_line = re.sub(r'^[-*•\d\.]+\s*', '', line).strip()
+                    if len(cleaned_line) > 3 and not cleaned_line.startswith('['):
+                        p_name = cleaned_line
+                        p_price = ""
+                        p_search = cleaned_line
+                    else:
+                        continue
+
+                p_name_clean = re.sub(r'[*_#]', '', p_name).strip()
+                p_search_clean = re.sub(r'[*_#]', '', p_search).strip()
+                if not p_name_clean:
+                    continue
+
+                encoded_q = urllib.parse.quote_plus(p_search_clean)
+                products.append({
+                    "name": p_name_clean,
+                    "price": p_price if p_price and p_price.upper() not in ["N/A", "NONE", "NOT SPECIFIED"] else "",
+                    "query": p_search_clean,
+                    "amazon_url": f"https://www.amazon.in/s?k={encoded_q}",
+                    "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}",
+                    "google_shopping_url": f"https://www.google.com/search?tbm=shop&q={encoded_q}",
+                    "flipkart_url": f"https://www.flipkart.com/search?q={encoded_q}"
+                })
 
     details_match = re.search(r'(?:\[DETAILS\]:|---\s*\n\[DETAILS\]:)\s*(.+)', raw_text, re.DOTALL | re.IGNORECASE)
     if details_match:
         details = details_match.group(1).strip()
+        details = re.sub(r'\[PRODUCTS\]:\s*.+', '', details, flags=re.DOTALL | re.IGNORECASE).strip()
 
     # Sanitize title for filename & normalize currency symbols
     clean_title = title.replace('₹', 'Rs_').replace('$', 'USD_').replace('€', 'EUR_').replace('£', 'GBP_')
@@ -196,10 +274,12 @@ def parse_extracted_content(raw_text: str) -> dict:
         "emoji": emoji,
         "title": title,
         "summary": summary,
+        "products": products,
         "details": details,
         "clean_filename": clean_title,
         "raw_text": raw_text
     }
+
 
 def extract_apt_recipe_title(recipe_text: str) -> str:
     """
@@ -376,7 +456,18 @@ def process_video_and_generate_recipe(
 """
         if meta.get("summary"):
             formatted_file_content += f"\n📋 Summary:\n{meta['summary']}\n"
+
+        if meta.get("products") and len(meta["products"]) > 0:
+            formatted_file_content += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Purchase Links:\n{'='*50}\n"
+            for idx, p in enumerate(meta["products"], 1):
+                price_str = f" (Price: {p['price']})" if p.get("price") else ""
+                formatted_file_content += f"{idx}. {p['name']}{price_str}\n"
+                formatted_file_content += f"   • Amazon: {p['amazon_url']}\n"
+                formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n"
+                formatted_file_content += f"   • Flipkart: {p['flipkart_url']}\n\n"
+
         formatted_file_content += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{meta['details']}\n"
+
 
         # Save TXT file with utf-8 encoding
         with open(txt_filename, "w", encoding="utf-8") as f:

@@ -59,8 +59,16 @@ st.markdown("""
         font-size: 1rem;
         margin-top: 10px;
     }
+    .product-box {
+        background: #1E293B;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+    }
 </style>
 """, unsafe_allow_html=True)
+
 
 # Sidebar Settings
 st.sidebar.image("https://img.icons8.com/color/96/instagram-reel.png", width=64)
@@ -178,6 +186,30 @@ if process_btn:
                 if meta.get("summary"):
                     st.info(f"**Executive Summary**: {meta['summary']}")
 
+                # Featured Products & 1-Click Purchase Links
+                products_list = meta.get("products", [])
+                if products_list:
+                    st.markdown("### 🛍️ Featured Products & 1-Click Buy Links")
+                    st.caption("AI identified the following products in this video. Click any store to view or purchase:")
+                    
+                    for prod in products_list:
+                        p_name = prod["name"]
+                        p_price = prod.get("price", "")
+                        price_html = f"<span style='background-color:#064E3B; color:#34D399; border:1px solid #059669; font-size:0.8rem; padding:3px 9px; border-radius:12px; margin-left:8px; font-weight:600;'>💰 {p_price}</span>" if p_price else ""
+                        
+                        st.markdown(f"""
+                        <div class="product-box">
+                            <div style="font-size:1rem; font-weight:700; margin-bottom:8px; color:#F1F5F9;">
+                                📦 {p_name} {price_html}
+                            </div>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <a href="{prod['amazon_url']}" target="_blank" style="text-decoration:none; background:#FF9900; color:#111; font-weight:700; padding:6px 14px; border-radius:6px; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">🛒 Amazon</a>
+                                <a href="{prod['google_shopping_url']}" target="_blank" style="text-decoration:none; background:#4285F4; color:#fff; font-weight:700; padding:6px 14px; border-radius:6px; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">🛍️ Google Shopping</a>
+                                <a href="{prod['flipkart_url']}" target="_blank" style="text-decoration:none; background:#2874F0; color:#fff; font-weight:700; padding:6px 14px; border-radius:6px; font-size:0.85rem; display:inline-flex; align-items:center; gap:4px;">📦 Flipkart</a>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
                 st.markdown("---")
                 
                 # WhatsApp & Download Action Buttons
@@ -216,7 +248,7 @@ if process_btn:
 
                 with col_btn3:
                     if phone_number_input:
-                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code)
+                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code, products=products_list)
                         st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn" style="text-align:center; display:block; margin-top:0; padding:10px 14px; font-size:0.95rem;">📲 Send to WhatsApp</a>', unsafe_allow_html=True)
                     else:
                         st.info("💡 Enter WhatsApp Number in sidebar!")
@@ -278,13 +310,14 @@ if process_btn:
                 st.info(f"📂 **Stored Files Location**: `{storage_folder}`\n- `.txt` File: `{txt_filename}`\n- `.mp4` Video: `{os.path.basename(final_video_path) if final_video_path else 'Downloaded video'}`")
 
                 if callmebot_key and phone_number_input:
-                    wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key, category=cat_code)
+                    wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key, category=cat_code, products=products_list)
                     if wa_sent:
                         st.success(wa_msg)
                     else:
                         st.warning(f"CallMeBot API Notice: {wa_msg}")
 
                 st.markdown("---")
+
                 col_preview1, col_preview2 = st.columns([1, 1])
                 with col_preview1:
                     st.subheader(f"📖 Extracted {cat_name} Notes")
