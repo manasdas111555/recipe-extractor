@@ -71,13 +71,51 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
         if uploaded_file.state.name == "FAILED":
             return False, "", "Gemini API failed to process video file."
 
-        print("[Gemini] Generating recipe content...")
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[uploaded_file, PROMPT_TEXT]
-        )
+        # Resilient Model Cascade:
+        # If gemini-2.5-flash experiences 503 high demand spikes, automatically retry and fall back to gemini-2.0-flash / gemini-1.5-flash
+        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        response = None
+        last_err = None
 
-        recipe_content = response.text or "No recipe content generated."
+        for model_name in models_to_try:
+            print(f"[Gemini] Requesting recipe generation with model: {model_name}...")
+            for attempt in range(2):
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=[uploaded_file, PROMPT_TEXT]
+                    )
+                    if response and response.text:
+                        print(f"[Gemini] Successfully generated recipe with {model_name}!")
+                        break
+                except Exception as gen_err:
+                    last_err = gen_err
+                    err_str = str(gen_err)
+                    print(f"[Gemini] Model {model_name} (attempt {attempt + 1}) error: {err_str}")
+                    # If model is overloaded (503 / 429 / high demand), pause and retry or fallback
+                    if any(code in err_str.lower() for code in ["503", "unavailable", "high demand", "resourceexhausted", "429"]):
+                        if attempt == 0:
+                            time.sleep(2)
+                            continue
+                        else:
+                            break
+                    else:
+                        # Other non-transient error, break to next model
+                        break
+
+            if response and response.text:
+                break
+
+        # Best-effort cleanup of temporary uploaded video from Gemini File API
+        try:
+            client.files.delete(name=uploaded_file.name)
+        except Exception:
+            pass
+
+        if not response or not response.text:
+            return False, "", f"Gemini API Error: {str(last_err)}"
+
+        recipe_content = response.text.strip()
 
         # Extract apt recipe title
         apt_title = extract_apt_recipe_title(recipe_content)
@@ -101,27 +139,4 @@ def process_video_and_generate_recipe(video_path: str, custom_api_key: str = Non
         return True, str(txt_filename), recipe_content
 
     except Exception as e:
-        # Fallback for legacy SDK if needed
-        try:
-            import google.generativeai as legacy_genai
-            legacy_genai.configure(api_key=api_key)
-
-            print(f"[Gemini Legacy] Uploading video: {video_path}...")
-            video_file = legacy_genai.upload_file(str(video_file_path))
-            while video_file.state.name == "PROCESSING":
-                time.sleep(3)
-                video_file = legacy_genai.get_file(video_file.name)
-
-            model = legacy_genai.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content([video_file, PROMPT_TEXT])
-
-            recipe_content = response.text or "No recipe content generated."
-            apt_title = extract_apt_recipe_title(recipe_content)
-            txt_filename = output_dir / f"{apt_title}.txt"
-
-            with open(txt_filename, "w", encoding="utf-8") as f:
-                f.write(recipe_content)
-
-            return True, str(txt_filename), recipe_content
-        except Exception as legacy_err:
-            return False, "", f"Gemini API Error: {str(e)} (Fallback error: {str(legacy_err)})"
+        return False, "", f"Gemini Processing Error: {str(e)}"
