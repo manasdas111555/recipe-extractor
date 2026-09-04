@@ -62,20 +62,29 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
 
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Check duration before downloading full stream
-            info_dict = ydl.extract_info(video_url, download=False)
-            if info_dict:
-                duration = info_dict.get('duration')
-                if duration and duration > MAX_VIDEO_DURATION:
-                    return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
-
-            # Download stream
+            # Single-pass: retrieve metadata and download stream in one network pass
             info_dict = ydl.extract_info(video_url, download=True)
+            if not info_dict:
+                return False, "Could not extract video from URL."
+            
+            duration = info_dict.get('duration')
             filename = ydl.prepare_filename(info_dict)
             if not os.path.exists(filename):
                 base_name = os.path.splitext(filename)[0]
                 if os.path.exists(base_name + ".mp4"):
                     filename = base_name + ".mp4"
+
+            # Check duration limit
+            if duration and duration > MAX_VIDEO_DURATION:
+                if os.path.exists(filename):
+                    try:
+                        os.remove(filename)
+                    except Exception:
+                        pass
+                return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
+
+            if not os.path.exists(filename):
+                return False, "Downloaded video file not found on disk."
             return True, filename
     except Exception as e:
         return False, f"yt-dlp download error: {str(e)}"

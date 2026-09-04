@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import sys
+import time
 from pathlib import Path
 
 # Force UTF-8 encoding on Windows console for currency symbols (₹) and emojis
@@ -164,9 +165,9 @@ mode_choice = st.sidebar.selectbox(
 
 model_choice = st.sidebar.selectbox(
     "Gemini Model",
-    options=["gemini-3.8-flash", "gemini-3.1-pro-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
+    options=["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
     index=0,
-    help="Default is gemini-3.8-flash (latest frontier model). You can also toggle gemini-3.1-pro-preview or gemini-2.5-flash."
+    help="Default is gemini-2.5-flash (fastest, production-ready video reasoning). If congested, it automatically cascades to fallback models."
 )
 
 # Affiliate Monetization Tags Expander
@@ -207,7 +208,7 @@ with col2:
     st.markdown("""
     1. 🌐 **Paste URL** (Instagram Reel or YouTube Short)
     2. 📥 **Download HD Stream** (Native single-pass download)
-    3. 🤖 **Gemini 3.8 Multi-Modal AI** (Auto-classifies content)
+    3. ⚡ **Gemini 2.5 Multi-Modal AI** (Auto-classifies content with instant fallback)
     4. 📝 **Generate Structured Notes** (Apt title & `.txt` file)
     5. 📱 **Forward to WhatsApp** (File download + direct sharing)
     """)
@@ -218,19 +219,22 @@ if process_btn:
     elif not api_key_input:
         st.error("Please enter your Gemini API Key in the sidebar.")
     else:
+        start_time = time.perf_counter()
         clean_url = reel_url.strip()
         detected_plat = detect_platform(clean_url)
         status_box = st.status(f"Processing {detected_plat} Request...", expanded=True)
 
         # Step 1 & 2: Download Video
+        t_dl_start = time.perf_counter()
         status_box.write(f"⏳ **Step 1 & 2**: Downloading {detected_plat} stream...")
         success, video_result = get_video_from_url(clean_url, preferred_engine="ytdlp")
+        dl_duration = time.perf_counter() - t_dl_start
 
         if not success:
             status_box.update(label="❌ Video Download Failed", state="error")
             st.error(f"Download Error: {video_result}")
         else:
-            status_box.write("✅ Video stream downloaded successfully!")
+            status_box.write(f"✅ Video stream downloaded in **{dl_duration:.1f}s**!")
 
             # Step 3, 4 & 5: Upload to Gemini & Generate Structured Notes
             gemini_res = process_video_and_generate_recipe(
@@ -248,6 +252,8 @@ if process_btn:
             final_video_path = gemini_res[3] if len(gemini_res) > 3 else video_result
             meta = gemini_res[4] if len(gemini_res) > 4 else {}
 
+            total_elapsed = time.perf_counter() - start_time
+
             if not gemini_success:
                 status_box.update(label="❌ Gemini AI Processing Failed", state="error")
                 st.error(f"Gemini Error: {recipe_text}")
@@ -256,9 +262,22 @@ if process_btn:
                 cat_emoji = meta.get("emoji", "📝")
                 cat_code = meta.get("category", "RECIPE")
                 item_title = meta.get("title", get_recipe_display_name(txt_filepath))
+                timings = meta.get("timings", {})
+                cloud_prep_time = timings.get('prep_s', 0.0) + timings.get('upload_s', 0.0)
+                ai_duration = timings.get('inference_s', 0.0)
+                model_display = timings.get('model_used', model_choice)
 
-                status_box.update(label=f"🎉 {cat_name} Extracted: {item_title}!", state="complete")
+                status_box.update(label=f"🎉 {cat_name} Extracted in {total_elapsed:.1f}s: {item_title}!", state="complete")
                 st.balloons()
+                
+                # High-Visibility Latency & Performance Benchmark
+                st.markdown(f"#### ⚡ Latency & Execution Benchmark (`{total_elapsed:.1f}s` Total Turnaround)")
+                b1, b2, b3, b4 = st.columns(4)
+                b1.metric("⏱️ Total Turnaround", f"{total_elapsed:.1f}s")
+                b2.metric("📥 Stream Download", f"{dl_duration:.1f}s")
+                b3.metric("☁️ Cloud Upload & Prep", f"{cloud_prep_time:.1f}s")
+                b4.metric(f"🧠 AI ({model_display})", f"{ai_duration:.1f}s")
+                st.markdown("---")
                 
                 # Category Header Banner
                 st.markdown(f"### {cat_emoji} {item_title}")

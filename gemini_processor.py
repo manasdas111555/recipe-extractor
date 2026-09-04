@@ -356,56 +356,43 @@ def process_video_and_generate_recipe(
     try:
         from google import genai
         client = genai.Client(api_key=api_key)
-
         prompt_text = get_prompt_for_mode(extraction_mode)
 
-        notify(f"Uploading video: `{video_file_path.name}` to Gemini...")
+        # Step 1: Upload video to Gemini File API
+        t_gemini_start = time.perf_counter()
+        t_upload_start = time.perf_counter()
+        notify(f"Uploading video: `{video_file_path.name}` to Gemini Cloud...")
         uploaded_file = client.files.upload(file=str(video_file_path))
-        notify(f"Video uploaded ({uploaded_file.name}). Waiting for file processing...")
+        t_upload_end = time.perf_counter()
+        upload_duration = t_upload_end - t_upload_start
+        notify(f"Video uploaded in {upload_duration:.1f}s ({uploaded_file.name}). Preparing video...")
 
+        # Step 2: Poll until video is in ACTIVE state (1s interval for minimum latency)
+        t_poll_start = time.perf_counter()
         while uploaded_file.state.name == "PROCESSING":
-            time.sleep(3)
+            time.sleep(1)
             uploaded_file = client.files.get(name=uploaded_file.name)
+            if time.perf_counter() - t_poll_start > 60:
+                break
+        t_poll_end = time.perf_counter()
+        prep_duration = t_poll_end - t_poll_start
 
         if uploaded_file.state.name == "FAILED":
             return False, "", "Gemini API failed to process video file.", str(video_file_path), {}
 
-        # Dynamically discover active models supported on this API key to prevent 404s
-        available_model_names = []
-        try:
-            for m in client.models.list():
-                name = getattr(m, 'name', '') or ''
-                cleaned = name.replace('models/', '').strip()
-                if cleaned:
-                    available_model_names.append(cleaned)
-        except Exception as list_err:
-            safe_print(f"[Gemini] Note: could not query model list dynamically: {list_err}")
+        notify(f"Video ready in {prep_duration:.1f}s. Beginning multi-modal AI reasoning...")
 
-        # Preferred modern candidate models (Gemini 3.8 Flash, 3.1 Pro Preview, 2.5 Flash)
+        # Step 3: Model execution priority - Gemini 2.5 Flash first as primary, followed by fallbacks
         preferred_candidates = [
-            "gemini-3.8-flash",
-            "gemini-3.1-pro-preview",
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite"
+            "gemini-2.5-flash",       # Primary: production-ready, ultra-fast video reasoning
+            "gemini-2.5-flash-lite",  # Fallback 1: ultra-lightweight, lowest latency
+            "gemini-3.8-flash",       # Fallback 2: frontier flash model
+            "gemini-3.1-pro-preview"  # Fallback 3: frontier reasoning model
         ]
-        
-        # Exclude known deprecated models
-        deprecated_models = {"gemini-2.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"}
 
-        if available_model_names:
-            models_to_try = [
-                m for m in preferred_candidates 
-                if m in available_model_names and m not in deprecated_models
-            ]
-            if not models_to_try:
-                models_to_try = [
-                    m for m in available_model_names 
-                    if m not in deprecated_models and any(k in m for k in ["3.8", "3.1", "3", "2.5", "flash", "pro"])
-                ]
-        else:
-            models_to_try = list(preferred_candidates)
+        models_to_try = list(preferred_candidates)
 
-        # If user explicitly preferred a model, ensure it's tried first regardless of list filter
+        # If user explicitly preferred a specific model from UI, place it at the front
         if model_preference:
             if model_preference in models_to_try:
                 models_to_try.remove(model_preference)
@@ -413,29 +400,41 @@ def process_video_and_generate_recipe(
 
         response = None
         attempt_log = []
+        successful_model = None
+        inference_duration = 0.0
 
         for model_name in models_to_try:
             notify(f"Analyzing video & extracting intelligence with `{model_name}`...")
             model_succeeded = False
-            # Try up to 3 attempts with exponential backoff for 503 high-demand traffic spikes
-            for attempt in range(1, 4):
+            remaining_models = len(models_to_try) - (models_to_try.index(model_name) + 1)
+            max_attempts = 1 if remaining_models > 0 else 2
+
+            for attempt in range(1, max_attempts + 1):
+                t_infer_start = time.perf_counter()
                 try:
                     response = client.models.generate_content(
                         model=model_name,
                         contents=[uploaded_file, prompt_text]
                     )
                     if response and response.text:
-                        notify(f"Successfully processed video with `{model_name}`!")
+                        inference_duration = time.perf_counter() - t_infer_start
+                        successful_model = model_name
+                        notify(f"Successfully processed video with `{model_name}` in {inference_duration:.1f}s!")
                         model_succeeded = True
                         break
                 except Exception as gen_err:
                     err_str = str(gen_err)
                     safe_print(f"[Gemini] Model {model_name} (attempt {attempt}) error: {err_str}")
                     is_busy = any(k in err_str.lower() for k in ["503", "unavailable", "high demand", "capacity", "resourceexhausted", "429"])
-                    if is_busy and attempt < 3:
-                        wait_sec = attempt * 3
-                        notify(f"⚠️ `{model_name}` is experiencing high traffic (503). Retrying in {wait_sec}s (attempt {attempt}/3)...")
-                        time.sleep(wait_sec)
+                    
+                    if is_busy and remaining_models > 0:
+                        # Fast failover: don't stall for 9s if another healthy model is in line
+                        notify(f"⚠️ `{model_name}` congested (503/429). Instantly switching to next model...")
+                        attempt_log.append(f"{model_name}: {err_str}")
+                        break
+                    elif is_busy and attempt < max_attempts:
+                        notify(f"⚠️ `{model_name}` congested (503). Retrying in 1.5s...")
+                        time.sleep(1.5)
                         continue
                     else:
                         attempt_log.append(f"{model_name}: {err_str}")
@@ -443,7 +442,7 @@ def process_video_and_generate_recipe(
 
             if model_succeeded and response and response.text:
                 break
-            elif len(models_to_try) > 1:
+            elif remaining_models > 0:
                 notify(f"🔄 `{model_name}` unavailable, trying next model...")
 
         # Best-effort cleanup of temporary uploaded video from Gemini File API
@@ -458,6 +457,14 @@ def process_video_and_generate_recipe(
 
         raw_content = response.text.strip()
         meta = parse_extracted_content(raw_content, affiliate_tags=affiliate_tags)
+
+        meta["timings"] = {
+            "upload_s": round(upload_duration, 2),
+            "prep_s": round(prep_duration, 2),
+            "inference_s": round(inference_duration, 2),
+            "total_ai_s": round(time.perf_counter() - t_gemini_start, 2),
+            "model_used": successful_model or "gemini-2.5-flash"
+        }
 
 
         apt_title = meta["clean_filename"]
