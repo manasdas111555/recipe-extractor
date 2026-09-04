@@ -1,0 +1,132 @@
+import os
+import time
+import re
+import requests
+from pathlib import Path
+from typing import Tuple
+
+from config import get_download_dir
+
+def download_via_ytdlp(reel_url: str, output_dir: Path) -> Tuple[bool, str]:
+    """
+    Downloads Instagram Reel video directly using yt-dlp.
+    Uses 'best[ext=mp4]/best' to download pre-merged single video streams without requiring ffmpeg.
+    """
+    try:
+        import yt_dlp
+        output_template = str(output_dir / "recipe_video_%(id)s.%(ext)s")
+        
+        ydl_opts = {
+            'outtmpl': output_template,
+            'format': 'best[ext=mp4]/best',
+            'quiet': True,
+            'no_warnings': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(reel_url, download=True)
+            filename = ydl.prepare_filename(info_dict)
+            if not os.path.exists(filename):
+                base_name = os.path.splitext(filename)[0]
+                if os.path.exists(base_name + ".mp4"):
+                    filename = base_name + ".mp4"
+            return True, filename
+    except Exception as e:
+        return False, f"yt-dlp download error: {str(e)}"
+
+
+def download_via_indownloader(reel_url: str, output_dir: Path) -> Tuple[bool, str]:
+    """
+    Automates browsing to https://indownloader.app/video-downloader using Playwright if available,
+    otherwise gracefully falls back to yt-dlp.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("[Downloader] Playwright not installed in cloud. Using yt-dlp engine...")
+        return download_via_ytdlp(reel_url, output_dir)
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(accept_downloads=True)
+            page = context.new_page()
+
+            page.goto("https://indownloader.app/video-downloader", timeout=30000)
+            page.wait_for_load_state("domcontentloaded")
+
+            input_selector = None
+            for sel in ["input[name='link']", "input[type='text']", "input[placeholder*='Link']", "input[placeholder*='URL']", "input"]:
+                if page.is_visible(sel):
+                    input_selector = sel
+                    break
+            
+            if not input_selector:
+                browser.close()
+                return download_via_ytdlp(reel_url, output_dir)
+
+            page.fill(input_selector, reel_url)
+            time.sleep(1)
+
+            button_clicked = False
+            for btn_sel in ["button[type='submit']", "button:has-text('Search')", "button:has-text('Download')", "input[type='submit']", ".btn"]:
+                if page.is_visible(btn_sel):
+                    page.click(btn_sel)
+                    button_clicked = True
+                    break
+
+            if not button_clicked:
+                page.keyboard.press("Enter")
+
+            time.sleep(5)
+
+            video_url = None
+            download_links = page.query_selector_all("a[href*='.mp4'], a[href*='download'], a.btn-download, a:has-text('Download')")
+            for link in download_links:
+                href = link.get_attribute("href")
+                if href and ("http" in href or ".mp4" in href or "cdn" in href or "download" in href):
+                    if "indownloader" not in href or ".mp4" in href or "fbcdn" in href or "cdninstagram" in href:
+                        video_url = href
+                        break
+
+            if not video_url:
+                video_elem = page.query_selector("video src, video source")
+                if video_elem:
+                    video_url = video_elem.get_attribute("src")
+
+            if not video_url:
+                browser.close()
+                return download_via_ytdlp(reel_url, output_dir)
+
+            filename = output_dir / f"indownloader_{int(time.time())}.mp4"
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            resp = requests.get(video_url, headers=headers, stream=True, timeout=30)
+            if resp.status_code == 200:
+                with open(filename, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                browser.close()
+                return True, str(filename)
+            else:
+                browser.close()
+                return download_via_ytdlp(reel_url, output_dir)
+
+    except Exception as e:
+        print(f"[Downloader] Playwright error ({e}). Using yt-dlp engine...")
+        return download_via_ytdlp(reel_url, output_dir)
+
+
+def get_recipe_video(reel_url: str, preferred_engine: str = "ytdlp") -> Tuple[bool, str]:
+    """
+    Main entry point for downloading reel video.
+    Defaults to yt-dlp for universal cloud and local compatibility.
+    """
+    output_dir = get_download_dir()
+    
+    success, result = download_via_ytdlp(reel_url, output_dir)
+    if success:
+        return True, result
+    
+    print(f"[Warning] yt-dlp failed ({result}). Trying indownloader fallback...")
+    return download_via_indownloader(reel_url, output_dir)
