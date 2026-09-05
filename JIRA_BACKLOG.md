@@ -12,8 +12,8 @@
 
 | Sprint | Goal / Theme | Story Points | Status | Target Timeline |
 | :--- | :--- | :--- | :--- | :--- |
-| **Sprint 1** | **Core Decoupling & Multi-Tenant Data Layer** (Supabase + FastAPI) | 26 pts | 🚀 **READY TO START** | Weeks 1–2 |
-| **Sprint 2** | **Async Worker Pipeline & Scraper Resilience** (Celery + Redis + Proxies) | 34 pts | ⏳ Backlog | Weeks 3–4 |
+| **Sprint 1** | **Core Decoupling & Multi-Tenant Data Layer** (Supabase + FastAPI) | 26 pts | 🎉 **COMPLETED (100%)** | Weeks 1–2 |
+| **Sprint 2** | **Async Worker Pipeline & Scraper Resilience** (Celery + Redis + Proxies) | 34 pts | 🚀 **READY TO START** | Weeks 3–4 |
 | **Sprint 3** | **Zero-Friction Chat Ingestion Bot** (Telegram & WhatsApp Cloud API) | 29 pts | ⏳ Backlog | Weeks 5–6 |
 | **Sprint 4** | **Next.js 15 PWA & Personal Vault** (Web Share Sheet + UI Dashboard) | 37 pts | ⏳ Backlog | Weeks 7–8 |
 | **Sprint 5** | **Monetization, Quotas & Subscriptions** (Razorpay AutoPay + Stripe) | 26 pts | ⏳ Backlog | Weeks 9–10 |
@@ -21,11 +21,11 @@
 
 ---
 
-## 📌 Sprint 1 Kanban Board (Current Sprint)
+## 📌 Sprint 1 Kanban Board (Completed)
 
-| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done |
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (26 pts) |
 | :--- | :--- | :--- | :--- |
-| `UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline<br>`UPA-101` Supabase Schema Migration (001)<br>`UPA-102` Row Level Security Policies<br>`UPA-103` SHA-256 URL Hash Cache Index<br>`UPA-104` FastAPI Modular Backend Skeleton<br>`UPA-105` Supabase Auth & JWT Middleware |
+| None | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline<br>`UPA-101` Supabase Schema Migration (001)<br>`UPA-102` Row Level Security Policies<br>`UPA-103` SHA-256 URL Hash Cache Index<br>`UPA-104` FastAPI Modular Backend Skeleton<br>`UPA-105` Supabase Auth & JWT Middleware<br>`UPA-106` Job Enqueue Endpoint (`/v1/extract`)<br>`UPA-107` Task Polling & Progress Endpoint (`/status/{job_id}`) |
 
 ---
 
@@ -122,22 +122,24 @@
 - **Dependencies**: `UPA-104`.
 
 #### `UPA-106`: Job Enqueue Endpoint (`POST /v1/extract`)
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a client, I want to submit a social video URL and receive a `job_id` within 300ms, so that my app never freezes during 20-second video processing.*
 - **Acceptance Criteria**:
-  - [ ] Endpoint validates URL via `pydantic.HttpUrl`.
-  - [ ] Checks and decrements daily quota for free-tier users.
-  - [ ] Computes `url_hash` and enqueues task to Celery queue.
-  - [ ] Returns HTTP 202 Accepted with `job_id`, `status: "queued"`.
+  - [x] Endpoint validates URL via `pydantic.field_validator` and regex.
+  - [x] Checks and decrements daily quota for free-tier users (HTTP 429 when quota exceeded).
+  - [x] Computes `url_hash` (SHA-256) and returns instant 0-cost cache hit (HTTP 200).
+  - [x] On cache miss, enqueues background extraction and returns HTTP 202 Accepted with `job_id`, `status: "queued"`, and `poll_url`.
 - **Dependencies**: `UPA-104`, `UPA-105`.
 
 #### `UPA-107`: Task Polling & Progress Endpoint (`GET /v1/extract/status/{job_id}`)
-- **Type**: Story | **Priority**: P1 (High) | **Points**: 2 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P1 (High) | **Points**: 2 pts | **Status**: `[x] DONE`
 - **User Story**: *As a client frontend, I want to poll job progress stages, so that I can show dynamic status indicators (downloading, AI scanning, complete) to the user.*
 - **Acceptance Criteria**:
-  - [ ] Queries Celery `AsyncResult` state (`PENDING`, `PROCESSING`, `SUCCESS`, `FAILURE`).
-  - [ ] Returns current stage metadata (e.g. `downloading_media`, `multimodal_ai_inference`).
-  - [ ] When completed, returns full structured JSON payload.
+  - [x] Queries in-memory thread-safe `JobManager` state (`queued`, `downloading`, `processing`, `completed`, `failed`).
+  - [x] Returns current stage metadata (`downloading_media`, `multimodal_ai_inference`, etc.) and progress percentage.
+  - [x] When completed, returns full structured JSON payload.
+  - [x] Fallback query to Supabase `extractions` table by ID if job evicted from memory.
+  - [x] Returns HTTP 404 for unknown job IDs.
 - **Dependencies**: `UPA-106`.
 
 ---

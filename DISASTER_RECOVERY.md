@@ -87,6 +87,10 @@ This document details:
 - **Configuration Loader (`backend/app/core/config.py`)**: Uses Pydantic Settings with automatic `.env` discovery.
 - **Supabase REST Client (`backend/app/core/supabase_client.py`)**: Direct HTTP client communicating with Supabase PostgreSQL without heavy SDKs.
 - **Security Middleware (`backend/app/core/security.py`)**: Validates Supabase JWT Bearer tokens and provisions guest access sessions (`is_anonymous: True`, 3 free extractions).
+- **Asynchronous Extraction Router (`backend/app/api/v1/extract.py`)**:
+  - `POST /api/v1/extract`: Validates URL, enforces daily quota (HTTP 429 when exceeded), computes SHA-256 `url_hash`, checks PostgreSQL cache (HTTP 200), and enqueues background worker jobs (HTTP 202).
+  - `GET /api/v1/extract/status/{job_id}`: Real-time polling endpoint tracking progress percentage, stage lifecycle (`enqueued`, `downloading_media`, `multimodal_ai_inference`, `completed`, `failed`), and output payload.
+- **Job Manager (`backend/app/services/job_manager.py`)**: Thread-safe in-memory job registry and background execution pipeline with automatic Supabase persistence.
 
 ### 5. Multi-Environment & CI/CD Pipeline (`scripts/`, `.github/`)
 - **`scripts/verify_promotion.py`**: Executes syntax validation, isolated clean-process module imports, and the 45-test unit suite.
