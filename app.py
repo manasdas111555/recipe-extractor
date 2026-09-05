@@ -14,62 +14,61 @@ if sys.platform == "win32":
     except Exception:
         pass
 
+# Ensure repository root is always first in sys.path
+ROOT_DIR = str(Path(__file__).parent.resolve())
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import importlib
 
-try:
-    from config import (
-        get_api_key, 
-        save_api_key, 
-        get_download_dir, 
-        get_affiliate_tags, 
-        save_affiliate_tags, 
-        cleanup_old_downloads,
-        get_mistral_api_key,
-        get_aionlabs_api_key,
-        get_groq_api_key,
-        get_nvidia_api_key,
-        set_env_var,
-        MAX_VIDEO_DURATION
-    )
-except ImportError:
-    import config
-    importlib.reload(config)
-    from config import (
-        get_api_key, 
-        save_api_key, 
-        get_download_dir, 
-        get_affiliate_tags, 
-        save_affiliate_tags, 
-        cleanup_old_downloads,
-        get_mistral_api_key,
-        get_aionlabs_api_key,
-        get_groq_api_key,
-        get_nvidia_api_key,
-        set_env_var,
-        MAX_VIDEO_DURATION
-    )
+def _safe_load_module(module_name: str):
+    """Safely imports and reloads internal modules to prevent stale cache errors on Streamlit Cloud."""
+    try:
+        mod = importlib.import_module(module_name)
+        return importlib.reload(mod)
+    except Exception:
+        return importlib.import_module(module_name)
 
-from downloader import get_video_from_url, detect_platform
-from gemini_processor import process_video_and_generate_recipe
-from ai_router import route_video_intelligence, AI_PROVIDERS
-from ui_components import NeuralProgressDeck, render_skeleton_card_html
+# 1. Config module
+config = _safe_load_module("config")
+get_api_key = getattr(config, "get_api_key", lambda: "")
+save_api_key = getattr(config, "save_api_key", lambda k: None)
+get_download_dir = getattr(config, "get_download_dir", lambda: Path("downloads"))
+get_affiliate_tags = getattr(config, "get_affiliate_tags", lambda: {})
+save_affiliate_tags = getattr(config, "save_affiliate_tags", lambda **kw: None)
+cleanup_old_downloads = getattr(config, "cleanup_old_downloads", lambda **kw: None)
+get_mistral_api_key = getattr(config, "get_mistral_api_key", lambda: "")
+get_aionlabs_api_key = getattr(config, "get_aionlabs_api_key", lambda: "")
+get_groq_api_key = getattr(config, "get_groq_api_key", lambda: "")
+get_nvidia_api_key = getattr(config, "get_nvidia_api_key", lambda: "")
+set_env_var = getattr(config, "set_env_var", lambda k, v: None)
+MAX_VIDEO_DURATION = getattr(config, "MAX_VIDEO_DURATION", 90)
 
-try:
-    from whatsapp_service import (
-        generate_whatsapp_deep_link, 
-        send_via_callmebot_api, 
-        get_recipe_display_name,
-        get_default_country_code
-    )
-except ImportError:
-    import whatsapp_service
-    importlib.reload(whatsapp_service)
-    from whatsapp_service import (
-        generate_whatsapp_deep_link, 
-        send_via_callmebot_api, 
-        get_recipe_display_name,
-        get_default_country_code
-    )
+# 2. Downloader module
+downloader = _safe_load_module("downloader")
+get_video_from_url = getattr(downloader, "get_video_from_url", getattr(downloader, "get_recipe_video", None))
+detect_platform = getattr(downloader, "detect_platform", lambda url: "Instagram Reel" if "instagram" in url.lower() else "Web Video")
+
+# 3. Gemini Processor module
+gemini_processor = _safe_load_module("gemini_processor")
+process_video_and_generate_recipe = getattr(gemini_processor, "process_video_and_generate_recipe", None)
+
+# 4. AI Router module
+ai_router = _safe_load_module("ai_router")
+route_video_intelligence = getattr(ai_router, "route_video_intelligence", None)
+AI_PROVIDERS = getattr(ai_router, "AI_PROVIDERS", ["Google Gemini (Native Video AI)"])
+
+# 5. UI Components module
+ui_components = _safe_load_module("ui_components")
+NeuralProgressDeck = getattr(ui_components, "NeuralProgressDeck", None)
+render_skeleton_card_html = getattr(ui_components, "render_skeleton_card_html", lambda: "")
+
+# 6. WhatsApp Service module
+whatsapp_service = _safe_load_module("whatsapp_service")
+generate_whatsapp_deep_link = getattr(whatsapp_service, "generate_whatsapp_deep_link", None)
+send_via_callmebot_api = getattr(whatsapp_service, "send_via_callmebot_api", None)
+get_recipe_display_name = getattr(whatsapp_service, "get_recipe_display_name", None)
+get_default_country_code = getattr(whatsapp_service, "get_default_country_code", lambda: "+91")
 
 
 

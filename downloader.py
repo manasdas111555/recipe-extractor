@@ -24,7 +24,17 @@ def safe_print(msg: str):
         except Exception:
             pass
 
-from config import get_download_dir, MAX_VIDEO_DURATION, cleanup_old_downloads
+ROOT_DIR = str(Path(__file__).parent.resolve())
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+try:
+    from config import get_download_dir, MAX_VIDEO_DURATION, cleanup_old_downloads
+except Exception:
+    import config
+    get_download_dir = getattr(config, "get_download_dir", lambda: Path("downloads"))
+    MAX_VIDEO_DURATION = getattr(config, "MAX_VIDEO_DURATION", 90)
+    cleanup_old_downloads = getattr(config, "cleanup_old_downloads", lambda **kw: None)
 
 
 def detect_platform(url: str) -> str:
