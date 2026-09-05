@@ -50,6 +50,7 @@ except ImportError:
 from downloader import get_video_from_url, detect_platform
 from gemini_processor import process_video_and_generate_recipe
 from ai_router import route_video_intelligence, AI_PROVIDERS
+from ui_components import NeuralProgressDeck, render_skeleton_card_html
 
 try:
     from whatsapp_service import (
@@ -415,6 +416,75 @@ st.markdown("""
             gap: 12px !important;
         }
     }
+
+    /* Neural Scanner Deck & Perceived Speed System */
+    .neural-scanner-deck {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.82) 100%);
+        border: 1px solid rgba(244, 63, 94, 0.35);
+        border-radius: 16px;
+        padding: 20px 22px;
+        margin: 14px 0;
+        box-shadow: 0 12px 32px -5px rgba(0, 0, 0, 0.5), 0 0 25px rgba(244, 63, 94, 0.15);
+        position: relative;
+        overflow: hidden;
+    }
+    .neural-scanner-deck::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 200%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #FF416C, #F43F5E, transparent);
+        animation: scanner-sweep 2.2s linear infinite;
+    }
+    @keyframes scanner-sweep {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(50%); }
+    }
+    .scanner-pulse-dot {
+        display: inline-flex;
+        width: 12px;
+        height: 12px;
+        background: #F43F5E;
+        border-radius: 50%;
+        box-shadow: 0 0 12px #F43F5E;
+        animation: pulse 1.4s infinite;
+        margin: 4px;
+        flex-shrink: 0;
+    }
+    .trivia-ticker {
+        background: rgba(244, 63, 94, 0.08);
+        border: 1px solid rgba(244, 63, 94, 0.22);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-top: 14px;
+    }
+    .skeleton-card {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-top: 12px;
+    }
+    .shimmer-bar {
+        background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.03) 75%);
+        background-size: 200% 100%;
+        animation: shimmer-anim 1.8s infinite;
+        border-radius: 6px;
+    }
+    @keyframes shimmer-anim {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    .video-preview-standby {
+        background: rgba(15, 23, 42, 0.6);
+        border: 2px dashed rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 40px 20px;
+        text-align: center;
+        margin-top: 14px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -652,28 +722,62 @@ if process_btn:
         start_time = time.perf_counter()
         clean_url = reel_url.strip()
         detected_plat = detect_platform(clean_url)
-        status_box = st.status(f"Processing {detected_plat} with {provider_choice.split('(')[0].strip()}...", expanded=True)
 
-        # Step 1 & 2: Download Video
+        # Dual-Column High-Velocity Processing Layout
+        proc_left, proc_right = st.columns([1.2, 0.8], gap="large")
+
+        with proc_left:
+            deck_placeholder = st.empty()
+            deck = NeuralProgressDeck(deck_placeholder)
+            skeleton_placeholder = st.empty()
+            if hasattr(skeleton_placeholder, "html"):
+                skeleton_placeholder.html(render_skeleton_card_html())
+            else:
+                skeleton_placeholder.markdown(render_skeleton_card_html(), unsafe_allow_html=True)
+
+        with proc_right:
+            preview_placeholder = st.empty()
+            standby_html = f"""<div class="video-preview-standby">
+<div style="font-size:2.2rem; margin-bottom:10px;">⚡</div>
+<div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:1.02rem; color:#F1F5F9;">Ingesting {detected_plat}...</div>
+<div style="font-size:0.8rem; color:#94A3B8; margin-top:4px;">Connecting to CDN stream pipeline</div>
+</div>"""
+            if hasattr(preview_placeholder, "html"):
+                preview_placeholder.html(standby_html)
+            else:
+                preview_placeholder.markdown(standby_html, unsafe_allow_html=True)
+
+        # Step 1: Download Video Stream
         t_dl_start = time.perf_counter()
-        status_box.write(f"⏳ **Step 1 & 2**: Downloading {detected_plat} stream...")
         success, video_result = get_video_from_url(clean_url, preferred_engine="ytdlp")
         dl_duration = time.perf_counter() - t_dl_start
 
         if not success:
-            status_box.update(label="❌ Video Download Failed", state="error")
+            deck.update_step("dl", "error", f"Download Error: {video_result}")
+            skeleton_placeholder.empty()
             st.error(f"Download Error: {video_result}")
         else:
-            status_box.write(f"✅ Video stream downloaded in **{dl_duration:.1f}s**!")
+            deck.update_step("dl", "done", f"Stream captured in {dl_duration:.1f}s")
+            deck.update_step("prep", "active", "Extracting visual keyframes & speech tensors...")
 
-            # Step 3, 4 & 5: AI Multimodal Processing via Central Router
+            # INSTANT FIRST PAINT (~1.5s): Show video preview immediately!
+            with preview_placeholder.container():
+                st.markdown(f"""
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:0.88rem; color:#F1F5F9;">🎬 Stream Ingested ({dl_duration:.1f}s)</span>
+                    <span style="background:rgba(16,185,129,0.15); color:#34D399; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:6px; border:1px solid rgba(16,185,129,0.3);">Neural Scan Active</span>
+                </div>
+                """, unsafe_allow_html=True)
+                st.video(video_result)
+
+            # Step 2: Multimodal AI Reasoning via Central Router
             gemini_res = route_video_intelligence(
                 video_path=video_result,
                 provider=provider_choice,
                 custom_gemini_key=gemini_key,
                 custom_mistral_key=mistral_key,
                 custom_groq_key=groq_key,
-                status_callback=status_box.write,
+                status_callback=deck.on_ai_status,
                 gemini_model_preference=model_choice,
                 extraction_mode=mode_choice,
                 affiliate_tags=get_affiliate_tags()
@@ -686,9 +790,10 @@ if process_btn:
             meta = gemini_res[4] if len(gemini_res) > 4 else {}
 
             total_elapsed = time.perf_counter() - start_time
+            skeleton_placeholder.empty()
 
             if not gemini_success:
-                status_box.update(label="❌ AI Intelligence Extraction Failed", state="error")
+                deck.update_step("ai", "error", f"Extraction Failed: {recipe_text}")
                 st.error(f"Extraction Error: {recipe_text}")
             else:
                 cat_name = meta.get("category_name", "Extracted Content")
@@ -700,7 +805,7 @@ if process_btn:
                 ai_duration = timings.get('inference_s', 0.0)
                 model_display = timings.get('model_used', model_choice)
 
-                status_box.update(label=f"🎉 {cat_name} Extracted in {total_elapsed:.1f}s: {item_title}!", state="complete")
+                deck.complete_all(total_elapsed)
                 st.balloons()
                 
                 # High-Visibility Latency & Performance Benchmark
