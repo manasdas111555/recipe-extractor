@@ -25,22 +25,20 @@
 
 | 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done |
 | :--- | :--- | :--- | :--- |
-| `UPA-101` Supabase Schema Migration<br>`UPA-102` RLS Security Policies<br>`UPA-103` URL Hash Cache Indexing<br>`UPA-104` FastAPI Directory Skeleton<br>`UPA-105` Supabase Auth & JWT Middleware<br>`UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite |
+| `UPA-101` Supabase Schema Migration<br>`UPA-102` RLS Security Policies<br>`UPA-103` URL Hash Cache Indexing<br>`UPA-104` FastAPI Directory Skeleton<br>`UPA-105` Supabase Auth & JWT Middleware<br>`UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline |
 
 ---
 
 ## 🎯 Epics Breakdown
 
 ```
-[EPIC 1: Data Layer] ──> [EPIC 2: API Gateway] ──> [EPIC 3: Worker Queue]
-                                                         │
-                                                         ▼
-[EPIC 6: Next.js PWA] <── [EPIC 5: Mobile Bots] <── [EPIC 4: Commerce Engine]
-        │
-        ▼
-[EPIC 7: Monetization & Quotas]
+[EPIC 0: DevOps & CI/CD] ──> [EPIC 1: Data Layer] ──> [EPIC 2: API Gateway] ──> [EPIC 3: Worker Queue]
+                                                                                       │
+                                                                                       ▼
+[EPIC 7: Monetization] <── [EPIC 6: Next.js PWA] <── [EPIC 5: Mobile Bots] <── [EPIC 4: Commerce Engine]
 ```
 
+* **EPIC-0 (`UPA-E0`)**: DevOps, CI/CD Pipeline & 3-Tier Multi-Environment Architecture (Dev -> Staging -> Prod)
 * **EPIC-1 (`UPA-E1`)**: Multi-Tenant Data Layer & Database Architecture (Supabase / PostgreSQL)
 * **EPIC-2 (`UPA-E2`)**: Decoupled Asynchronous API Gateway (FastAPI)
 * **EPIC-3 (`UPA-E3`)**: High-Concurrency Async Media Worker & Extraction Pipeline (Celery + Redis)
@@ -53,7 +51,19 @@
 
 ## 📝 User Stories Backlog
 
-### 🏢 EPIC-1: Multi-Tenant Data Layer & Database Architecture (Supabase / PostgreSQL)
+### 🛠️ EPIC-0: DevOps, CI/CD & 3-Tier Multi-Environment Infrastructure
+
+#### `UPA-004`: 3-Tier Multi-Environment Architecture & CI/CD Pipeline
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
+- **User Story**: *As a devops engineer, I want isolated Development, Staging, and Production environments backed by automated GitHub Actions CI and pre-promotion gates, so that untested code never breaks the live production site.*
+- **Acceptance Criteria**:
+  - [x] Permanent `staging` branch created on GitHub (`origin/staging`).
+  - [x] Automated GitHub Actions CI workflow (`.github/workflows/ci.yml`) runs on pushes/PRs to `Dev`, `staging`, `main`.
+  - [x] Pre-promotion verification script (`scripts/verify_promotion.py`) validates syntax, clean isolated module imports, and 30 unit tests.
+  - [x] Branch promotion script (`scripts/promote.py`) safely merges `Dev -> staging` and `staging -> main` after running verification gates.
+- **Dependencies**: None.
+
+---
 
 #### `UPA-101`: Provision Managed PostgreSQL Schema on Supabase
 - **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
