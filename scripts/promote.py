@@ -17,6 +17,14 @@ import argparse
 import subprocess
 from pathlib import Path
 
+# Force UTF-8 encoding on Windows consoles
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 def run_cmd(cmd, check=True):
