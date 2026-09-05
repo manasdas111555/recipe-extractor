@@ -44,22 +44,31 @@ def get_recipe_display_name(txt_file_path: str) -> str:
 def get_category_header(recipe_name: str, category: str = "RECIPE") -> Tuple[str, str]:
     """Returns (header_caption, emoji_icon) based on category."""
     cat = (category or "RECIPE").upper()
-    if "KITCHEN" in cat:
+    if "EDUCATIONAL" in cat or "ACADEMIC" in cat or "EXPLAINER" in cat or "SCIENCE" in cat:
+        return f"Here is educational explainer & study notes for - {recipe_name} !", "🎓"
+    elif "TUTORIAL" in cat or "TECH" in cat or "CODE" in cat or "HOW_TO" in cat or "DIY" in cat:
+        return f"Here is tutorial guide & learning links for - {recipe_name} !", "💻"
+    elif "KITCHEN" in cat:
         return f"Here is kitchen finds & product buy links for - {recipe_name} !", "🛍️"
     elif "PRODUCT" in cat or "UNBOXING" in cat or "HAUL" in cat:
         return f"Here is product finds & buy links for - {recipe_name} !", "📦"
-    elif "WORKOUT" in cat or "FITNESS" in cat:
+    elif "WORKOUT" in cat or "FITNESS" in cat or "EXERCISE" in cat:
         return f"Here is workout routine for - {recipe_name} !", "🏋️"
-    elif "TECH" in cat or "TUTORIAL" in cat or "CODE" in cat:
-        return f"Here is tutorial notes for - {recipe_name} !", "💻"
+    elif "FINANCE" in cat or "BUSINESS" in cat or "INVEST" in cat:
+        return f"Here is finance & business breakdown for - {recipe_name} !", "💰"
     elif "TRAVEL" in cat or "PLACE" in cat:
         return f"Here is travel guide for - {recipe_name} !", "✈️"
+    elif "BEAUTY" in cat or "FASHION" in cat or "SKINCARE" in cat:
+        return f"Here is beauty & style guide for - {recipe_name} !", "💄"
+    elif "HACK" in cat or "PRODUCTIVITY" in cat:
+        return f"Here is life hacks & productivity tips for - {recipe_name} !", "💡"
     elif "KNOWLEDGE" in cat or "SUMMARY" in cat:
-        return f"Here is summary notes for - {recipe_name} !", "💡"
+        return f"Here is key summary notes for - {recipe_name} !", "💡"
     elif "GENERAL" in cat:
         return f"Here is key takeaways for - {recipe_name} !", "📝"
     else:
         return f"Here is recipe file for - {recipe_name} !", "🍳"
+
 
 def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, resources: list = None) -> str:
     """

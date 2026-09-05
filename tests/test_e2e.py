@@ -145,7 +145,7 @@ Day 1: Foundations.
 Day 2: LangChain.
 """
         meta = parse_extracted_content(sample)
-        self.assertEqual(meta["category"], "TECH_TUTORIAL")
+        self.assertIn(meta["category"], ["TUTORIAL", "TECH_TUTORIAL"])
         self.assertIn("resources", meta)
         self.assertEqual(len(meta["resources"]), 3)
         res1 = meta["resources"][0]
@@ -178,7 +178,7 @@ Detailed Steps & Notes:
 * **Saturday & Sunday - Hands-On GitHub Projects:** Spend the weekend building open-source AI agent projects.
 """
         meta = parse_extracted_content(sample)
-        self.assertEqual(meta["category"], "TECH_TUTORIAL")
+        self.assertIn(meta["category"], ["TUTORIAL", "TECH_TUTORIAL"])
         self.assertIn("resources", meta)
         self.assertGreaterEqual(len(meta["resources"]), 5)
         # Verify first resource captures Stanford / LLM Fundamentals
@@ -188,6 +188,47 @@ Detailed Steps & Notes:
             "Stanford" in first["name"] or "LLM Fundamentals" in first["name"],
             f"Expected Stanford or LLM Fundamentals in resource name, got: {first['name']}"
         )
+
+    def test_parse_extracted_content_educational_concept(self):
+        sample = """
+[CATEGORY]: EDUCATIONAL
+[TITLE]: How Quantum Computing Actually Works
+[SUMMARY]: An academic explainer on qubits, superposition, and quantum entanglement.
+"""
+        meta = parse_extracted_content(sample)
+        self.assertEqual(meta["category"], "EDUCATIONAL")
+        self.assertEqual(meta["emoji"], "🎓")
+        self.assertEqual(meta["category_name"], "Educational & Concept Explainer")
+
+    def test_parse_extracted_content_tutorial_diy(self):
+        sample = """
+[CATEGORY]: TUTORIAL
+[TITLE]: How to Build a Custom Mechanical Keyboard
+[SUMMARY]: Step-by-step soldering, lubing, and assembly guide for custom keyboard builds.
+"""
+        meta = parse_extracted_content(sample)
+        self.assertEqual(meta["category"], "TUTORIAL")
+        self.assertEqual(meta["emoji"], "💻")
+        self.assertEqual(meta["category_name"], "Tutorial & How-To Guide")
+
+    def test_parse_extracted_content_finance_and_beauty(self):
+        sample_fin = """
+[CATEGORY]: FINANCE_BUSINESS
+[TITLE]: Index Funds vs Dividend Stocks
+[SUMMARY]: Comparison of long-term compound growth.
+"""
+        meta_fin = parse_extracted_content(sample_fin)
+        self.assertEqual(meta_fin["category"], "FINANCE_BUSINESS")
+        self.assertEqual(meta_fin["emoji"], "💰")
+
+        sample_beauty = """
+[CATEGORY]: BEAUTY_FASHION
+[TITLE]: 5-Minute Daily Glass Skin Routine
+[SUMMARY]: Clean Korean skincare routine.
+"""
+        meta_beauty = parse_extracted_content(sample_beauty)
+        self.assertEqual(meta_beauty["category"], "BEAUTY_FASHION")
+        self.assertEqual(meta_beauty["emoji"], "💄")
 
 
 
@@ -219,6 +260,7 @@ Price: ₹349
 """
         meta = parse_extracted_content(sample)
         self.assertEqual(meta["category"], "KITCHEN_FINDS")
+        self.assertEqual(meta["emoji"], "🛍️")
         self.assertEqual(meta["title"], "5 Smart Amazon Kitchen Gadgets")
         self.assertEqual(len(meta["products"]), 3)
         self.assertEqual(meta["products"][0]["name"], "Electric Spice Grinder")
@@ -227,6 +269,14 @@ Price: ₹349
         self.assertEqual(meta["products"][1]["name"], "Oil Dispenser with Silicone Brush")
 
     def test_category_headers(self):
+        h, icon = get_category_header("Quantum Physics", "EDUCATIONAL")
+        self.assertIn("educational", h.lower())
+        self.assertEqual(icon, "🎓")
+
+        h, icon = get_category_header("Docker Setup", "TUTORIAL")
+        self.assertIn("tutorial", h.lower())
+        self.assertEqual(icon, "💻")
+
         h, icon = get_category_header("Pasta", "RECIPE")
         self.assertIn("recipe", h.lower())
         self.assertEqual(icon, "🍳")
@@ -243,9 +293,18 @@ Price: ₹349
         self.assertIn("workout", h.lower())
         self.assertEqual(icon, "🏋️")
 
-        h, icon = get_category_header("Docker Setup", "TECH_TUTORIAL")
-        self.assertIn("tutorial", h.lower())
-        self.assertEqual(icon, "💻")
+        h, icon = get_category_header("Index Funds", "FINANCE_BUSINESS")
+        self.assertIn("finance", h.lower())
+        self.assertEqual(icon, "💰")
+
+        h, icon = get_category_header("Skincare Routine", "BEAUTY_FASHION")
+        self.assertIn("beauty", h.lower())
+        self.assertEqual(icon, "💄")
+
+        h, icon = get_category_header("Morning Habits", "LIFE_HACKS")
+        self.assertIn("hacks", h.lower())
+        self.assertEqual(icon, "💡")
+
 
     def test_generate_whatsapp_deep_link_with_products(self):
         products = [

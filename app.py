@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import sys
 import time
+import textwrap
 from pathlib import Path
 
 # Force UTF-8 encoding on Windows console for currency symbols (₹) and emojis
@@ -350,6 +351,22 @@ st.markdown("""
         filter: brightness(1.1);
     }
 
+    /* AI Category Classification Banner */
+    .classification-banner {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.9) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45), 0 0 20px rgba(56, 189, 248, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+
     /* WhatsApp Emerald Glowing Action */
     .wa-btn-luxury {
         display: inline-flex;
@@ -608,17 +625,20 @@ mode_choice = st.sidebar.selectbox(
     "Domain Classifier",
     options=[
         "Auto-Detect (Universal AI)",
-        "Kitchen Finds & Home Gadgets",
-        "Amazon & Product Unboxing",
-        "Cooking Recipe",
-        "Fitness & Workout",
-        "Tech & Coding Tutorial",
-        "Travel & Food Guide",
-        "Summary & Key Takeaways"
+        "🍳 Cooking Recipe & Food",
+        "🛍️ Kitchen Finds & Home Gadgets",
+        "🎓 Educational & Concept Explainer",
+        "💻 Tutorial & How-To Guide (Tech, Coding, DIY)",
+        "📦 Product Unboxing & Amazon Finds",
+        "🏋️ Fitness & Workout Routine",
+        "💰 Finance, Business & Investing",
+        "✈️ Travel, Places & Food Guide",
+        "💄 Beauty, Skincare & Fashion",
+        "💡 Life Hacks & Productivity"
     ],
     index=0,
     label_visibility="collapsed",
-    help="Auto-Detect intelligently determines whether the video is a kitchen finds review, unboxing, recipe, fitness routine, tech tutorial, or summary."
+    help="Auto-Detect intelligently determines whether the video is educational, tutorial, kitchen finds, recipe, workout, finance, beauty, or travel."
 )
 
 # Backend defaults for high performance
@@ -857,9 +877,23 @@ if process_btn:
                 b4.metric(f"🧠 AI ({model_display})", f"{ai_duration:.1f}s")
                 st.markdown("---")
                 
-                # Category Header Banner
-                st.markdown(f"### {cat_emoji} {item_title}")
-                st.markdown(f"<span class='badge-pill' style='background-color:#1E293B; color:#38BDF8; border:1px solid #38BDF8;'>🏷️ Detected Domain: {cat_name}</span>", unsafe_allow_html=True)
+                # AI Domain Classification Banner
+                classification_html = f"""
+                <div class="classification-banner">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="font-size:1.85rem; line-height:1;">{cat_emoji}</span>
+                        <div>
+                            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#94A3B8; font-weight:700;">AI Domain Classification</div>
+                            <div style="font-size:1.18rem; font-weight:800; color:#38BDF8; font-family:'Outfit',sans-serif; letter-spacing:-0.01em;">{cat_name}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span style="background:rgba(56, 189, 248, 0.12); color:#38BDF8; border:1px solid rgba(56, 189, 248, 0.35); font-size:0.76rem; font-weight:700; padding:4px 12px; border-radius:9999px;">✓ Verified Domain</span>
+                    </div>
+                </div>
+                """
+                st.markdown(textwrap.dedent(classification_html).strip(), unsafe_allow_html=True)
+                st.markdown(f"### {item_title}")
                 
                 if meta.get("summary"):
                     st.info(f"**Executive Summary**: {meta['summary']}")

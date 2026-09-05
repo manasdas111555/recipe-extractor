@@ -29,24 +29,34 @@ from config import get_api_key, ensure_download_dir, get_affiliate_tags
 
 
 CATEGORY_EMOJIS = {
-    "KITCHEN_FINDS": "🛍️",
-    "PRODUCT_FINDS": "📦",
     "RECIPE": "🍳",
-    "WORKOUT": "🏋️",
+    "KITCHEN_FINDS": "🛍️",
+    "EDUCATIONAL": "🎓",
+    "TUTORIAL": "💻",
     "TECH_TUTORIAL": "💻",
+    "PRODUCT_FINDS": "📦",
+    "WORKOUT": "🏋️",
+    "FINANCE_BUSINESS": "💰",
     "TRAVEL_GUIDE": "✈️",
+    "BEAUTY_FASHION": "💄",
+    "LIFE_HACKS": "💡",
     "KNOWLEDGE_SUMMARY": "💡",
     "GENERAL": "📝"
 }
 
 CATEGORY_NAMES = {
-    "KITCHEN_FINDS": "Kitchen & Home Finds",
-    "PRODUCT_FINDS": "Product Unboxing & Finds",
     "RECIPE": "Cooking Recipe",
-    "WORKOUT": "Fitness Workout",
-    "TECH_TUTORIAL": "Tech Tutorial",
-    "TRAVEL_GUIDE": "Travel & Food Guide",
-    "KNOWLEDGE_SUMMARY": "Knowledge & Summary",
+    "KITCHEN_FINDS": "Kitchen & Home Finds",
+    "EDUCATIONAL": "Educational & Concept Explainer",
+    "TUTORIAL": "Tutorial & How-To Guide",
+    "TECH_TUTORIAL": "Tutorial & How-To Guide",
+    "PRODUCT_FINDS": "Product Unboxing & Finds",
+    "WORKOUT": "Fitness & Workout Routine",
+    "FINANCE_BUSINESS": "Finance & Business Insights",
+    "TRAVEL_GUIDE": "Travel & Places Guide",
+    "BEAUTY_FASHION": "Beauty, Skincare & Fashion",
+    "LIFE_HACKS": "Life Hacks & Productivity",
+    "KNOWLEDGE_SUMMARY": "Knowledge & Executive Summary",
     "GENERAL": "General Intelligence"
 }
 
@@ -94,7 +104,7 @@ For each product:
 - Key Functionality & Value Proposition:
 - Buyer Advice & Verdict:
 """
-    elif "recipe" in clean_mode:
+    elif "recipe" in clean_mode or "cook" in clean_mode:
         return """
 Analyze this video and extract a comprehensive cooking recipe.
 Structure your response as follows:
@@ -115,7 +125,64 @@ If no specific purchasable products/gadgets are featured, write:
 - Step-by-Step Cooking Instructions:
 - Chef tips, substitutions & nutrition (if mentioned):
 """
-    elif "workout" in clean_mode or "fitness" in clean_mode:
+    elif "educational" in clean_mode or "academic" in clean_mode or "science" in clean_mode or "history" in clean_mode or "explainer" in clean_mode:
+        return """
+Analyze this video and extract comprehensive educational notes, core concepts, and recommended learning resources.
+Structure your response strictly as follows:
+[CATEGORY]: EDUCATIONAL
+[TITLE]: <Clear, academic topic or concept title, max 6-8 words>
+[SUMMARY]: <A 2-3 sentence executive overview explaining the core thesis, scientific principle, or historical topic>
+
+[RESOURCES & TUTORIALS]:
+For EVERY lecture series, academic paper, YouTube explainer, book, or online course cited or recommended to study this topic:
+List each one in this exact line format:
+- RESOURCE: <Lecture / Course / Book Name> | PLATFORM: <YouTube | Course | Book | Paper> | SEARCH: <Targeted search query to find and study this topic on YouTube, e.g. 'MIT physics lectures' or 'Khan Academy calculus'>
+If no external learning resources are featured, write:
+[RESOURCES & TUTORIALS]: NONE
+
+[PRODUCTS]:
+If any specific textbooks, study tools, lab equipment, or calculators are recommended:
+- PRODUCT: <Item/Book Name> | PRICE: <Price if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If none, write:
+[PRODUCTS]: NONE
+
+---
+[DETAILS]:
+- Subject Area & Target Concept:
+- Theoretical Foundations & In-Depth Explanation:
+- Key Laws, Formulas, Dates or Core Definitions:
+- Practical Analogies & Real-World Case Studies:
+- Summary & Core Study Takeaways:
+"""
+    elif "tutorial" in clean_mode or "tech" in clean_mode or "code" in clean_mode or "how-to" in clean_mode or "howto" in clean_mode or "diy" in clean_mode:
+        return """
+Analyze this video and extract detailed step-by-step tutorial notes, procedures, and learning resources.
+Structure your response as follows:
+[CATEGORY]: TUTORIAL
+[TITLE]: <Clear tutorial topic or project title, max 6-8 words>
+[SUMMARY]: <A 2-3 sentence overview of what is taught, built, or scheduled>
+
+[RESOURCES & TUTORIALS]:
+For EVERY tutorial, lecture, course, framework, library, tool, or roadmap milestone mentioned or recommended in this video (especially YouTube tutorials, Stanford/MIT lectures, GitHub repos, documentation):
+List each one in this exact line format:
+- RESOURCE: <Tutorial or Course or Topic Name> | PLATFORM: <YouTube | GitHub | Documentation | Course> | SEARCH: <Targeted search query to find and watch this exact tutorial on YouTube, e.g. 'Stanford LLM lectures' or 'LangChain tutorial for beginners'>
+If no external tutorials, courses, or tools are mentioned, write:
+[RESOURCES & TUTORIALS]: NONE
+
+[PRODUCTS]:
+If any specific tech gadgets, hardware, devices, tools, craft supplies, or peripherals are featured or recommended to buy, list each one in this exact line format:
+- PRODUCT: <Brand/Model Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If no hardware or physical products are featured, write:
+[PRODUCTS]: NONE
+
+---
+[DETAILS]:
+- Prerequisites & Tools Needed:
+- Step-by-Step Instructions / Roadmap:
+- Exact Commands / Code Snippets / Action Steps:
+- Common Gotchas & Best Practices:
+"""
+    elif "workout" in clean_mode or "fitness" in clean_mode or "gym" in clean_mode:
         return """
 Analyze this video and extract the complete fitness workout routine.
 Structure your response as follows:
@@ -136,39 +203,59 @@ If no specific gear/equipment is featured, write:
 - Exercise Routine (Exercise name, Sets x Reps, Rest interval):
 - Form Cues, Technique Tips & Mistakes to Avoid:
 """
-    elif "tech" in clean_mode or "tutorial" in clean_mode or "code" in clean_mode:
+    elif "finance" in clean_mode or "business" in clean_mode or "invest" in clean_mode or "money" in clean_mode:
         return """
-Analyze this video and extract detailed technical tutorial notes, roadmap steps, and learning resources.
+Analyze this video and extract financial, investment, or business strategy insights.
 Structure your response as follows:
-[CATEGORY]: TECH_TUTORIAL
-[TITLE]: <Clear tech topic or tutorial title, max 6-8 words>
-[SUMMARY]: <A 2-3 sentence overview of what is taught, built, or scheduled>
+[CATEGORY]: FINANCE_BUSINESS
+[TITLE]: <Core financial topic or company title, max 6-8 words>
+[SUMMARY]: <A 2-3 sentence executive overview of the financial strategy or market insight>
 
 [RESOURCES & TUTORIALS]:
-For EVERY tutorial, lecture, course, framework, library, tool, or roadmap milestone mentioned or recommended in this video (especially YouTube tutorials, Stanford/MIT lectures, GitHub repos, documentation):
-List each one in this exact line format:
-- RESOURCE: <Tutorial or Course or Topic Name> | PLATFORM: <YouTube | GitHub | Documentation | Course> | SEARCH: <Targeted search query to find and watch this exact tutorial on YouTube, e.g. 'Stanford LLM lectures full course' or 'LangChain tutorial for beginners'>
-If no external tutorials, courses, or tools are mentioned, write:
+If any specific finance books, courses, YouTube analysis channels, or data platforms are recommended:
+- RESOURCE: <Resource Name> | PLATFORM: <YouTube | Book | Course> | SEARCH: <Targeted YouTube search query>
+If none, write:
 [RESOURCES & TUTORIALS]: NONE
 
 [PRODUCTS]:
-If any specific tech gadgets, hardware, devices, tools, or peripherals are featured or recommended to buy, list each one in this exact line format:
-- PRODUCT: <Brand/Model Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
-If no hardware or physical products are featured, write:
+If any books, financial tools, software, or planners are featured:
+- PRODUCT: <Item/Book Name> | PRICE: <Price if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If none, write:
 [PRODUCTS]: NONE
 
 ---
 [DETAILS]:
-- Prerequisites & Tools Used:
-- Step-by-Step Instructions & Roadmap:
-- Commands / Code Snippets:
-- Common Gotchas & Best Practices:
+- Market Context & Thesis:
+- Key Numbers, Metrics & Financial Rules:
+- Step-by-Step Strategy & Execution:
+- Risk Factors, Pitfalls & Disclaimer:
 """
-    elif "summary" in clean_mode or "knowledge" in clean_mode:
+    elif "beauty" in clean_mode or "fashion" in clean_mode or "skincare" in clean_mode or "makeup" in clean_mode:
         return """
-Analyze this video and extract an executive summary with key takeaways and recommended resources.
+Analyze this video and extract beauty, skincare, or fashion styling details.
 Structure your response as follows:
-[CATEGORY]: KNOWLEDGE_SUMMARY
+[CATEGORY]: BEAUTY_FASHION
+[TITLE]: <Descriptive style or routine title, max 6-8 words>
+[SUMMARY]: <A 2-3 sentence overview of the style, look, or skincare regimen>
+
+[PRODUCTS]:
+For EVERY cosmetic, skincare product, hair styling tool, or clothing item showcased:
+- PRODUCT: <Brand & Shade / Product Name> | PRICE: <Price if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If none, write:
+[PRODUCTS]: NONE
+
+---
+[DETAILS]:
+- Skin/Hair Type & Look Objective:
+- Product Application Order & Techniques:
+- Step-by-Step Styling/Routine Guide:
+- Pro-Tips & Common Mistakes:
+"""
+    elif "summary" in clean_mode or "knowledge" in clean_mode or "hack" in clean_mode or "productivity" in clean_mode:
+        return """
+Analyze this video and extract an executive summary with key takeaways and life hacks.
+Structure your response as follows:
+[CATEGORY]: LIFE_HACKS
 [TITLE]: <Core topic title, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary>
 
@@ -196,24 +283,34 @@ If no purchasable products are mentioned, write:
 You are an expert Content Intelligence AI.
 Analyze the uploaded video thoroughly and automatically classify and extract structured information tailored to its actual domain.
 
-First, determine the CATEGORY of the video:
-- KITCHEN_FINDS (kitchen gadgets, home organizers, kitchen tools, cookware reviews, Amazon kitchen finds)
-- PRODUCT_FINDS (product unboxings, gadget hauls, Amazon finds, tool reviews, lifestyle gear)
-- RECIPE (actual cooking, baking, dish preparation, edible recipes with ingredients)
-- WORKOUT (exercises, fitness routines, gym, yoga)
-- TECH_TUTORIAL (coding, software tools, computer guides, engineering roadmaps)
-- TRAVEL_GUIDE (places to visit, restaurants, travel itineraries, travel tips)
-- KNOWLEDGE_SUMMARY (finance, business, life hacks, book summaries, educational)
-- GENERAL (any other informative content)
+First, classify the video into one of these specific CATEGORIES:
+- EDUCATIONAL: Academic concepts, science, history, deep dive explainers, theory, math, astronomy, or intellectual knowledge.
+- TUTORIAL: Step-by-step how-to guides, coding, software walkthroughs, tech roadmaps, DIY crafts, editing, or hands-on procedures.
+- KITCHEN_FINDS: Kitchen utensils, smart gadgets, food storage organizers, cookware reviews, or Amazon kitchen finds.
+- RECIPE: Actual cooking, baking, seasoning, or food/drink preparation with edible ingredients and culinary steps.
+- PRODUCT_FINDS: Consumer electronics, unboxings, everyday gadget hauls, tools, or lifestyle gear reviews.
+- WORKOUT: Fitness routines, gym exercises, yoga, bodyweight movements, or sports training.
+- FINANCE_BUSINESS: Personal finance, investing, stock market, crypto, business breakdowns, or economics.
+- TRAVEL_GUIDE: Destinations, places to visit, restaurants, itinerary tips, or city guides.
+- BEAUTY_FASHION: Makeup tutorials, skincare routines, hairstyle guides, or clothing outfit styling.
+- LIFE_HACKS: Everyday life shortcuts, organization tricks, or productivity habits.
+- GENERAL: Any other informative or entertainment content.
 
-CRITICAL INSTRUCTION FOR CLASSIFICATION:
-If the video demonstrates kitchen utensils, storage organizers, gadgets, or Amazon finds, DO NOT classify it as RECIPE. Classify it as KITCHEN_FINDS or PRODUCT_FINDS!
-Only classify as RECIPE if someone is actually preparing, seasoning, cooking, or baking food/drinks with edible ingredients.
+CRITICAL CLASSIFICATION RULES:
+1. EDUCATIONAL vs TUTORIAL:
+   - If the video explains a concept, science, history, or knowledge topic without hands-on build steps -> EDUCATIONAL.
+   - If the video provides step-by-step instructions on how to build, code, fix, configure, or do something -> TUTORIAL.
+2. KITCHEN_FINDS vs RECIPE:
+   - If the video demonstrates kitchen utensils, storage organizers, gadgets, or Amazon finds, DO NOT classify it as RECIPE. Classify it as KITCHEN_FINDS!
+   - Only classify as RECIPE if someone is actually preparing, seasoning, cooking, or baking food/drinks with edible ingredients.
+3. PRODUCT_FINDS vs BEAUTY_FASHION:
+   - If cosmetics, skincare, or fashion -> BEAUTY_FASHION.
+   - If electronics, gadgets, or tools -> PRODUCT_FINDS.
 
 Structure your response strictly as follows:
-[CATEGORY]: <KITCHEN_FINDS | PRODUCT_FINDS | RECIPE | WORKOUT | TECH_TUTORIAL | TRAVEL_GUIDE | KNOWLEDGE_SUMMARY | GENERAL>
+[CATEGORY]: <EDUCATIONAL | TUTORIAL | KITCHEN_FINDS | RECIPE | PRODUCT_FINDS | WORKOUT | FINANCE_BUSINESS | TRAVEL_GUIDE | BEAUTY_FASHION | LIFE_HACKS | GENERAL>
 [TITLE]: <A clear, descriptive title-cased name for this video, max 6-8 words>
-[SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates or reviews>
+[SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates, explains, or reviews>
 
 [RESOURCES & TUTORIALS]:
 If this video recommends or mentions tutorials, lectures, courses, frameworks, libraries, tools, or learning roadmaps (e.g. YouTube tutorials, Stanford/MIT lectures, GitHub repos, documentation):
@@ -223,7 +320,7 @@ If no external tutorials or learning resources are featured, write:
 [RESOURCES & TUTORIALS]: NONE
 
 [PRODUCTS]:
-For EVERY physical item, gadget, or product showcased, reviewed, or unboxed in this video, list each one in this exact line format:
+For EVERY physical item, gadget, cosmetic, book, or product showcased, reviewed, or unboxed in this video, list each one in this exact line format:
 - PRODUCT: <Brand & Model / Item Name> | PRICE: <Price if stated or estimated, e.g. Under ₹1000, or 'N/A'> | SEARCH: <Targeted search query to find and buy this exact item online>
 
 If no specific purchasable products or equipment are featured, write:
@@ -231,13 +328,16 @@ If no specific purchasable products or equipment are featured, write:
 
 ---
 [DETAILS]:
-(Provide rich, comprehensive, actionable details depending on the category):
-- If KITCHEN_FINDS or PRODUCT_FINDS: List each item with its key features, what it is used for, usability tips, and pros/cons.
-- If RECIPE: Full ingredients with exact measurements, equipment needed, prep & cook time, step-by-step instructions, serving tips, and nutrition/calories if mentioned.
-- If WORKOUT: Target muscles, equipment needed, warm-up, each exercise with sets x reps and rest intervals, and technique/form cues.
-- If TECH_TUTORIAL: Tools & prerequisites, roadmap schedule / step-by-step breakdown, exact commands/code snippets, and key notes.
-- If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing/costs, and itinerary tips.
-- If KNOWLEDGE_SUMMARY or GENERAL: Core principles, bulleted step-by-step breakdown, key insights, and actionable takeaways.
+(Provide rich, comprehensive, actionable details tailored to the category):
+- If EDUCATIONAL: Core concepts, theoretical foundations, key definitions, real-world examples, and key study takeaways.
+- If TUTORIAL: Prerequisites & tools, step-by-step procedures/roadmap, exact commands/code, and tips/pitfalls.
+- If KITCHEN_FINDS or PRODUCT_FINDS: List each item with key features, usability tips, and pros/cons.
+- If RECIPE: Full ingredients with exact measurements, equipment needed, prep & cook time, step-by-step instructions, and chef tips.
+- If WORKOUT: Target muscles, equipment needed, warm-up, each exercise with sets x reps and rest intervals, and form cues.
+- If FINANCE_BUSINESS: Key financial thesis, metrics/formulas, step-by-step strategy, and risk factors.
+- If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing, and itinerary tips.
+- If BEAUTY_FASHION: Target look, product order, step-by-step routine, and pro tips.
+- If LIFE_HACKS or GENERAL: Core principles, bulleted step-by-step breakdown, and actionable takeaways.
 
 Be thorough, precise, and practical. Do not omit crucial steps, tutorial names, or product names.
 """
@@ -259,18 +359,26 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     cat_match = re.search(r'\[CATEGORY\]:\s*([A-Za-z_]+)', raw_text, re.IGNORECASE)
     if cat_match:
         found_cat = cat_match.group(1).upper().strip()
-        if any(c in found_cat for c in ["KITCHEN_FINDS", "KITCHEN_FIND", "KITCHEN_GADGET", "HOME_FIND"]):
+        if any(c in found_cat for c in ["EDUCATIONAL", "EDUCATION", "EXPLAINER", "ACADEMIC", "SCIENCE", "HISTORY", "THEORY"]):
+            category = "EDUCATIONAL"
+        elif any(c in found_cat for c in ["TUTORIAL", "TECH_TUTORIAL", "TECH", "CODE", "PROGRAMMING", "HOW_TO", "HOWTO", "DIY", "GUIDE"]):
+            category = "TUTORIAL"
+        elif any(c in found_cat for c in ["KITCHEN_FINDS", "KITCHEN_FIND", "KITCHEN_GADGET", "HOME_FIND"]):
             category = "KITCHEN_FINDS"
         elif any(c in found_cat for c in ["PRODUCT_FINDS", "PRODUCT_FIND", "UNBOXING", "PRODUCT_REVIEW", "HAUL", "AMAZON_FIND"]):
             category = "PRODUCT_FINDS"
-        elif any(c in found_cat for c in ["WORKOUT", "FITNESS", "EXERCISE"]):
+        elif any(c in found_cat for c in ["WORKOUT", "FITNESS", "EXERCISE", "GYM", "YOGA"]):
             category = "WORKOUT"
-        elif any(c in found_cat for c in ["TECH", "CODE", "PROGRAMMING", "TUTORIAL"]):
-            category = "TECH_TUTORIAL"
-        elif any(c in found_cat for c in ["TRAVEL", "PLACE", "RESTAURANT", "FOOD_GUIDE"]):
+        elif any(c in found_cat for c in ["FINANCE_BUSINESS", "FINANCE", "BUSINESS", "INVESTING", "MONEY", "CRYPTO", "STOCKS"]):
+            category = "FINANCE_BUSINESS"
+        elif any(c in found_cat for c in ["TRAVEL_GUIDE", "TRAVEL", "PLACE", "RESTAURANT", "FOOD_GUIDE", "ITINERARY"]):
             category = "TRAVEL_GUIDE"
-        elif any(c in found_cat for c in ["KNOWLEDGE", "FINANCE", "SUMMARY", "BOOK"]):
-            category = "KNOWLEDGE_SUMMARY"
+        elif any(c in found_cat for c in ["BEAUTY_FASHION", "BEAUTY", "SKINCARE", "MAKEUP", "FASHION", "STYLE", "GROOMING"]):
+            category = "BEAUTY_FASHION"
+        elif any(c in found_cat for c in ["LIFE_HACKS", "LIFE_HACK", "PRODUCTIVITY", "HACK", "HABIT"]):
+            category = "LIFE_HACKS"
+        elif any(c in found_cat for c in ["KNOWLEDGE_SUMMARY", "KNOWLEDGE", "SUMMARY", "BOOK"]):
+            category = "EDUCATIONAL"
         elif any(c in found_cat for c in ["RECIPE", "COOK", "BAKE"]):
             category = "RECIPE"
         else:
@@ -278,22 +386,29 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     else:
         # Fallback category detection if [CATEGORY] tag is omitted in output
         header_sample = raw_text[:400].upper()
-        if any(k in header_sample for k in ["TECH TUTORIAL", "TECH_TUTORIAL", "ROADMAP", "PROGRAMMING", "AI ENGINEER", "LLM", "💻"]):
-            category = "TECH_TUTORIAL"
+        if any(k in header_sample for k in ["EDUCATIONAL", "EXPLAINER", "CONCEPT", "SCIENCE", "HISTORY", "THEORY", "LECTURE", "ACADEMIC"]):
+            category = "EDUCATIONAL"
+        elif any(k in header_sample for k in ["TUTORIAL", "TECH TUTORIAL", "TECH_TUTORIAL", "ROADMAP", "PROGRAMMING", "AI ENGINEER", "LLM", "HOW TO", "HOW-TO", "DIY", "💻"]):
+            category = "TUTORIAL"
         elif any(k in header_sample for k in ["KITCHEN FINDS", "KITCHEN_FINDS", "KITCHEN GADGET", "HOME FINDS"]):
             category = "KITCHEN_FINDS"
-        elif any(k in header_sample for k in ["PRODUCT FINDS", "AMAZON FINDS", "UNBOXING"]):
+        elif any(k in header_sample for k in ["PRODUCT FINDS", "AMAZON FINDS", "UNBOXING", "HAUL"]):
             category = "PRODUCT_FINDS"
-        elif any(k in header_sample for k in ["WORKOUT", "FITNESS", "EXERCISE", "ROUTINE", "GYM"]):
+        elif any(k in header_sample for k in ["WORKOUT", "FITNESS", "EXERCISE", "ROUTINE", "GYM", "YOGA"]):
             category = "WORKOUT"
-        elif any(k in header_sample for k in ["TRAVEL GUIDE", "TRAVEL_GUIDE", "ITINERARY"]):
+        elif any(k in header_sample for k in ["FINANCE", "BUSINESS", "INVESTING", "STOCKS", "MONEY", "CRYPTO"]):
+            category = "FINANCE_BUSINESS"
+        elif any(k in header_sample for k in ["TRAVEL GUIDE", "TRAVEL_GUIDE", "ITINERARY", "PLACES TO VISIT"]):
             category = "TRAVEL_GUIDE"
-        elif any(k in header_sample for k in ["KNOWLEDGE", "SUMMARY", "BOOK SUMMARY"]):
-            category = "KNOWLEDGE_SUMMARY"
-        elif any(k in header_sample for k in ["RECIPE", "INGREDIENTS", "COOKING", "CHEF", "PREP TIME"]):
+        elif any(k in header_sample for k in ["BEAUTY", "SKINCARE", "MAKEUP", "FASHION", "HAIRSTYLE"]):
+            category = "BEAUTY_FASHION"
+        elif any(k in header_sample for k in ["LIFE HACK", "PRODUCTIVITY", "HACK", "SUMMARY", "BOOK SUMMARY"]):
+            category = "LIFE_HACKS"
+        elif any(k in header_sample for k in ["RECIPE", "INGREDIENTS", "COOKING", "CHEF", "PREP TIME", "BAKING"]):
             category = "RECIPE"
         else:
             category = "RECIPE"
+
 
 
     title_match = re.search(r'\[TITLE\]:\s*(.+)', raw_text, re.IGNORECASE)
@@ -355,7 +470,7 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                 })
 
     # Secondary Fallback: If no products were captured via [PRODUCTS] section but items are described in details
-    if len(products) == 0 and category in ["KITCHEN_FINDS", "PRODUCT_FINDS", "GENERAL"]:
+    if len(products) == 0 and category in ["KITCHEN_FINDS", "PRODUCT_FINDS", "BEAUTY_FASHION", "GENERAL"]:
         fallback_matches = re.findall(r'(?:^|\n)(?:###\s*\d+\.|\d+\.|\*)\s*\*\*([^*\n:]+)\*\*', raw_text)
         for f_item in fallback_matches:
             item_clean = f_item.strip()
@@ -418,9 +533,9 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                     "github_url": f"https://github.com/search?q={encoded_q}"
                 })
 
-    # Fallback for TECH_TUTORIAL, KNOWLEDGE_SUMMARY or Roadmaps:
+    # Fallback for TUTORIAL, EDUCATIONAL, LIFE_HACKS or Roadmaps:
     # If no explicit [RESOURCES & TUTORIALS] were captured, extract topics from roadmap steps/bullets
-    if len(resources) == 0 and category in ["TECH_TUTORIAL", "KNOWLEDGE_SUMMARY", "GENERAL"]:
+    if len(resources) == 0 and category in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "LIFE_HACKS", "KNOWLEDGE_SUMMARY", "FINANCE_BUSINESS", "GENERAL"]:
         step_matches = re.findall(r'(?:^|\n)(?:[-*•\d\.]+|###)\s*\*\*([^*\n:]+):\*\*\s*([^\n]+)', raw_text)
         for s_title, s_desc in step_matches:
             clean_s_title = re.sub(r'^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|\&|\s|-|\d+\.)+', '', s_title, flags=re.IGNORECASE).strip(' -:')
