@@ -25,7 +25,7 @@
 
 | 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done |
 | :--- | :--- | :--- | :--- |
-| `UPA-105` Supabase Auth & JWT Middleware<br>`UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline<br>`UPA-101` Supabase Schema Migration (001)<br>`UPA-102` Row Level Security Policies<br>`UPA-103` SHA-256 URL Hash Cache Index<br>`UPA-104` FastAPI Modular Backend Skeleton |
+| `UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline<br>`UPA-101` Supabase Schema Migration (001)<br>`UPA-102` Row Level Security Policies<br>`UPA-103` SHA-256 URL Hash Cache Index<br>`UPA-104` FastAPI Modular Backend Skeleton<br>`UPA-105` Supabase Auth & JWT Middleware |
 
 ---
 
@@ -111,12 +111,14 @@
 - **Dependencies**: None.
 
 #### `UPA-105`: Supabase Auth & JWT Verification Middleware
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a client app, I want to authenticate against FastAPI using Supabase JWT Bearer tokens, so that all protected endpoints identify the active user securely.*
 - **Acceptance Criteria**:
-  - [ ] `get_current_user` dependency validates Supabase JWT against Supabase secret.
-  - [ ] Inactive or expired tokens return HTTP 401 Unauthorized.
-  - [ ] Anonymous guest mode supported with fallback temporary guest UUID.
+  - [x] `get_current_user` dependency in `backend/app/core/security.py` validates Supabase JWT Bearer token claims.
+  - [x] Inactive, malformed, or expired tokens return HTTP 401 Unauthorized.
+  - [x] Anonymous guest mode supported with fallback guest UUID and 3 free trial daily quota.
+  - [x] `backend/app/core/supabase_client.py` provides resilient direct REST client for profiles, cache lookups, and quota RPC.
+  - [x] 4 unit tests in `tests/test_auth_security.py` validate guest sessions, JWT decoding, and 401 rejection.
 - **Dependencies**: `UPA-104`.
 
 #### `UPA-106`: Job Enqueue Endpoint (`POST /v1/extract`)

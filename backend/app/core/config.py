@@ -15,7 +15,7 @@ ENV_FILE = ROOT_DIR / ".env"
 
 class Settings(BaseSettings):
     # Service Information
-    PROJECT_NAME: str = "Universal Pro AI — API Gateway"
+    PROJECT_NAME: str = "Universal Pro AI - API Gateway"
     VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
     ENVIRONMENT: str = "development"

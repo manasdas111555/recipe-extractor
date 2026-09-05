@@ -26,8 +26,24 @@ async def get_v1_info():
             "finance_business"
         ],
         "endpoints": {
+            "auth": f"{settings.API_V1_PREFIX}/auth/me",
             "extract": f"{settings.API_V1_PREFIX}/extract (Queued in UPA-106)",
             "library": f"{settings.API_V1_PREFIX}/library",
             "webhooks": f"{settings.API_V1_PREFIX}/webhooks"
         }
     }
+
+from fastapi import Depends
+from backend.app.core.security import get_current_user
+
+@router.get("/auth/me", summary="Get Current Authenticated or Guest Profile", tags=["Authentication"])
+async def get_my_profile(current_user: dict = Depends(get_current_user)):
+    """
+    Returns the active user profile based on Supabase JWT Bearer token.
+    If unauthenticated, returns an anonymous guest session with free tier quota.
+    """
+    return {
+        "status": "success",
+        "user": current_user
+    }
+
