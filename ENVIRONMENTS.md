@@ -10,7 +10,7 @@ This guide details the **3-Tier Environment Architecture** for Universal Pro AI,
 | :--- | :--- | :--- | :--- |
 | **Git Branch** | **`Dev`** | **`staging`** | **`main`** *(Protected)* |
 | **Hosting Platform** | Local Workstation | Streamlit Cloud (Staging App) | Streamlit Cloud (Primary App) |
-| **Access URL** | `http://localhost:8501` | `https://manas-recipe-extractor-staging.streamlit.app/` | `https://manas-recipe-extractor.streamlit.app/` |
+| **Access URL** | `http://localhost:8501` | `https://universalpro-stage.streamlit.app/` | `https://universalpro-ai.streamlit.app/` |
 | **Primary Goal** | Fast feature development | Pre-production testing & cloud validation | 100% reliable consumer traffic |
 | **Data / API Keys** | Local `.env` | Streamlit Cloud Secrets (Staging) | Streamlit Cloud Secrets (Production) |
 | **Promotion Gate** | Manual commit | Automated CI + `scripts/verify_promotion.py` | Manual approval after Staging verification |
@@ -49,7 +49,7 @@ python scripts/promote.py --to main
    - **Repository**: `manasdas111555/recipe-extractor`
    - **Branch**: `staging`
    - **Main file path**: `app.py`
-   - **App URL**: `manas-recipe-extractor-staging` (or customized)
+   - **App URL**: `universalpro-stage` (Streamlit disallows the word 'staging', so use 'stage')
 4. Click **Advanced settings...** and paste your secrets:
    ```toml
    GEMINI_API_KEY = "..."

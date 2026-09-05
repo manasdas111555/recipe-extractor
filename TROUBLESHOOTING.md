@@ -17,6 +17,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-005** | 2026-09-05 | Monetization | How to create working affiliate links for Flipkart and Meesho | ✅ Resolved |
 | **ISSUE-006** | 2026-09-05 | Streamlit UI | HTML buttons rendered as raw code block text `<pre><code>` | ✅ Resolved |
 | **ISSUE-007** | 2026-09-05 | Cloud Deployment | `ImportError: cannot import name 'get_video_from_url'` on Streamlit Cloud | ✅ Resolved |
+| **ISSUE-008** | 2026-09-05 | Cloud Deployment | Custom subdomain error: "can't include the term 'staging'" on Streamlit Cloud | ✅ Resolved |
 
 ---
 
@@ -235,6 +236,31 @@ File "/mount/src/recipe-extractor/app.py", line 52, in <module>
    get_video_from_url = getattr(downloader, "get_video_from_url", getattr(downloader, "get_recipe_video", None))
    detect_platform = getattr(downloader, "detect_platform", lambda url: "Instagram Reel" if "instagram" in url.lower() else "Web Video")
    ```
+
+---
+
+### 🚨 ISSUE-008: Streamlit Cloud Disallows "staging" in Subdomain
+- **Date**: 2026-09-05
+- **Affected Environment**: Streamlit Cloud Deployment Settings
+
+#### 1. What Happened (Symptom):
+When attempting to deploy the staging branch with the custom subdomain `universalpro-staging.streamlit.app`, Streamlit Cloud displayed a red validation error:
+```text
+Custom subdomains can't include the term 'staging'. Please provide an alternative subdomain.
+```
+
+#### 2. Root Cause:
+Streamlit Community Cloud has a platform-level routing rule that reserves the keyword `"staging"` for internal Streamlit platform infrastructure and testing environments, blocking all user apps from using `"staging"` anywhere in custom subdomains.
+
+#### 3. Resolution:
+Use industry-standard alternative staging/testing environment prefixes that are accepted by Streamlit Cloud:
+- **`universalpro-stage`** (Recommended) $\rightarrow$ `https://universalpro-stage.streamlit.app/`
+- **`universalpro-test`** $\rightarrow$ `https://universalpro-test.streamlit.app/`
+- **`universalpro-beta`** $\rightarrow$ `https://universalpro-beta.streamlit.app/`
+- **`universalpro-preview`** $\rightarrow$ `https://universalpro-preview.streamlit.app/`
+
+#### 4. Testing & Verification:
+Entering `universalpro-stage` or `universalpro-beta` satisfies Streamlit's subdomain validation and enables the "Deploy" button.
 
 ---
 
