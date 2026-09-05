@@ -72,6 +72,16 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
 
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Pre-flight duration check: immediately intercept long videos before consuming bandwidth
+            try:
+                meta = ydl.extract_info(video_url, download=False)
+                if meta:
+                    duration = meta.get('duration')
+                    if duration and duration > MAX_VIDEO_DURATION:
+                        return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
+            except Exception:
+                pass  # If pre-flight check fails, proceed to single-pass download
+
             # Single-pass: retrieve metadata and download stream in one network pass
             info_dict = ydl.extract_info(video_url, download=True)
             if not info_dict:
@@ -84,7 +94,7 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
                 if os.path.exists(base_name + ".mp4"):
                     filename = base_name + ".mp4"
 
-            # Check duration limit
+            # Post-download safety check
             if duration and duration > MAX_VIDEO_DURATION:
                 if os.path.exists(filename):
                     try:
@@ -197,6 +207,9 @@ def get_video_from_url(video_url: str, preferred_engine: str = "ytdlp") -> Tuple
     if success:
         return True, result
     
+    if "videos must be under" in result:
+        return False, result
+
     # Only try Instagram web scraper fallback if it is an Instagram URL
     if "Instagram" in platform:
         safe_print(f"[Warning] yt-dlp failed ({result}). Trying indownloader fallback...")

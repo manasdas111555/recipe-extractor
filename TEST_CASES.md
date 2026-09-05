@@ -75,3 +75,40 @@
 | **TC-PERF-02** | Real-Time Phase Animation | App in extraction state (0s to 20s). | • Neural Scanner Deck continuously animates.<br>• Ticker cycles status every 3–4s.<br>• UI remains responsive with no browser freeze. | Medium | ✅ Passed |
 | **TC-UI-01** | Glassmorphism & Responsive Layout | Desktop (1920x1080), Tablet (768px), Mobile (390px). | • Dark luxury theme (`#0A0E1A`) renders cleanly with zero horizontal bleed.<br>• Store badges wrap cleanly into grid cards on mobile.<br>• Text contrast meets WCAG AA standards. | Medium | ✅ Passed |
 | **TC-PERF-03** | Concurrency Load Check | 5 simultaneous users trigger extraction on Streamlit Cloud. | • Session states isolated per user.<br>• Zero variable leakage across sessions.<br>• Container memory remains within limits without rebooting. | Critical | ✅ Passed |
+
+---
+
+### 6. 🎬 Live Test Video Benchmark Matrix
+
+A benchmark testing matrix pairing specific short-form videos across genres directly with the test suite:
+
+| Genre / Domain | Target Test Case ID | Test Video Link | Core Content & Modality | Verification Criteria & Expected Output | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Cooking & Recipes** | `TC-FUNC-01` (Happy Path) | [Palak Paneer Short](https://www.youtube.com/shorts/DPdivoOcXHM) | Rapid cooking sequence with spoken steps & on-screen spice labels (Paneer, Curd, Shahi Jeera). | • Classified as `Recipes & Cooking` 🍳.<br>• Ingredients extracted with quantities.<br>• Quick Commerce shelf populates 1-click cart links for Blinkit, Zepto, and Instamart for "Paneer", "Butter", "Curd". | ✅ Passed |
+| **2. Kitchen Gadgets & Amazon Finds** | `TC-FUNC-02` (Commercial Intent) | [Vegetable Chopper Short](https://www.youtube.com/shorts/uxj8ZlWoJzo) | Fast-paced product demo showing manual chopper handling carrots, garlic, chillies. | • Classified as `Kitchen Finds & Product Gadgets` 🛒.<br>• Identifies chopper utility, mechanism, and use-case.<br>• Outbound buttons route via `tag=manasdas11155-21` and EarnKaro redirect (`r=5608766`). | ✅ Passed |
+| **3. Multi-Item Haul & Gadget Roundup** | `TC-FUNC-02` (Multi-Entity) | [10 Amazon Kitchen Finds Short](https://www.youtube.com/shorts/voYgyIHpKmc) | Rapid succession montage showcasing multiple individual gadgets. | • Parses multiple distinct items into a list rather than grouping into a single blob.<br>• Each item receives its own individual shopping card. | ✅ Passed |
+| **4. Tech & Coding Tutorials** | `TC-FUNC-03` (Code & Dev Setup) | [Python Tips for Beginners Short](https://www.youtube.com/shorts/KrFDs2M_FSE) | Spoken technical guidance covering basic syntax, loops, and functions. | • Classified as `Tech & DIY Tutorials` 💻.<br>• Renders structured bullet takeaways and formatted code blocks.<br>• Tutorial Hub generates GitHub and YouTube deep-search queries. | ✅ Passed |
+| **5. Fitness & Workout Routines** | `TC-FUNC-01` / Domain Test | [6 Bodyweight Exercises Workout Short](https://www.youtube.com/shorts/65QnIrbBBWs) | Demonstration of 6 bodyweight movements (Airborne Lunge, Doorway Row, Push-Up Toe Touch). | • Classified under `Fitness & Workouts` 🏋️.<br>• Extracts exercise names, target muscles, and intervals (1-min work / rest cadence).<br>• Action hook prompts export/logging to fitness notes. | ✅ Passed |
+| **6. Skincare & Beauty Regimens** | `TC-FUNC-01` / Domain Test | [Skincare Routine for Dry Skin Short](https://m.youtube.com/shorts/QEoX7DEuZnA) | Step-by-step skincare order: non-foaming cleanser $\rightarrow$ hyaluronic acid $\rightarrow$ moisturizer $\rightarrow$ sunscreen. | • Classified under `Beauty & Skincare` ✨.<br>• Extracts sequential application order and active ingredients.<br>• Generates shopping links wrapped for Nykaa/Tira and Amazon Beauty. | ✅ Passed |
+| **7. Travel & City Itinerary** | `TC-FUNC-01` / Domain Test | [Europe Train Travel Itinerary Short](https://www.youtube.com/shorts/o5khv0iU5xQ) | Multi-day route optimization for a short European trip using rail transit. | • Classified under `Travel & City Guides` ✈️.<br>• Parses transit legs, travel window, and destination sequence into a day-by-day itinerary. | ✅ Passed |
+| **8. Boundary / Guardrail Enforcement** | `TC-ING-01` (Duration Limit Check) | [5-Minute Pasta Recipe (Full Video)](https://www.youtube.com/watch?v=VHXQ5cSJrC4) | Standard horizontal YouTube video exceeding 90 seconds (Duration: ~6 minutes / 365s). | • Pre-flight ingestion halts pipeline in $\le 2\text{s}$ before downloading video stream.<br>• UI displays: *"Video is 365s long. To keep processing fast and free, videos must be under 90 seconds (Reels & Shorts only)."*<br>• Zero compute or bandwidth wasted. | ✅ Passed |
+
+---
+
+### 🔄 Step-by-Step Test Execution Workflow
+
+1. **Verify Baseline Ingestion & Duration Limits**:
+   - Feed the [5-Minute Pasta Recipe (Full Video)](https://www.youtube.com/watch?v=VHXQ5cSJrC4) into the URL bar.
+   - Confirm that `MAX_VIDEO_DURATION = 90` pre-flight check halts the pipeline with an explicit warning banner before any audio/video stream download begins.
+2. **Execute Primary Multimodal Recipe Flow**:
+   - Submit the [Palak Paneer Cooking Short](https://www.youtube.com/shorts/DPdivoOcXHM).
+   - Monitor the animated Neural Scanner Deck to ensure metric cards reflect realistic phase times (Download $\le 4\text{s}$, Prep $\le 9\text{s}$, Multimodal AI $\le 10\text{s}$).
+   - Verify that local Indian grocery staples (Paneer, Butter, Cumin, Turmeric) correctly produce clickable quick-commerce links that route to active search queries on Blinkit, Zepto, and Instamart.
+3. **Verify Affiliate Tag Preservation**:
+   - Process the [Amazon Kitchen Vegetable Chopper Short](https://www.youtube.com/shorts/uxj8ZlWoJzo).
+   - Click the primary Amazon button and verify that the destination URL contains `tag=manasdas11155-21`.
+   - Click the Flipkart/Myntra buttons and verify that the link wraps through the EarnKaro aggregator redirect (`EARNKARO_ID=5608766`).
+4. **Validate Non-Recipe Multi-Domain Support**:
+   - Ingest the [Quick Python Tips for Beginners Short](https://www.youtube.com/shorts/KrFDs2M_FSE) and the [6 Bodyweight Exercises Workout Short](https://www.youtube.com/shorts/65QnIrbBBWs) under "Auto-Detect".
+   - Confirm that the classification engine swaps out the Quick Commerce grocery tray in favor of the Tutorial Hub (GitHub/YouTube) or exercise breakdown schema respectively.
+

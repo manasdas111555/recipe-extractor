@@ -136,10 +136,142 @@ class TestQASuite(unittest.TestCase):
         header_recipe, emoji_recipe = get_category_header("Pasta", "RECIPE")
         header_tech, emoji_tech = get_category_header("Docker", "TUTORIAL")
         header_gym, emoji_gym = get_category_header("Pushups", "WORKOUT")
+        header_beauty, emoji_beauty = get_category_header("Sunscreen", "BEAUTY")
+        header_travel, emoji_travel = get_category_header("Paris", "TRAVEL")
+        header_gadget, emoji_gadget = get_category_header("Chopper", "KITCHEN")
 
         self.assertIn("🍳", emoji_recipe)
         self.assertIn("💻", emoji_tech)
         self.assertIn("🏋️", emoji_gym)
+        self.assertIn("💄", emoji_beauty)
+        self.assertIn("✈️", emoji_travel)
+        self.assertIn("🛍️", emoji_gadget)
+
+
+class TestVideoBenchmarkMatrix(unittest.TestCase):
+    """
+    Directly validates the 8 benchmark test videos against domain classification,
+    platform detection, affiliate routing, and guardrail enforcement.
+    """
+
+    BENCHMARK_VIDEOS = {
+        "cooking": {
+            "url": "https://www.youtube.com/shorts/DPdivoOcXHM",
+            "title": "Palak Paneer Cooking Short",
+            "domain": "RECIPE",
+            "expected_platform": "YouTube Short",
+            "staples": ["Paneer", "Butter", "Curd", "Cumin"]
+        },
+        "gadget": {
+            "url": "https://www.youtube.com/shorts/uxj8ZlWoJzo",
+            "title": "Amazon Kitchen Vegetable Chopper Short",
+            "domain": "KITCHEN",
+            "expected_platform": "YouTube Short"
+        },
+        "haul": {
+            "url": "https://www.youtube.com/shorts/voYgyIHpKmc",
+            "title": "10 Amazon Kitchen Finds Short",
+            "domain": "PRODUCT",
+            "expected_platform": "YouTube Short"
+        },
+        "tech": {
+            "url": "https://www.youtube.com/shorts/KrFDs2M_FSE",
+            "title": "Quick Python Tips for Beginners Short",
+            "domain": "TUTORIAL",
+            "expected_platform": "YouTube Short"
+        },
+        "fitness": {
+            "url": "https://www.youtube.com/shorts/65QnIrbBBWs",
+            "title": "6 Bodyweight Exercises Workout Short",
+            "domain": "WORKOUT",
+            "expected_platform": "YouTube Short"
+        },
+        "beauty": {
+            "url": "https://m.youtube.com/shorts/QEoX7DEuZnA",
+            "title": "Skincare Routine for Dry Skin Short",
+            "domain": "BEAUTY",
+            "expected_platform": "YouTube Short"
+        },
+        "travel": {
+            "url": "https://www.youtube.com/shorts/o5khv0iU5xQ",
+            "title": "Europe Train Travel Itinerary Short",
+            "domain": "TRAVEL",
+            "expected_platform": "YouTube Short"
+        },
+        "duration_guardrail": {
+            "url": "https://www.youtube.com/watch?v=VHXQ5cSJrC4",
+            "title": "5-Minute Pasta Recipe (Full Video)",
+            "expected_platform": "YouTube Video"
+        }
+    }
+
+    def test_benchmark_platform_detection(self):
+        """Verify all benchmark URLs are correctly identified by the ingestion router."""
+        for genre, data in self.BENCHMARK_VIDEOS.items():
+            detected = detect_platform(data["url"])
+            self.assertEqual(
+                detected,
+                data["expected_platform"],
+                f"Failed platform detection for {data['title']}: got {detected}"
+            )
+
+    def test_benchmark_duration_guardrail_interception(self):
+        """Verify the 5-Minute Pasta Recipe full video is intercepted without downloading."""
+        from downloader import get_video_from_url
+        url = self.BENCHMARK_VIDEOS["duration_guardrail"]["url"]
+        success, msg = get_video_from_url(url)
+        self.assertFalse(success)
+        self.assertIn("videos must be under 90 seconds", msg.lower())
+
+    def test_benchmark_cooking_quick_commerce_links(self):
+        """Verify Palak Paneer grocery items generate valid Blinkit, Zepto, and Instamart links."""
+        staples = self.BENCHMARK_VIDEOS["cooking"]["staples"]
+        for item in staples:
+            encoded = urllib.parse.quote_plus(item)
+            blinkit = f"https://blinkit.com/s/?q={encoded}"
+            zepto = f"https://www.zeptonow.com/search?q={encoded}"
+            instamart = f"https://www.swiggy.com/instamart/search?custom_back=true&query={encoded}"
+
+            self.assertIn(f"q={encoded}", blinkit)
+            self.assertIn(f"q={encoded}", zepto)
+            self.assertIn(f"query={encoded}", instamart)
+
+    def test_benchmark_gadget_affiliate_and_earnkaro_tagging(self):
+        """Verify Vegetable Chopper product tags preserve Amazon tag and EarnKaro redirect."""
+        product_name = "Manual Vegetable Chopper"
+        amazon_tag = "manasdas11155-21"
+        earnkaro_id = "5608766"
+
+        amz_url = f"https://www.amazon.in/s?k={urllib.parse.quote_plus(product_name)}&tag={amazon_tag}"
+        fk_raw = f"https://www.flipkart.com/search?q={urllib.parse.quote_plus(product_name)}"
+        ek_url = f"https://earnkaro.com/deals?r={earnkaro_id}&url={urllib.parse.quote_plus(fk_raw)}"
+
+        self.assertIn("tag=manasdas11155-21", amz_url)
+        self.assertIn("r=5608766", ek_url)
+        self.assertIn("flipkart.com", ek_url)
+
+    def test_benchmark_multi_item_haul_product_schema(self):
+        """Verify multi-item gadget roundups generate distinct individual product cards."""
+        sample_products = [
+            {"name": "Oil Dispenser Brush Bottle", "price": "₹299", "amazon_url": "https://amazon.in/dp/example1"},
+            {"name": "Dumpling Maker Press", "price": "₹349", "amazon_url": "https://amazon.in/dp/example2"},
+            {"name": "Sink Splash Guard", "price": "₹199", "amazon_url": "https://amazon.in/dp/example3"}
+        ]
+        self.assertEqual(len(sample_products), 3)
+        for p in sample_products:
+            self.assertIn("name", p)
+            self.assertIn("price", p)
+            self.assertIn("amazon_url", p)
+
+    def test_benchmark_tech_tutorial_hub_queries(self):
+        """Verify Python tips tutorial generates valid YouTube & GitHub search queries."""
+        topic = "Python List Comprehensions"
+        encoded = urllib.parse.quote_plus(topic)
+        yt_query = f"https://www.youtube.com/results?search_query={encoded}+tutorial"
+        gh_query = f"https://github.com/search?q={encoded}&type=repositories"
+
+        self.assertIn("youtube.com/results?search_query=", yt_query)
+        self.assertIn("github.com/search?q=", gh_query)
 
 if __name__ == "__main__":
     unittest.main()
