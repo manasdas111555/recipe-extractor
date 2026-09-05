@@ -401,6 +401,53 @@ class TestMultiProviderAndMedia(unittest.TestCase):
         self.assertIn("Auto-Universal (Gemini with Multi-Model Fallback)", AI_PROVIDERS)
 
 
+class TestNeuralProgressDeck(unittest.TestCase):
+    class DummyPlaceholder:
+        def __init__(self):
+            self.content = ""
+        def html(self, html_str):
+            self.content = html_str
+        def markdown(self, md_str, **kwargs):
+            self.content = md_str
+
+    def test_deck_auto_detect_has_no_shoppable_catalog_by_default(self):
+        from ui_components import NeuralProgressDeck
+        dummy = self.DummyPlaceholder()
+        deck = NeuralProgressDeck(dummy, mode="Auto-Detect (Universal AI)")
+        step_ids = [s["id"] for s in deck.steps]
+        self.assertNotIn("links", step_ids, "Shoppable Catalog Synthesis should not be visible for generic/educational/recipe videos")
+        self.assertIn("dl", step_ids)
+        self.assertIn("prep", step_ids)
+        self.assertIn("ai", step_ids)
+        self.assertIn("dispatch", step_ids)
+
+    def test_deck_product_domain_includes_shoppable_catalog(self):
+        from ui_components import NeuralProgressDeck
+        dummy = self.DummyPlaceholder()
+        deck = NeuralProgressDeck(dummy, mode="🛍️ Kitchen Finds & Home Gadgets")
+        step_ids = [s["id"] for s in deck.steps]
+        self.assertIn("links", step_ids, "Product domains should include Shoppable Catalog Synthesis")
+
+    def test_deck_dynamically_inserts_shoppable_catalog_when_products_found(self):
+        from ui_components import NeuralProgressDeck
+        dummy = self.DummyPlaceholder()
+        deck = NeuralProgressDeck(dummy, mode="Auto-Detect (Universal AI)")
+        self.assertNotIn("links", [s["id"] for s in deck.steps])
+        
+        # Simulate AI discovering 3 products
+        deck.insert_or_update_step(
+            step_id="links",
+            title="Shoppable Catalog Synthesis",
+            desc="Generated 1-click buy tags for 3 products",
+            icon="🛍️",
+            state="done"
+        )
+        step_ids = [s["id"] for s in deck.steps]
+        self.assertIn("links", step_ids)
+        self.assertEqual(deck.steps[-2]["id"], "links", "Links step should be inserted right before dispatch")
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

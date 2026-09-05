@@ -788,7 +788,7 @@ if process_btn:
 
         with proc_left:
             deck_placeholder = st.empty()
-            deck = NeuralProgressDeck(deck_placeholder)
+            deck = NeuralProgressDeck(deck_placeholder, mode=mode_choice)
             skeleton_placeholder = st.empty()
             if hasattr(skeleton_placeholder, "html"):
                 skeleton_placeholder.html(render_skeleton_card_html())
@@ -864,6 +864,26 @@ if process_btn:
                 cloud_prep_time = timings.get('prep_s', 0.0) + timings.get('upload_s', 0.0)
                 ai_duration = timings.get('inference_s', 0.0)
                 model_display = timings.get('model_used', model_choice)
+
+                # Dynamically reflect specialized steps only if actual content exists
+                found_prods = meta.get("products", [])
+                found_res = meta.get("resources", [])
+                if found_prods and len(found_prods) > 0:
+                    deck.insert_or_update_step(
+                        step_id="links",
+                        title="Shoppable Catalog Synthesis",
+                        desc=f"Generated 1-click buy tags for {len(found_prods)} products",
+                        icon="🛍️",
+                        state="done"
+                    )
+                elif found_res and len(found_res) > 0:
+                    deck.insert_or_update_step(
+                        step_id="resources",
+                        title="Recommended YouTube Tutorials & Links",
+                        desc=f"Linked {len(found_res)} tutorials & learning resources",
+                        icon="🎓",
+                        state="done"
+                    )
 
                 deck.complete_all(total_elapsed)
                 st.balloons()

@@ -103,25 +103,39 @@ class NeuralProgressDeck:
     during video ingestion and multimodal reasoning.
     """
     TRIVIA_LIST = [
-        "💡 <b>Reel Fact</b>: Over 68% of viral kitchen gadgets featured on Instagram Reels sell out on Amazon within 48 hours.",
         "🧠 <b>Vision AI</b>: Gemini 3.5 Flash inspects video frames, on-screen text overlays, and audio dialogue simultaneously.",
         "⚡ <b>Extreme Speed</b>: Processing video directly in cloud tensor memory cuts turnaround time by 15× compared to separate transcription pipelines.",
-        "🛒 <b>Shoppable Links</b>: Every detected product is automatically paired with Amazon India and Flipkart 1-click buy tags.",
-        "🍳 <b>Domain Detection</b>: AI automatically distinguishes between cooking recipes, fitness routines, and physical product unboxings.",
+        "🎓 <b>Educational & Tutorial AI</b>: Automatically extracts lecture roadmaps, commands, and direct YouTube tutorials.",
+        "🍳 <b>Domain Detection</b>: AI automatically distinguishes between educational explainers, coding tutorials, recipes, and product finds.",
+        "🛍️ <b>Smart Product Detection</b>: When purchasable products appear, AI automatically pairs them with 1-click buy links.",
         "📱 <b>Zero Manual Work</b>: Everything is auto-formatted into a 1-click WhatsApp document for instant sharing to friends or family.",
         "🔒 <b>Zero Data Retained</b>: Temporary video frames and files are purged after processing to guard user privacy."
     ]
 
-    def __init__(self, placeholder):
+    def __init__(self, placeholder, mode: str = "Auto-Detect"):
         self.placeholder = placeholder
         self.start_time = time.perf_counter()
+        self.mode = mode or "Auto-Detect"
+        
+        # Base universal steps (4-stage clean pipeline without unneeded shopping catalog)
         self.steps = [
             {"id": "dl", "title": "HD Video Stream Ingestion", "desc": "Fetching pristine stream from CDN...", "icon": "📥", "state": "active"},
             {"id": "prep", "title": "Neural Video Frame Slicing", "desc": "Extracting visual frames & audio tracks...", "icon": "🎞️", "state": "pending"},
-            {"id": "ai", "title": "Multimodal Vision AI (Gemini 3.5 Flash)", "desc": "Reasoning over ingredients, tools & steps...", "icon": "🧠", "state": "pending"},
-            {"id": "links", "title": "Shoppable Catalog Synthesis", "desc": "Generating 1-click Amazon & Flipkart tags...", "icon": "🛍️", "state": "pending"},
-            {"id": "dispatch", "title": "Instant Delivery & Export", "desc": "Formatting .txt notes & WhatsApp deep link...", "icon": "📱", "state": "pending"},
+            {"id": "ai", "title": "Multimodal Vision AI (Gemini 3.5 Flash)", "desc": "Analyzing visual keyframes & speech tensors...", "icon": "🧠", "state": "pending"},
+            {"id": "dispatch", "title": "Instant Delivery & Export", "desc": "Formatting structured notes & WhatsApp export...", "icon": "📱", "state": "pending"},
         ]
+        
+        # Only show Shoppable Catalog Synthesis upfront if user specifically selected a product finds domain
+        mode_lower = self.mode.lower()
+        if any(k in mode_lower for k in ["kitchen", "product", "unboxing", "haul", "amazon"]):
+            self.steps.insert(3, {
+                "id": "links", 
+                "title": "Shoppable Catalog Synthesis", 
+                "desc": "Generating 1-click Amazon & Flipkart tags...", 
+                "icon": "🛍️", 
+                "state": "pending"
+            })
+        
         self.trivia_index = 0
         self.active_msg = ""
         self.render()
@@ -132,6 +146,34 @@ class NeuralProgressDeck:
                 s["state"] = state
                 if custom_desc:
                     s["desc"] = custom_desc
+        self.render()
+
+    def insert_or_update_step(self, step_id: str, title: str, desc: str, icon: str, state: str = "done"):
+        """Dynamically inserts a specialized step (e.g. Products or Tutorials) only when content actually warrants it."""
+        for s in self.steps:
+            if s["id"] == step_id:
+                s["title"] = title
+                s["desc"] = desc
+                s["icon"] = icon
+                s["state"] = state
+                self.render()
+                return
+
+        # Insert right before dispatch
+        dispatch_idx = len(self.steps) - 1
+        for i, s in enumerate(self.steps):
+            if s["id"] == "dispatch":
+                dispatch_idx = i
+                break
+        
+        new_step = {
+            "id": step_id,
+            "title": title,
+            "desc": desc,
+            "icon": icon,
+            "state": state
+        }
+        self.steps.insert(dispatch_idx, new_step)
         self.render()
 
     def on_ai_status(self, msg: str):
@@ -146,7 +188,10 @@ class NeuralProgressDeck:
             self.update_step("ai", "active", msg)
         elif "inference completed" in lower or "synthesiz" in lower or "parsed" in lower:
             self.update_step("ai", "done", "Multimodal extraction completed")
-            self.update_step("links", "active", "Cross-referencing shopping catalogs...")
+            if any(s["id"] == "links" for s in self.steps):
+                self.update_step("links", "active", "Cross-referencing shopping catalogs...")
+            else:
+                self.update_step("dispatch", "active", "Structuring intelligence notes...")
         
         self.trivia_index = (self.trivia_index + 1) % len(self.TRIVIA_LIST)
         self.render()
@@ -171,3 +216,4 @@ class NeuralProgressDeck:
             self.placeholder.html(html)
         else:
             self.placeholder.markdown(html, unsafe_allow_html=True)
+
