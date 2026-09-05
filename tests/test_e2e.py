@@ -78,7 +78,7 @@ Punchy bass in mini size.
 3. 3-in-1 Stand:
 Hands-free MagSafe mounting.
 """
-        meta = parse_extracted_content(sample)
+        meta = parse_extracted_content(sample, affiliate_tags={})
         self.assertEqual(meta["category"], "GENERAL")
         self.assertEqual(meta["title"], "3 Underrated Gadgets Under ₹1000")
         self.assertNotIn("₹", meta["clean_filename"])
@@ -284,7 +284,7 @@ Price: ₹299
 Quickly snip fresh herbs directly into food.
 Price: ₹349
 """
-        meta = parse_extracted_content(sample)
+        meta = parse_extracted_content(sample, affiliate_tags={})
         self.assertEqual(meta["category"], "KITCHEN_FINDS")
         self.assertEqual(meta["emoji"], "🛍️")
         self.assertEqual(meta["title"], "5 Smart Amazon Kitchen Gadgets")
