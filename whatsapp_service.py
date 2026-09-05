@@ -61,10 +61,10 @@ def get_category_header(recipe_name: str, category: str = "RECIPE") -> Tuple[str
     else:
         return f"Here is recipe file for - {recipe_name} !", "🍳"
 
-def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None) -> str:
+def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, resources: list = None) -> str:
     """
     Generates a WhatsApp Deep Link (wa.me / api.whatsapp.com).
-    When opened on mobile or web, it opens WhatsApp with caption, content & purchase links pre-filled!
+    When opened on mobile or web, it opens WhatsApp with caption, content, products & YouTube tutorial links pre-filled!
     """
     clean_phone = format_phone_number(phone_number)
     recipe_name = get_recipe_display_name(recipe_txt_path)
@@ -76,8 +76,14 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
         for p in products[:5]:
             price_tag = f" ({p['price']})" if p.get("price") else ""
             product_section += f"• *{p['name']}*{price_tag}\n  🛒 Amazon: {p['amazon_url']}\n"
+
+    resource_section = ""
+    if resources and len(resources) > 0:
+        resource_section = "\n\n🎓 *Recommended YouTube Tutorials:*\n"
+        for r in resources[:5]:
+            resource_section += f"• *{r['name']}*\n  ▶️ YouTube: {r['youtube_url']}\n"
     
-    full_message = f"{icon} *{header}*\n\n{recipe_content}{product_section}"
+    full_message = f"{icon} *{header}*\n\n{recipe_content}{product_section}{resource_section}"
     
     # Truncate if exceptionally long for URL safety
     if len(full_message) > 3000:
@@ -86,9 +92,9 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
     encoded_text = urllib.parse.quote(full_message)
     return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_text}"
 
-def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_content: str, api_key: str, category: str = "RECIPE", products: list = None) -> Tuple[bool, str]:
+def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_content: str, api_key: str, category: str = "RECIPE", products: list = None, resources: list = None) -> Tuple[bool, str]:
     """
-    Sends WhatsApp message directly via free CallMeBot API with product buy links.
+    Sends WhatsApp message directly via free CallMeBot API with product buy links and YouTube tutorial links.
     """
     if not api_key:
         return False, "CallMeBot API key not provided."
@@ -103,7 +109,13 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
         for p in products[:3]:
             product_section += f"• {p['name']}: {p['amazon_url']}\n"
 
-    full_message = f"{icon} *{header}*\n\n{recipe_content[:1200]}{product_section}"
+    resource_section = ""
+    if resources and len(resources) > 0:
+        resource_section = "\n\n🎓 *Tutorials:*\n"
+        for r in resources[:3]:
+            resource_section += f"• {r['name']}: {r['youtube_url']}\n"
+
+    full_message = f"{icon} *{header}*\n\n{recipe_content[:1000]}{product_section}{resource_section}"
     
     encoded_text = urllib.parse.quote(full_message)
     url = f"https://api.callmebot.com/whatsapp.php?phone={clean_phone}&text={encoded_text}&apikey={api_key}"
@@ -117,16 +129,16 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
     except Exception as e:
         return False, f"CallMeBot API Request Error: {str(e)}"
 
-def dispatch_whatsapp(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, callmebot_api_key: str = None) -> Tuple[bool, str]:
+def dispatch_whatsapp(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, resources: list = None, callmebot_api_key: str = None) -> Tuple[bool, str]:
     """
     Unified WhatsApp dispatcher for CLI and automated workflows.
     If callmebot_api_key is provided, attempts direct API message.
     Otherwise, generates and returns the pre-filled WhatsApp deep link.
     """
     if callmebot_api_key:
-        return send_via_callmebot_api(phone_number, recipe_txt_path, recipe_content, callmebot_api_key, category=category, products=products)
+        return send_via_callmebot_api(phone_number, recipe_txt_path, recipe_content, callmebot_api_key, category=category, products=products, resources=resources)
     
-    deep_link = generate_whatsapp_deep_link(phone_number, recipe_txt_path, recipe_content, category=category, products=products)
+    deep_link = generate_whatsapp_deep_link(phone_number, recipe_txt_path, recipe_content, category=category, products=products, resources=resources)
     return True, f"WhatsApp link generated: {deep_link}"
 
 

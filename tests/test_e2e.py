@@ -128,6 +128,68 @@ NONE
         self.assertEqual(meta["category"], "RECIPE")
         self.assertEqual(len(meta["products"]), 0)
 
+    def test_parse_extracted_content_tech_tutorial_explicit_resources(self):
+        sample = """
+[CATEGORY]: TECH_TUTORIAL
+[TITLE]: 7-Day AI Engineer Roadmap
+[SUMMARY]: A weekly plan to become an AI engineer.
+
+[RESOURCES]:
+- RESOURCE: Stanford CS229 Machine Learning | PLATFORM: YouTube | SEARCH: Stanford CS229 Machine Learning Andrew Ng
+- RESOURCE: LangChain Crash Course | PLATFORM: YouTube | SEARCH: LangChain for beginners tutorial
+- RESOURCE: Build RAG with ChromaDB | PLATFORM: YouTube | SEARCH: RAG tutorial ChromaDB Python
+
+---
+[DETAILS]:
+Day 1: Foundations.
+Day 2: LangChain.
+"""
+        meta = parse_extracted_content(sample)
+        self.assertEqual(meta["category"], "TECH_TUTORIAL")
+        self.assertIn("resources", meta)
+        self.assertEqual(len(meta["resources"]), 3)
+        res1 = meta["resources"][0]
+        self.assertEqual(res1["name"], "Stanford CS229 Machine Learning")
+        self.assertIn("youtube.com/results?search_query=", res1["youtube_url"])
+        self.assertIn("Stanford+CS229", res1["youtube_url"])
+        self.assertIn("google.com/search?q=", res1["google_url"])
+        self.assertIn("github.com/search?q=", res1["github_url"])
+
+    def test_parse_extracted_content_tech_tutorial_fallback_roadmap(self):
+        # Similar to user's real-world screenshot notes where model didn't output [RESOURCES] block
+        sample = """
+==================================================
+💻 Roadmap to Become an AI Engineer in One Week (Tech Tutorial)
+==================================================
+
+📋 Summary:
+This video presents a structured 7-day learning schedule to transition into AI engineering.
+
+==================================================
+Detailed Steps & Notes:
+==================================================
+
+**Step-by-Step Weekly Roadmap:**
+* **Monday - LLM Fundamentals:** Study foundational LLM concepts and theory (e.g., Stanford Engineering LLM lectures).
+* **Tuesday - LangChain:** Learn the LangChain framework for chaining together prompts, memory, and LLMs.
+* **Wednesday - RAG (Retrieval-Augmented Generation):** Master RAG architectures, vector databases, and embeddings.
+* **Thursday - AI Agents:** Explore autonomous AI agent frameworks, prompt engineering for agents.
+* **Friday - LangGraph:** Deep dive into stateful multi-agent workflows and graph-based agent orchestration.
+* **Saturday & Sunday - Hands-On GitHub Projects:** Spend the weekend building open-source AI agent projects.
+"""
+        meta = parse_extracted_content(sample)
+        self.assertEqual(meta["category"], "TECH_TUTORIAL")
+        self.assertIn("resources", meta)
+        self.assertGreaterEqual(len(meta["resources"]), 5)
+        # Verify first resource captures Stanford / LLM Fundamentals
+        first = meta["resources"][0]
+        self.assertIn("youtube.com/results?search_query=", first["youtube_url"])
+        self.assertTrue(
+            "Stanford" in first["name"] or "LLM Fundamentals" in first["name"],
+            f"Expected Stanford or LLM Fundamentals in resource name, got: {first['name']}"
+        )
+
+
 
 
 class TestWhatsAppService(unittest.TestCase):
@@ -205,6 +267,32 @@ Price: ₹349
         decoded = urllib.parse.unquote(url)
         self.assertIn("Portronics GaN Charger", decoded)
         self.assertIn("https://www.amazon.in/s?k=Portronics+GaN+Charger", decoded)
+
+    def test_generate_whatsapp_deep_link_with_resources(self):
+        resources = [
+            {
+                "name": "Stanford LLM Fundamentals",
+                "platform": "YouTube",
+                "youtube_url": "https://www.youtube.com/results?search_query=Stanford+LLM+Fundamentals+tutorial"
+            },
+            {
+                "name": "LangChain Framework",
+                "platform": "YouTube",
+                "youtube_url": "https://www.youtube.com/results?search_query=LangChain+Framework+tutorial"
+            }
+        ]
+        url = generate_whatsapp_deep_link(
+            "918056804940",
+            "C:/downloads/Roadmap.txt",
+            "Step-by-step roadmap notes...",
+            category="TECH_TUTORIAL",
+            resources=resources
+        )
+        self.assertTrue(url.startswith("https://api.whatsapp.com/send?phone=918056804940"))
+        decoded = urllib.parse.unquote(url)
+        self.assertIn("Recommended YouTube Tutorials", decoded)
+        self.assertIn("Stanford LLM Fundamentals", decoded)
+        self.assertIn("https://www.youtube.com/results?search_query=Stanford+LLM+Fundamentals+tutorial", decoded)
 
     def test_dispatch_whatsapp_cli_helper(self):
         success, msg = dispatch_whatsapp("918056804940", "C:/test.txt", "Some content", category="RECIPE")

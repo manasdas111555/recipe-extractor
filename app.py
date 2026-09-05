@@ -310,6 +310,46 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(40, 116, 240, 0.5);
     }
 
+    /* YouTube Tutorial & Learning Showcase */
+    .tutorial-box-luxury {
+        background: linear-gradient(135deg, rgba(22, 30, 49, 0.75) 0%, rgba(15, 23, 42, 0.92) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 14px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        transition: all 0.25s ease;
+    }
+    .tutorial-box-luxury:hover {
+        border-color: rgba(239, 68, 68, 0.45);
+        box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.5), 0 0 20px rgba(239, 68, 68, 0.15);
+        transform: translateY(-2px);
+    }
+    .watch-btn-yt {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #FF0000 0%, #CC0000 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 8px 18px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 14px rgba(255, 0, 0, 0.35);
+        transition: all 0.2s ease;
+    }
+    .watch-btn-yt:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(255, 0, 0, 0.55);
+        filter: brightness(1.1);
+    }
+
     /* WhatsApp Emerald Glowing Action */
     .wa-btn-luxury {
         display: inline-flex;
@@ -848,6 +888,31 @@ if process_btn:
                         </div>
                         """, unsafe_allow_html=True)
 
+                # Recommended YouTube Tutorials & Learning Links
+                resources_list = meta.get("resources", [])
+                if resources_list:
+                    st.markdown("### 🎓 Recommended YouTube Tutorials & Learning Links")
+                    st.caption("AI identified the following tutorials, lectures, and resources in this video. Click to watch directly on YouTube:")
+                    
+                    for res in resources_list:
+                        r_name = res["name"]
+                        r_plat = res.get("platform", "YouTube")
+                        plat_badge = f"<span style='background-color:rgba(239, 68, 68, 0.15); color:#F87171; border:1px solid rgba(239, 68, 68, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>📺 {r_plat}</span>"
+                        github_btn = f'<a href="{res["github_url"]}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🐙 Search GitHub</a>' if any(k in r_name.lower() for k in ["github", "code", "project", "repo"]) else ""
+
+                        st.markdown(f"""
+                        <div class="tutorial-box-luxury">
+                            <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9;">
+                                <span>▶️</span> <span>{r_name}</span> {plat_badge}
+                            </div>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                <a href="{res['youtube_url']}" target="_blank" class="watch-btn-yt">▶️ Watch on YouTube</a>
+                                {github_btn}
+                                <a href="{res['google_url']}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:'Outfit',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🔍 Search Google</a>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
                 st.markdown("---")
                 
                 # WhatsApp & Download Action Buttons
@@ -886,7 +951,7 @@ if process_btn:
 
                 with col_btn3:
                     if phone_number_input:
-                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code, products=products_list)
+                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code, products=products_list, resources=resources_list)
                         st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn-luxury">📲 1-Click WhatsApp Forward</a>', unsafe_allow_html=True)
                     else:
                         st.info("💡 Enter WhatsApp Number in sidebar!")

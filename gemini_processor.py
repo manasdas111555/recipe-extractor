@@ -138,11 +138,18 @@ If no specific gear/equipment is featured, write:
 """
     elif "tech" in clean_mode or "tutorial" in clean_mode or "code" in clean_mode:
         return """
-Analyze this video and extract detailed technical tutorial notes.
+Analyze this video and extract detailed technical tutorial notes, roadmap steps, and learning resources.
 Structure your response as follows:
 [CATEGORY]: TECH_TUTORIAL
 [TITLE]: <Clear tech topic or tutorial title, max 6-8 words>
-[SUMMARY]: <A 2-3 sentence overview of what is taught or built>
+[SUMMARY]: <A 2-3 sentence overview of what is taught, built, or scheduled>
+
+[RESOURCES & TUTORIALS]:
+For EVERY tutorial, lecture, course, framework, library, tool, or roadmap milestone mentioned or recommended in this video (especially YouTube tutorials, Stanford/MIT lectures, GitHub repos, documentation):
+List each one in this exact line format:
+- RESOURCE: <Tutorial or Course or Topic Name> | PLATFORM: <YouTube | GitHub | Documentation | Course> | SEARCH: <Targeted search query to find and watch this exact tutorial on YouTube, e.g. 'Stanford LLM lectures full course' or 'LangChain tutorial for beginners'>
+If no external tutorials, courses, or tools are mentioned, write:
+[RESOURCES & TUTORIALS]: NONE
 
 [PRODUCTS]:
 If any specific tech gadgets, hardware, devices, tools, or peripherals are featured or recommended to buy, list each one in this exact line format:
@@ -153,17 +160,23 @@ If no hardware or physical products are featured, write:
 ---
 [DETAILS]:
 - Prerequisites & Tools Used:
-- Step-by-Step Instructions:
+- Step-by-Step Instructions & Roadmap:
 - Commands / Code Snippets:
 - Common Gotchas & Best Practices:
 """
     elif "summary" in clean_mode or "knowledge" in clean_mode:
         return """
-Analyze this video and extract an executive summary with key takeaways.
+Analyze this video and extract an executive summary with key takeaways and recommended resources.
 Structure your response as follows:
 [CATEGORY]: KNOWLEDGE_SUMMARY
 [TITLE]: <Core topic title, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary>
+
+[RESOURCES & TUTORIALS]:
+If any specific lectures, YouTube tutorials, books, or online courses are recommended or cited, list each one in this line format:
+- RESOURCE: <Resource Name> | PLATFORM: <YouTube | Book | Course> | SEARCH: <Targeted YouTube search query to find and study it>
+If no external learning resources are featured, write:
+[RESOURCES & TUTORIALS]: NONE
 
 [PRODUCTS]:
 If any specific books, gadgets, planners, tools, or hardware are featured or recommended to buy, list each one in this exact line format:
@@ -188,7 +201,7 @@ First, determine the CATEGORY of the video:
 - PRODUCT_FINDS (product unboxings, gadget hauls, Amazon finds, tool reviews, lifestyle gear)
 - RECIPE (actual cooking, baking, dish preparation, edible recipes with ingredients)
 - WORKOUT (exercises, fitness routines, gym, yoga)
-- TECH_TUTORIAL (coding, software tools, computer guides, engineering)
+- TECH_TUTORIAL (coding, software tools, computer guides, engineering roadmaps)
 - TRAVEL_GUIDE (places to visit, restaurants, travel itineraries, travel tips)
 - KNOWLEDGE_SUMMARY (finance, business, life hacks, book summaries, educational)
 - GENERAL (any other informative content)
@@ -202,8 +215,15 @@ Structure your response strictly as follows:
 [TITLE]: <A clear, descriptive title-cased name for this video, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates or reviews>
 
+[RESOURCES & TUTORIALS]:
+If this video recommends or mentions tutorials, lectures, courses, frameworks, libraries, tools, or learning roadmaps (e.g. YouTube tutorials, Stanford/MIT lectures, GitHub repos, documentation):
+List each one in this exact line format:
+- RESOURCE: <Tutorial or Course or Topic Name> | PLATFORM: <YouTube | GitHub | Documentation | Course> | SEARCH: <Targeted search query to find and watch this exact tutorial on YouTube, e.g. 'Stanford LLM lectures' or 'LangChain tutorial'>
+If no external tutorials or learning resources are featured, write:
+[RESOURCES & TUTORIALS]: NONE
+
 [PRODUCTS]:
-For EVERY item, gadget, or product showcased, reviewed, or unboxed in this video, list each one in this exact line format:
+For EVERY physical item, gadget, or product showcased, reviewed, or unboxed in this video, list each one in this exact line format:
 - PRODUCT: <Brand & Model / Item Name> | PRICE: <Price if stated or estimated, e.g. Under ₹1000, or 'N/A'> | SEARCH: <Targeted search query to find and buy this exact item online>
 
 If no specific purchasable products or equipment are featured, write:
@@ -215,11 +235,11 @@ If no specific purchasable products or equipment are featured, write:
 - If KITCHEN_FINDS or PRODUCT_FINDS: List each item with its key features, what it is used for, usability tips, and pros/cons.
 - If RECIPE: Full ingredients with exact measurements, equipment needed, prep & cook time, step-by-step instructions, serving tips, and nutrition/calories if mentioned.
 - If WORKOUT: Target muscles, equipment needed, warm-up, each exercise with sets x reps and rest intervals, and technique/form cues.
-- If TECH_TUTORIAL: Tools & prerequisites, exact commands/code snippets, step-by-step walkthrough, and key notes.
+- If TECH_TUTORIAL: Tools & prerequisites, roadmap schedule / step-by-step breakdown, exact commands/code snippets, and key notes.
 - If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing/costs, and itinerary tips.
 - If KNOWLEDGE_SUMMARY or GENERAL: Core principles, bulleted step-by-step breakdown, key insights, and actionable takeaways.
 
-Be thorough, precise, and practical. Do not omit crucial steps or product names.
+Be thorough, precise, and practical. Do not omit crucial steps, tutorial names, or product names.
 """
 
 def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
@@ -255,6 +275,26 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
             category = "RECIPE"
         else:
             category = "GENERAL"
+    else:
+        # Fallback category detection if [CATEGORY] tag is omitted in output
+        header_sample = raw_text[:400].upper()
+        if any(k in header_sample for k in ["TECH TUTORIAL", "TECH_TUTORIAL", "ROADMAP", "PROGRAMMING", "AI ENGINEER", "LLM", "💻"]):
+            category = "TECH_TUTORIAL"
+        elif any(k in header_sample for k in ["KITCHEN FINDS", "KITCHEN_FINDS", "KITCHEN GADGET", "HOME FINDS"]):
+            category = "KITCHEN_FINDS"
+        elif any(k in header_sample for k in ["PRODUCT FINDS", "AMAZON FINDS", "UNBOXING"]):
+            category = "PRODUCT_FINDS"
+        elif any(k in header_sample for k in ["WORKOUT", "FITNESS", "EXERCISE", "ROUTINE", "GYM"]):
+            category = "WORKOUT"
+        elif any(k in header_sample for k in ["TRAVEL GUIDE", "TRAVEL_GUIDE", "ITINERARY"]):
+            category = "TRAVEL_GUIDE"
+        elif any(k in header_sample for k in ["KNOWLEDGE", "SUMMARY", "BOOK SUMMARY"]):
+            category = "KNOWLEDGE_SUMMARY"
+        elif any(k in header_sample for k in ["RECIPE", "INGREDIENTS", "COOKING", "CHEF", "PREP TIME"]):
+            category = "RECIPE"
+        else:
+            category = "RECIPE"
+
 
     title_match = re.search(r'\[TITLE\]:\s*(.+)', raw_text, re.IGNORECASE)
     if title_match:
@@ -336,10 +376,84 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                 })
 
 
+    # Extract Resources & Tutorials section (for TECH_TUTORIAL, Roadmaps, Courses, etc.)
+    resources = []
+    res_section_match = re.search(r'\[RESOURCES & TUTORIALS\]:\s*(.+?)(?=\n---\n|\[PRODUCTS\]|\[DETAILS\]|\[CATEGORY\]|\[TITLE\]|\[SUMMARY\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+    if not res_section_match:
+        res_section_match = re.search(r'\[RESOURCES\]:\s*(.+?)(?=\n---\n|\[PRODUCTS\]|\[DETAILS\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+
+    if res_section_match:
+        res_text = res_section_match.group(1).strip()
+        if res_text.upper() != "NONE" and not res_text.upper().startswith("NONE"):
+            for line in res_text.splitlines():
+                line = line.strip()
+                if not line or line.startswith(('#', '=')) or line.upper() == "NONE":
+                    continue
+                r_match = re.search(r'RESOURCE:\s*([^|]+)(?:\|\s*PLATFORM:\s*([^|]+))?(?:\|\s*SEARCH:\s*(.+))?', line, re.IGNORECASE)
+                if r_match:
+                    r_name = r_match.group(1).strip()
+                    r_plat = (r_match.group(2) or "YouTube").strip()
+                    r_search = (r_match.group(3) or "").strip() or r_name
+                else:
+                    cleaned_line = re.sub(r'^[-*•\d\.]+\s*', '', line).strip()
+                    if len(cleaned_line) > 3 and not cleaned_line.startswith('['):
+                        r_name = cleaned_line
+                        r_plat = "YouTube"
+                        r_search = f"{cleaned_line} tutorial"
+                    else:
+                        continue
+
+                r_name_clean = re.sub(r'[*_#]', '', r_name).strip()
+                r_search_clean = re.sub(r'[*_#]', '', r_search).strip()
+                if not r_name_clean:
+                    continue
+
+                encoded_q = urllib.parse.quote_plus(r_search_clean)
+                resources.append({
+                    "name": r_name_clean,
+                    "platform": r_plat,
+                    "query": r_search_clean,
+                    "youtube_url": f"https://www.youtube.com/results?search_query={encoded_q}",
+                    "google_url": f"https://www.google.com/search?q={encoded_q}",
+                    "github_url": f"https://github.com/search?q={encoded_q}"
+                })
+
+    # Fallback for TECH_TUTORIAL, KNOWLEDGE_SUMMARY or Roadmaps:
+    # If no explicit [RESOURCES & TUTORIALS] were captured, extract topics from roadmap steps/bullets
+    if len(resources) == 0 and category in ["TECH_TUTORIAL", "KNOWLEDGE_SUMMARY", "GENERAL"]:
+        step_matches = re.findall(r'(?:^|\n)(?:[-*•\d\.]+|###)\s*\*\*([^*\n:]+):\*\*\s*([^\n]+)', raw_text)
+        for s_title, s_desc in step_matches:
+            clean_s_title = re.sub(r'^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|\&|\s|-|\d+\.)+', '', s_title, flags=re.IGNORECASE).strip(' -:')
+            if not clean_s_title or any(k in clean_s_title.lower() for k in ["prerequisite", "tools", "instructions", "summary", "gotchas", "best practice"]):
+                continue
+
+            # Check if description mentions specific lectures/channels in parentheses (e.g., Stanford Engineering LLM lectures)
+            specific_mention = re.search(r'\((?:e\.g\.,?|watch|see)\s*([^\)]+)\)', s_desc, re.IGNORECASE)
+            if specific_mention:
+                mention_text = specific_mention.group(1).strip()
+                if any(m in mention_text.lower() for m in ["lecture", "tutorial", "course", "youtube", "stanford", "mit", "channel", "video"]):
+                    yt_query = mention_text
+                else:
+                    yt_query = f"{clean_s_title} tutorial {mention_text}"
+            else:
+                yt_query = f"{clean_s_title} tutorial"
+
+            encoded_q = urllib.parse.quote_plus(yt_query)
+            resources.append({
+                "name": clean_s_title,
+                "platform": "YouTube",
+                "query": yt_query,
+                "youtube_url": f"https://www.youtube.com/results?search_query={encoded_q}",
+                "google_url": f"https://www.google.com/search?q={encoded_q}",
+                "github_url": f"https://github.com/search?q={encoded_q}"
+            })
+
     details_match = re.search(r'(?:\[DETAILS\]:|---\s*\n\[DETAILS\]:)\s*(.+)', raw_text, re.DOTALL | re.IGNORECASE)
     if details_match:
         details = details_match.group(1).strip()
         details = re.sub(r'\[PRODUCTS\]:\s*.+', '', details, flags=re.DOTALL | re.IGNORECASE).strip()
+        details = re.sub(r'\[RESOURCES & TUTORIALS\]:\s*.+', '', details, flags=re.DOTALL | re.IGNORECASE).strip()
+        details = re.sub(r'\[RESOURCES\]:\s*.+', '', details, flags=re.DOTALL | re.IGNORECASE).strip()
 
     # Sanitize title for filename & normalize currency symbols
     clean_title = title.replace('₹', 'Rs_').replace('$', 'USD_').replace('€', 'EUR_').replace('£', 'GBP_')
@@ -363,6 +477,7 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
         "title": title,
         "summary": summary,
         "products": products,
+        "resources": resources,
         "details": details,
         "clean_filename": clean_title,
         "raw_text": raw_text
@@ -577,6 +692,17 @@ def process_video_and_generate_recipe(
                 formatted_file_content += f"   • Amazon: {p['amazon_url']}\n"
                 formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n"
                 formatted_file_content += f"   • Flipkart: {p['flipkart_url']}\n\n"
+
+        if meta.get("resources") and len(meta["resources"]) > 0:
+            formatted_file_content += f"\n{'='*50}\n🎓 Recommended YouTube Tutorials & Resources:\n{'='*50}\n"
+            for idx, r in enumerate(meta["resources"], 1):
+                plat = r.get("platform", "YouTube")
+                formatted_file_content += f"{idx}. {r['name']} ({plat})\n"
+                formatted_file_content += f"   • ▶️ Watch on YouTube: {r['youtube_url']}\n"
+                formatted_file_content += f"   • 🔍 Google Search: {r['google_url']}\n"
+                if "github" in r['name'].lower() or "project" in r['name'].lower() or "code" in r['name'].lower():
+                    formatted_file_content += f"   • 🐙 GitHub Search: {r['github_url']}\n"
+                formatted_file_content += "\n"
 
         formatted_file_content += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{meta['details']}\n"
 
