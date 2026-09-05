@@ -91,6 +91,7 @@ Hands-free MagSafe mounting.
         self.assertIn("amazon.in/s?k=", first_prod["amazon_url"])
         self.assertIn("google.com/search?tbm=shop&q=", first_prod["google_shopping_url"])
         self.assertIn("flipkart.com/search?q=", first_prod["flipkart_url"])
+        self.assertIn("meesho.com/search?q=", first_prod["meesho_url"])
 
     def test_parse_extracted_content_with_affiliate_tags(self):
         sample = """
@@ -101,15 +102,40 @@ Hands-free MagSafe mounting.
 [PRODUCTS]:
 - PRODUCT: Portronics 65W GaN Charger | PRICE: ₹999 | SEARCH: Portronics 65W GaN Charger
 """
-        affiliate_tags = {"amazon": "testtag-21", "flipkart": "testaffid"}
+        affiliate_tags = {"amazon": "testtag-21", "flipkart": "testaffid", "meesho": "msh123"}
         meta = parse_extracted_content(sample, affiliate_tags=affiliate_tags)
         self.assertEqual(len(meta["products"]), 1)
         prod = meta["products"][0]
         self.assertIn("&tag=testtag-21", prod["amazon_url"])
         self.assertIn("&tag=testtag-21", prod["amazon_global_url"])
         self.assertIn("&affid=testaffid", prod["flipkart_url"])
+        self.assertIn("utm_campaign=msh123", prod["meesho_url"])
+
+    def test_parse_extracted_content_with_cuelinks_and_earnkaro_aggregators(self):
+        sample = """
+[CATEGORY]: GENERAL
+[TITLE]: 3 Underrated Gadgets
+[SUMMARY]: Gadget summary.
+
+[PRODUCTS]:
+- PRODUCT: Portronics 65W GaN Charger | PRICE: ₹999 | SEARCH: Portronics 65W GaN Charger
+"""
+        # Test Cuelinks
+        tags_cue = {"cuelinks": "12345"}
+        meta_cue = parse_extracted_content(sample, affiliate_tags=tags_cue)
+        prod_cue = meta_cue["products"][0]
+        self.assertIn("linksredirect.com/?cid=12345", prod_cue["flipkart_url"])
+        self.assertIn("linksredirect.com/?cid=12345", prod_cue["meesho_url"])
+
+        # Test EarnKaro
+        tags_ek = {"earnkaro": "user999"}
+        meta_ek = parse_extracted_content(sample, affiliate_tags=tags_ek)
+        prod_ek = meta_ek["products"][0]
+        self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["flipkart_url"])
+        self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["meesho_url"])
 
     def test_parse_extracted_content_no_products(self):
+
         sample = """
 [CATEGORY]: RECIPE
 [TITLE]: Classic Italian Pasta Aglio e Olio

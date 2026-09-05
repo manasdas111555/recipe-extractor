@@ -112,45 +112,58 @@ def get_nvidia_api_key() -> str:
 
 def get_affiliate_tags() -> dict:
     """
-    Retrieve Amazon Associates and Flipkart affiliate tags
+    Retrieve Amazon Associates, Flipkart, Meesho, and aggregator (Cuelinks/EarnKaro) affiliate tags
     from environment variables, Streamlit secrets, or defaults.
     """
     amazon_tag = os.environ.get("AMAZON_AFFILIATE_TAG", "").strip()
     flipkart_tag = os.environ.get("FLIPKART_AFFILIATE_TAG", "").strip()
+    meesho_tag = os.environ.get("MEESHO_AFFILIATE_TAG", "").strip()
+    cuelinks_id = os.environ.get("CUELINKS_ID", "").strip()
+    earnkaro_id = os.environ.get("EARNKARO_ID", "").strip()
     
-    if not amazon_tag:
-        try:
-            import streamlit as st
+    try:
+        import streamlit as st
+        if not amazon_tag:
             amazon_tag = st.secrets.get("AMAZON_AFFILIATE_TAG", "").strip()
-        except Exception:
-            pass
-            
-    if not flipkart_tag:
-        try:
-            import streamlit as st
+        if not flipkart_tag:
             flipkart_tag = st.secrets.get("FLIPKART_AFFILIATE_TAG", "").strip()
-        except Exception:
-            pass
+        if not meesho_tag:
+            meesho_tag = st.secrets.get("MEESHO_AFFILIATE_TAG", "").strip()
+        if not cuelinks_id:
+            cuelinks_id = st.secrets.get("CUELINKS_ID", "").strip()
+        if not earnkaro_id:
+            earnkaro_id = st.secrets.get("EARNKARO_ID", "").strip()
+    except Exception:
+        pass
 
     return {
         "amazon": amazon_tag,
-        "flipkart": flipkart_tag
+        "flipkart": flipkart_tag,
+        "meesho": meesho_tag,
+        "cuelinks": cuelinks_id,
+        "earnkaro": earnkaro_id
     }
 
-def save_affiliate_tags(amazon_tag: str = "", flipkart_tag: str = ""):
-    """Save affiliate tags to .env and active process environment."""
+def save_affiliate_tags(amazon_tag: str = "", flipkart_tag: str = "", meesho_tag: str = "", cuelinks_id: str = "", earnkaro_id: str = ""):
+    """Save affiliate and aggregator tags to .env and active process environment."""
+    keys_to_clean = ["AMAZON_AFFILIATE_TAG=", "FLIPKART_AFFILIATE_TAG=", "MEESHO_AFFILIATE_TAG=", "CUELINKS_ID=", "EARNKARO_ID="]
     lines = []
     if env_path.exists():
         with open(env_path, "r", encoding="utf-8") as f:
-            lines = [l for l in f.readlines() if not (l.startswith("AMAZON_AFFILIATE_TAG=") or l.startswith("FLIPKART_AFFILIATE_TAG="))]
+            lines = [l for l in f.readlines() if not any(l.startswith(k) for k in keys_to_clean)]
     
-    if amazon_tag.strip():
-        lines.append(f"AMAZON_AFFILIATE_TAG={amazon_tag.strip()}\n")
-        os.environ["AMAZON_AFFILIATE_TAG"] = amazon_tag.strip()
-    if flipkart_tag.strip():
-        lines.append(f"FLIPKART_AFFILIATE_TAG={flipkart_tag.strip()}\n")
-        os.environ["FLIPKART_AFFILIATE_TAG"] = flipkart_tag.strip()
+    def _add_tag(key: str, val: str):
+        if val.strip():
+            lines.append(f"{key}={val.strip()}\n")
+            os.environ[key] = val.strip()
+
+    _add_tag("AMAZON_AFFILIATE_TAG", amazon_tag)
+    _add_tag("FLIPKART_AFFILIATE_TAG", flipkart_tag)
+    _add_tag("MEESHO_AFFILIATE_TAG", meesho_tag)
+    _add_tag("CUELINKS_ID", cuelinks_id)
+    _add_tag("EARNKARO_ID", earnkaro_id)
 
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(lines)
+
 

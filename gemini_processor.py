@@ -342,10 +342,65 @@ If no specific purchasable products or equipment are featured, write:
 Be thorough, precise, and practical. Do not omit crucial steps, tutorial names, or product names.
 """
 
+def build_product_store_links(search_query: str, affiliate_tags: dict = None) -> dict:
+    """
+    Constructs 1-click store search links with affiliate/aggregator parameters
+    for Amazon, Flipkart, Meesho, and Google Shopping.
+    Supports direct tags as well as Cuelinks and EarnKaro aggregators.
+    """
+    if affiliate_tags is None:
+        affiliate_tags = {}
+
+    clean_q = search_query.strip()
+    encoded_q = urllib.parse.quote_plus(clean_q)
+    cuelinks_id = (affiliate_tags.get("cuelinks") or "").strip()
+    earnkaro_id = (affiliate_tags.get("earnkaro") or "").strip()
+
+    # 1. Amazon (Associates Tag)
+    amz_tag = (affiliate_tags.get("amazon") or "").strip()
+    amz_param = f"&tag={urllib.parse.quote_plus(amz_tag)}" if amz_tag else ""
+    amazon_url = f"https://www.amazon.in/s?k={encoded_q}{amz_param}"
+    amazon_global_url = f"https://www.amazon.com/s?k={encoded_q}{amz_param}"
+
+    # 2. Flipkart (Direct affid OR Aggregator Cuelinks/EarnKaro)
+    raw_flp_url = f"https://www.flipkart.com/search?q={encoded_q}"
+    flp_tag = (affiliate_tags.get("flipkart") or "").strip()
+    if cuelinks_id:
+        flipkart_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_flp_url)}"
+    elif earnkaro_id:
+        flipkart_url = f"https://ekaro.in/enlinks?r={urllib.parse.quote_plus(earnkaro_id)}&url={urllib.parse.quote_plus(raw_flp_url)}"
+    elif flp_tag:
+        flipkart_url = f"https://www.flipkart.com/search?q={encoded_q}&affid={urllib.parse.quote_plus(flp_tag)}"
+    else:
+        flipkart_url = raw_flp_url
+
+    # 3. Meesho (Aggregator Cuelinks/EarnKaro OR Reseller Campaign Tag OR Direct Search)
+    msh_tag = (affiliate_tags.get("meesho") or "").strip()
+    raw_meesho_url = f"https://www.meesho.com/search?q={encoded_q}"
+    if cuelinks_id:
+        meesho_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_meesho_url)}"
+    elif earnkaro_id:
+        meesho_url = f"https://ekaro.in/enlinks?r={urllib.parse.quote_plus(earnkaro_id)}&url={urllib.parse.quote_plus(raw_meesho_url)}"
+    elif msh_tag:
+        meesho_url = f"https://www.meesho.com/search?q={encoded_q}&utm_source=affiliate&utm_campaign={urllib.parse.quote_plus(msh_tag)}"
+    else:
+        meesho_url = raw_meesho_url
+
+    # 4. Google Shopping
+    google_shopping_url = f"https://www.google.com/search?tbm=shop&q={encoded_q}"
+
+    return {
+        "amazon_url": amazon_url,
+        "amazon_global_url": amazon_global_url,
+        "flipkart_url": flipkart_url,
+        "meesho_url": meesho_url,
+        "google_shopping_url": google_shopping_url
+    }
+
 def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     """
     Parses structured Gemini response into clean fields: category, title, summary, products, details, and safe filename.
-    Attaches affiliate tracking tags to Amazon and Flipkart links if configured.
+    Attaches affiliate tracking tags to Amazon, Flipkart, and Meesho links if configured.
     """
     if affiliate_tags is None:
         affiliate_tags = get_affiliate_tags()
@@ -448,25 +503,22 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                     else:
                         continue
 
+
                 p_name_clean = re.sub(r'[*_#]', '', p_name).strip()
                 p_search_clean = re.sub(r'[*_#]', '', p_search).strip()
                 if not p_name_clean:
                     continue
 
-                amz_tag = (affiliate_tags.get("amazon") or "").strip()
-                amz_param = f"&tag={urllib.parse.quote_plus(amz_tag)}" if amz_tag else ""
-                flp_tag = (affiliate_tags.get("flipkart") or "").strip()
-                flp_param = f"&affid={urllib.parse.quote_plus(flp_tag)}" if flp_tag else ""
-
-                encoded_q = urllib.parse.quote_plus(p_search_clean)
+                links = build_product_store_links(p_search_clean, affiliate_tags)
                 products.append({
                     "name": p_name_clean,
                     "price": p_price if p_price and p_price.upper() not in ["N/A", "NONE", "NOT SPECIFIED"] else "",
                     "query": p_search_clean,
-                    "amazon_url": f"https://www.amazon.in/s?k={encoded_q}{amz_param}",
-                    "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}{amz_param}",
-                    "google_shopping_url": f"https://www.google.com/search?tbm=shop&q={encoded_q}",
-                    "flipkart_url": f"https://www.flipkart.com/search?q={encoded_q}{flp_param}"
+                    "amazon_url": links["amazon_url"],
+                    "amazon_global_url": links["amazon_global_url"],
+                    "flipkart_url": links["flipkart_url"],
+                    "meesho_url": links["meesho_url"],
+                    "google_shopping_url": links["google_shopping_url"]
                 })
 
     # Secondary Fallback: If no products were captured via [PRODUCTS] section but items are described in details
@@ -475,20 +527,18 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
         for f_item in fallback_matches:
             item_clean = f_item.strip()
             if len(item_clean) > 3 and not any(k in item_clean.lower() for k in ["features", "uses", "tips", "pros", "cons", "details", "summary", "instructions"]):
-                amz_tag = (affiliate_tags.get("amazon") or "").strip()
-                amz_param = f"&tag={urllib.parse.quote_plus(amz_tag)}" if amz_tag else ""
-                flp_tag = (affiliate_tags.get("flipkart") or "").strip()
-                flp_param = f"&affid={urllib.parse.quote_plus(flp_tag)}" if flp_tag else ""
-                encoded_q = urllib.parse.quote_plus(item_clean)
+                links = build_product_store_links(item_clean, affiliate_tags)
                 products.append({
                     "name": item_clean,
                     "price": "",
                     "query": item_clean,
-                    "amazon_url": f"https://www.amazon.in/s?k={encoded_q}{amz_param}",
-                    "amazon_global_url": f"https://www.amazon.com/s?k={encoded_q}{amz_param}",
-                    "google_shopping_url": f"https://www.google.com/search?tbm=shop&q={encoded_q}",
-                    "flipkart_url": f"https://www.flipkart.com/search?q={encoded_q}{flp_param}"
+                    "amazon_url": links["amazon_url"],
+                    "amazon_global_url": links["amazon_global_url"],
+                    "flipkart_url": links["flipkart_url"],
+                    "meesho_url": links["meesho_url"],
+                    "google_shopping_url": links["google_shopping_url"]
                 })
+
 
 
     # Extract Resources & Tutorials section (for TECH_TUTORIAL, Roadmaps, Courses, etc.)
@@ -805,8 +855,10 @@ def process_video_and_generate_recipe(
                 price_str = f" (Price: {p['price']})" if p.get("price") else ""
                 formatted_file_content += f"{idx}. {p['name']}{price_str}\n"
                 formatted_file_content += f"   • Amazon: {p['amazon_url']}\n"
-                formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n"
-                formatted_file_content += f"   • Flipkart: {p['flipkart_url']}\n\n"
+                formatted_file_content += f"   • Flipkart: {p['flipkart_url']}\n"
+                formatted_file_content += f"   • Meesho: {p['meesho_url']}\n"
+                formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n\n"
+
 
         if meta.get("resources") and len(meta["resources"]) > 0:
             formatted_file_content += f"\n{'='*50}\n🎓 Recommended YouTube Tutorials & Resources:\n{'='*50}\n"

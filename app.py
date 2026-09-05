@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import textwrap
+import urllib.parse
 from pathlib import Path
 
 # Force UTF-8 encoding on Windows console for currency symbols (₹) and emojis
@@ -310,6 +311,26 @@ st.markdown("""
         transform: translateY(-1px);
         box-shadow: 0 6px 20px rgba(40, 116, 240, 0.5);
     }
+    .shop-btn-meesho {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #F43397 0%, #D81B60 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 8px 18px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 14px rgba(244, 51, 151, 0.35);
+        transition: all 0.2s ease;
+    }
+    .shop-btn-meesho:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(244, 51, 151, 0.55);
+    }
+
 
     /* YouTube Tutorial & Learning Showcase */
     .tutorial-box-luxury {
@@ -583,14 +604,18 @@ if is_admin:
         curr_tags = get_affiliate_tags()
         amz_in = st.text_input("Amazon Tag", value=curr_tags.get("amazon", ""))
         flp_in = st.text_input("Flipkart Tag", value=curr_tags.get("flipkart", ""))
+        msh_in = st.text_input("Meesho / Reseller Tag", value=curr_tags.get("meesho", ""))
+        cue_in = st.text_input("Cuelinks CID (Aggregator)", value=curr_tags.get("cuelinks", ""))
+        ek_in = st.text_input("EarnKaro User ID (Aggregator)", value=curr_tags.get("earnkaro", ""))
         if st.button("Save Admin Config"):
             if g_in: set_env_var("GEMINI_API_KEY", g_in)
             if m_in: set_env_var("MISTRALAI_API_KEY", m_in)
             if gr_in: set_env_var("GROQ_API_KEY", gr_in)
             if nv_in: set_env_var("NVIDIA_API_KEY", nv_in)
-            save_affiliate_tags(amz_in, flp_in)
+            save_affiliate_tags(amz_in, flp_in, msh_in, cue_in, ek_in)
             st.success("Admin configuration updated!")
             st.rerun()
+
 
 # 1. WhatsApp Destination (Primary Consumer Setting)
 st.sidebar.markdown("""
@@ -937,7 +962,9 @@ if process_btn:
                             <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                                 <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
                                 <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
+                                <a href="{prod.get('meesho_url', f'https://www.meesho.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-meesho">🌸 Meesho</a>
                                 <a href="{prod['google_shopping_url']}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:'Outfit',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🛍️ Google Shopping</a>
+
                             </div>
                         </div>
                         """, unsafe_allow_html=True)

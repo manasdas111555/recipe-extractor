@@ -85,6 +85,11 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
         for p in products[:5]:
             price_tag = f" ({p['price']})" if p.get("price") else ""
             product_section += f"• *{p['name']}*{price_tag}\n  🛒 Amazon: {p['amazon_url']}\n"
+            if p.get("flipkart_url"):
+                product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
+            if p.get("meesho_url"):
+                product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
+
 
     resource_section = ""
     if resources and len(resources) > 0:
