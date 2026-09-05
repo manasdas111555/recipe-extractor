@@ -331,6 +331,244 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(244, 51, 151, 0.55);
     }
 
+    /* Main Brand 3: Myntra */
+    .shop-btn-myntra {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #FF3F6C 0%, #FF527B 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.85rem;
+        padding: 8px 18px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 14px rgba(255, 63, 108, 0.35);
+        transition: all 0.2s ease;
+    }
+    .shop-btn-myntra:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(255, 63, 108, 0.55);
+    }
+
+    /* Dropdown Secondary Stores */
+    .shop-btn-ajio {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #2C4152 0%, #1D2D3A 100%);
+        color: #F8FAFC !important;
+        border: 1px solid rgba(255,255,255,0.15);
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 7px 15px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        transition: all 0.2s ease;
+    }
+    .shop-btn-ajio:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255,255,255,0.3);
+    }
+    .shop-btn-nykaa {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #FC2779 0%, #C8145B 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 7px 15px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(252, 39, 121, 0.35);
+        transition: all 0.2s ease;
+    }
+    .shop-btn-nykaa:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(252, 39, 121, 0.55);
+    }
+    .shop-btn-shopsy {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 7px 15px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+        transition: all 0.2s ease;
+    }
+    .shop-btn-shopsy:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(124, 58, 237, 0.55);
+    }
+    .shop-btn-google {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: #E2E8F0 !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        font-size: 0.82rem;
+        padding: 7px 15px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        transition: all 0.2s ease;
+    }
+    .shop-btn-google:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #FFFFFF !important;
+    }
+
+    /* Dropdown UI Container */
+    .more-stores-details {
+        margin-top: 10px;
+        width: 100%;
+    }
+    .more-stores-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        padding: 6px 14px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px dashed rgba(255, 255, 255, 0.18);
+        color: #94A3B8;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        font-size: 0.82rem;
+        user-select: none;
+        transition: all 0.2s ease;
+    }
+    .more-stores-summary:hover {
+        background: rgba(255, 255, 255, 0.09);
+        color: #F1F5F9;
+        border-color: rgba(255, 255, 255, 0.35);
+    }
+    .more-stores-shelf {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 10px;
+        padding: 12px 14px;
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        animation: fadeInDown 0.2s ease-out;
+    }
+    @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Quick Commerce Instant Delivery Shelf */
+    .qc-shelf-container {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.12);
+        width: 100%;
+    }
+    .qc-shelf-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #F59E0B;
+        margin-bottom: 8px;
+    }
+    .qc-btn-blinkit {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #F7D302;
+        color: #0C5427 !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 0.82rem;
+        padding: 6px 14px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(247, 211, 2, 0.3);
+        transition: all 0.2s ease;
+    }
+    .qc-btn-blinkit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(247, 211, 2, 0.5);
+    }
+    .qc-btn-zepto {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: linear-gradient(135deg, #7A1EA1 0%, #E02475 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 0.82rem;
+        padding: 6px 14px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(224, 36, 117, 0.3);
+        transition: all 0.2s ease;
+    }
+    .qc-btn-zepto:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(224, 36, 117, 0.5);
+    }
+    .qc-btn-instamart {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: linear-gradient(135deg, #FC8019 0%, #D85800 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 0.82rem;
+        padding: 6px 14px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(252, 128, 25, 0.3);
+        transition: all 0.2s ease;
+    }
+    .qc-btn-instamart:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(252, 128, 25, 0.5);
+    }
+    .qc-btn-jiomart {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: linear-gradient(135deg, #0078AD 0%, #004F75 100%);
+        color: #FFFFFF !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 0.82rem;
+        padding: 6px 14px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 12px rgba(0, 120, 173, 0.3);
+        transition: all 0.2s ease;
+    }
+    .qc-btn-jiomart:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0, 120, 173, 0.5);
+    }
+
 
     /* YouTube Tutorial & Learning Showcase */
     .tutorial-box-luxury {
@@ -954,20 +1192,43 @@ if process_btn:
                         p_price = prod.get("price", "")
                         price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
                         
-                        st.markdown(f"""
+                        prod_html = f"""
                         <div class="product-box-luxury">
-                            <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9;">
+                            <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 4px;">
                                 <span>📦</span> <span>{p_name}</span> {price_html}
                             </div>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                            <!-- Main 4 Brands (Always Visible) -->
+                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 8px;">
                                 <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
                                 <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
+                                <a href="{prod.get('myntra_url', f'https://www.myntra.com/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-myntra">🛍️ Myntra</a>
                                 <a href="{prod.get('meesho_url', f'https://www.meesho.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-meesho">🌸 Meesho</a>
-                                <a href="{prod['google_shopping_url']}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:'Outfit',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🛍️ Google Shopping</a>
+                            </div>
+                            
+                            <!-- More Stores Dropdown -->
+                            <details class="more-stores-details">
+                                <summary class="more-stores-summary">🏷️ More Stores & Price Compare ▾</summary>
+                                <div class="more-stores-shelf">
+                                    <a href="{prod.get('ajio_url', f'https://www.ajio.com/search/?text={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-ajio">👔 AJIO</a>
+                                    <a href="{prod.get('nykaa_url', f'https://www.nykaa.com/search/result/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-nykaa">💄 Nykaa</a>
+                                    <a href="{prod.get('shopsy_url', f'https://www.shopsy.in/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-shopsy">🟣 Shopsy</a>
+                                    <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
+                                </div>
+                            </details>
 
+                            <!-- Dedicated Quick Commerce (10-Minute Delivery) Shelf -->
+                            <div class="qc-shelf-container">
+                                <div class="qc-shelf-title">⚡ 10-Minute Instant Delivery (Quick Commerce)</div>
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                    <a href="{prod.get('blinkit_url', f'https://blinkit.com/s/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-blinkit">🟡 Blinkit</a>
+                                    <a href="{prod.get('zepto_url', f'https://www.zeptonow.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-zepto">⚡ Zepto</a>
+                                    <a href="{prod.get('instamart_url', f'https://www.swiggy.com/instamart/search?custom_back=true&query={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-instamart">🛵 Swiggy Instamart</a>
+                                    <a href="{prod.get('jiomart_url', f'https://www.jiomart.com/search/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-jiomart">📦 JioMart</a>
+                                </div>
                             </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """
+                        st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
 
                 # Recommended YouTube Tutorials & Learning Links
                 resources_list = meta.get("resources", [])
@@ -981,7 +1242,7 @@ if process_btn:
                         plat_badge = f"<span style='background-color:rgba(239, 68, 68, 0.15); color:#F87171; border:1px solid rgba(239, 68, 68, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>📺 {r_plat}</span>"
                         github_btn = f'<a href="{res["github_url"]}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🐙 Search GitHub</a>' if any(k in r_name.lower() for k in ["github", "code", "project", "repo"]) else ""
 
-                        st.markdown(f"""
+                        tut_html = f"""
                         <div class="tutorial-box-luxury">
                             <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9;">
                                 <span>▶️</span> <span>{r_name}</span> {plat_badge}
@@ -992,7 +1253,8 @@ if process_btn:
                                 <a href="{res['google_url']}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:'Outfit',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🔍 Search Google</a>
                             </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """
+                        st.markdown(textwrap.dedent(tut_html).strip(), unsafe_allow_html=True)
 
                 st.markdown("---")
                 

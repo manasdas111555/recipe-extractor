@@ -87,8 +87,12 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
             product_section += f"• *{p['name']}*{price_tag}\n  🛒 Amazon: {p['amazon_url']}\n"
             if p.get("flipkart_url"):
                 product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
+            if p.get("myntra_url"):
+                product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
             if p.get("meesho_url"):
                 product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
+            if p.get("blinkit_url"):
+                product_section += f"  ⚡ 10-Min Delivery: {p['blinkit_url']}\n"
 
 
     resource_section = ""

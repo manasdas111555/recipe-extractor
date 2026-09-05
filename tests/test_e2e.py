@@ -88,10 +88,21 @@ Hands-free MagSafe mounting.
         first_prod = meta["products"][0]
         self.assertEqual(first_prod["name"], "Portronics 65W GaN Charger")
         self.assertEqual(first_prod["price"], "Under ₹1000")
+        # Main 4 Brands
         self.assertIn("amazon.in/s?k=", first_prod["amazon_url"])
-        self.assertIn("google.com/search?tbm=shop&q=", first_prod["google_shopping_url"])
         self.assertIn("flipkart.com/search?q=", first_prod["flipkart_url"])
+        self.assertIn("myntra.com/", first_prod["myntra_url"])
         self.assertIn("meesho.com/search?q=", first_prod["meesho_url"])
+        # More Stores (Dropdown)
+        self.assertIn("ajio.com/search/?text=", first_prod["ajio_url"])
+        self.assertIn("nykaa.com/search/result/?q=", first_prod["nykaa_url"])
+        self.assertIn("shopsy.in/search?q=", first_prod["shopsy_url"])
+        self.assertIn("google.com/search?tbm=shop&q=", first_prod["google_shopping_url"])
+        # Quick Commerce
+        self.assertIn("blinkit.com/s/?q=", first_prod["blinkit_url"])
+        self.assertIn("zeptonow.com/search?q=", first_prod["zepto_url"])
+        self.assertIn("swiggy.com/instamart/search?", first_prod["instamart_url"])
+        self.assertIn("jiomart.com/search/", first_prod["jiomart_url"])
 
     def test_parse_extracted_content_with_affiliate_tags(self):
         sample = """
@@ -125,14 +136,22 @@ Hands-free MagSafe mounting.
         meta_cue = parse_extracted_content(sample, affiliate_tags=tags_cue)
         prod_cue = meta_cue["products"][0]
         self.assertIn("linksredirect.com/?cid=12345", prod_cue["flipkart_url"])
+        self.assertIn("linksredirect.com/?cid=12345", prod_cue["myntra_url"])
         self.assertIn("linksredirect.com/?cid=12345", prod_cue["meesho_url"])
+        self.assertIn("linksredirect.com/?cid=12345", prod_cue["ajio_url"])
+        self.assertIn("linksredirect.com/?cid=12345", prod_cue["nykaa_url"])
+        self.assertIn("linksredirect.com/?cid=12345", prod_cue["shopsy_url"])
 
         # Test EarnKaro
         tags_ek = {"earnkaro": "user999"}
         meta_ek = parse_extracted_content(sample, affiliate_tags=tags_ek)
         prod_ek = meta_ek["products"][0]
         self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["flipkart_url"])
+        self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["myntra_url"])
         self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["meesho_url"])
+        self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["ajio_url"])
+        self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["nykaa_url"])
+        self.assertIn("ekaro.in/enlinks?r=user999", prod_ek["shopsy_url"])
 
     def test_parse_extracted_content_no_products(self):
 
@@ -337,7 +356,11 @@ Price: ₹349
             {
                 "name": "Portronics GaN Charger",
                 "price": "₹999",
-                "amazon_url": "https://www.amazon.in/s?k=Portronics+GaN+Charger"
+                "amazon_url": "https://www.amazon.in/s?k=Portronics+GaN+Charger",
+                "flipkart_url": "https://www.flipkart.com/search?q=Portronics+GaN+Charger",
+                "myntra_url": "https://www.myntra.com/Portronics+GaN+Charger",
+                "meesho_url": "https://www.meesho.com/search?q=Portronics+GaN+Charger",
+                "blinkit_url": "https://blinkit.com/s/?q=Portronics+GaN+Charger"
             }
         ]
         url = generate_whatsapp_deep_link(
@@ -352,6 +375,10 @@ Price: ₹349
         decoded = urllib.parse.unquote(url)
         self.assertIn("Portronics GaN Charger", decoded)
         self.assertIn("https://www.amazon.in/s?k=Portronics+GaN+Charger", decoded)
+        self.assertIn("https://www.flipkart.com/search?q=Portronics+GaN+Charger", decoded)
+        self.assertIn("https://www.myntra.com/Portronics+GaN+Charger", decoded)
+        self.assertIn("https://www.meesho.com/search?q=Portronics+GaN+Charger", decoded)
+        self.assertIn("10-Min Delivery", decoded)
 
     def test_generate_whatsapp_deep_link_with_resources(self):
         resources = [

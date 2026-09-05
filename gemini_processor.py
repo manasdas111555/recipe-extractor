@@ -344,8 +344,10 @@ Be thorough, precise, and practical. Do not omit crucial steps, tutorial names, 
 
 def build_product_store_links(search_query: str, affiliate_tags: dict = None) -> dict:
     """
-    Constructs 1-click store search links with affiliate/aggregator parameters
-    for Amazon, Flipkart, Meesho, and Google Shopping.
+    Constructs 1-click store search links with affiliate/aggregator parameters for:
+    - Main 4 Brands: Amazon, Flipkart, Myntra, Meesho
+    - More Stores (Dropdown): AJIO, Nykaa, Shopsy, Google Shopping
+    - Quick Commerce (10-Min Instant Delivery): Zepto, Blinkit, Swiggy Instamart, JioMart
     Supports direct tags as well as Cuelinks and EarnKaro aggregators.
     """
     if affiliate_tags is None:
@@ -356,13 +358,14 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None) ->
     cuelinks_id = (affiliate_tags.get("cuelinks") or "").strip()
     earnkaro_id = (affiliate_tags.get("earnkaro") or "").strip()
 
-    # 1. Amazon (Associates Tag)
+    # --- 1. Main 4 Brands ---
+    # 1A. Amazon (Associates Tag)
     amz_tag = (affiliate_tags.get("amazon") or "").strip()
     amz_param = f"&tag={urllib.parse.quote_plus(amz_tag)}" if amz_tag else ""
     amazon_url = f"https://www.amazon.in/s?k={encoded_q}{amz_param}"
     amazon_global_url = f"https://www.amazon.com/s?k={encoded_q}{amz_param}"
 
-    # 2. Flipkart (Direct affid OR Aggregator Cuelinks/EarnKaro)
+    # 1B. Flipkart (Direct affid OR Aggregator Cuelinks/EarnKaro)
     raw_flp_url = f"https://www.flipkart.com/search?q={encoded_q}"
     flp_tag = (affiliate_tags.get("flipkart") or "").strip()
     if cuelinks_id:
@@ -374,7 +377,16 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None) ->
     else:
         flipkart_url = raw_flp_url
 
-    # 3. Meesho (Aggregator Cuelinks/EarnKaro OR Reseller Campaign Tag OR Direct Search)
+    # 1C. Myntra (Aggregator Cuelinks/EarnKaro OR Direct Search)
+    raw_myntra_url = f"https://www.myntra.com/{encoded_q}"
+    if cuelinks_id:
+        myntra_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_myntra_url)}"
+    elif earnkaro_id:
+        myntra_url = f"https://ekaro.in/enlinks?r={urllib.parse.quote_plus(earnkaro_id)}&url={urllib.parse.quote_plus(raw_myntra_url)}"
+    else:
+        myntra_url = raw_myntra_url
+
+    # 1D. Meesho (Aggregator Cuelinks/EarnKaro OR Reseller Campaign Tag OR Direct Search)
     msh_tag = (affiliate_tags.get("meesho") or "").strip()
     raw_meesho_url = f"https://www.meesho.com/search?q={encoded_q}"
     if cuelinks_id:
@@ -386,15 +398,60 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None) ->
     else:
         meesho_url = raw_meesho_url
 
-    # 4. Google Shopping
+    # --- 2. More Stores (Dropdown) ---
+    # 2A. AJIO
+    raw_ajio_url = f"https://www.ajio.com/search/?text={encoded_q}"
+    if cuelinks_id:
+        ajio_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_ajio_url)}"
+    elif earnkaro_id:
+        ajio_url = f"https://ekaro.in/enlinks?r={urllib.parse.quote_plus(earnkaro_id)}&url={urllib.parse.quote_plus(raw_ajio_url)}"
+    else:
+        ajio_url = raw_ajio_url
+
+    # 2B. Nykaa
+    raw_nykaa_url = f"https://www.nykaa.com/search/result/?q={encoded_q}"
+    if cuelinks_id:
+        nykaa_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_nykaa_url)}"
+    elif earnkaro_id:
+        nykaa_url = f"https://ekaro.in/enlinks?r={urllib.parse.quote_plus(earnkaro_id)}&url={urllib.parse.quote_plus(raw_nykaa_url)}"
+    else:
+        nykaa_url = raw_nykaa_url
+
+    # 2C. Shopsy
+    raw_shopsy_url = f"https://www.shopsy.in/search?q={encoded_q}"
+    if cuelinks_id:
+        shopsy_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_shopsy_url)}"
+    elif earnkaro_id:
+        shopsy_url = f"https://ekaro.in/enlinks?r={urllib.parse.quote_plus(earnkaro_id)}&url={urllib.parse.quote_plus(raw_shopsy_url)}"
+    else:
+        shopsy_url = raw_shopsy_url
+
+    # 2D. Google Shopping
     google_shopping_url = f"https://www.google.com/search?tbm=shop&q={encoded_q}"
 
+    # --- 3. Quick Commerce (10-Minute Delivery) ---
+    blinkit_url = f"https://blinkit.com/s/?q={encoded_q}"
+    zepto_url = f"https://www.zeptonow.com/search?q={encoded_q}"
+    instamart_url = f"https://www.swiggy.com/instamart/search?custom_back=true&query={encoded_q}"
+    jiomart_url = f"https://www.jiomart.com/search/{encoded_q}"
+
     return {
+        # Main 4
         "amazon_url": amazon_url,
         "amazon_global_url": amazon_global_url,
         "flipkart_url": flipkart_url,
+        "myntra_url": myntra_url,
         "meesho_url": meesho_url,
-        "google_shopping_url": google_shopping_url
+        # More Stores
+        "ajio_url": ajio_url,
+        "nykaa_url": nykaa_url,
+        "shopsy_url": shopsy_url,
+        "google_shopping_url": google_shopping_url,
+        # Quick Commerce
+        "blinkit_url": blinkit_url,
+        "zepto_url": zepto_url,
+        "instamart_url": instamart_url,
+        "jiomart_url": jiomart_url
     }
 
 def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
@@ -510,16 +567,13 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                     continue
 
                 links = build_product_store_links(p_search_clean, affiliate_tags)
-                products.append({
+                prod_entry = {
                     "name": p_name_clean,
                     "price": p_price if p_price and p_price.upper() not in ["N/A", "NONE", "NOT SPECIFIED"] else "",
                     "query": p_search_clean,
-                    "amazon_url": links["amazon_url"],
-                    "amazon_global_url": links["amazon_global_url"],
-                    "flipkart_url": links["flipkart_url"],
-                    "meesho_url": links["meesho_url"],
-                    "google_shopping_url": links["google_shopping_url"]
-                })
+                }
+                prod_entry.update(links)
+                products.append(prod_entry)
 
     # Secondary Fallback: If no products were captured via [PRODUCTS] section but items are described in details
     if len(products) == 0 and category in ["KITCHEN_FINDS", "PRODUCT_FINDS", "BEAUTY_FASHION", "GENERAL"]:
@@ -528,16 +582,13 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
             item_clean = f_item.strip()
             if len(item_clean) > 3 and not any(k in item_clean.lower() for k in ["features", "uses", "tips", "pros", "cons", "details", "summary", "instructions"]):
                 links = build_product_store_links(item_clean, affiliate_tags)
-                products.append({
+                fallback_entry = {
                     "name": item_clean,
                     "price": "",
                     "query": item_clean,
-                    "amazon_url": links["amazon_url"],
-                    "amazon_global_url": links["amazon_global_url"],
-                    "flipkart_url": links["flipkart_url"],
-                    "meesho_url": links["meesho_url"],
-                    "google_shopping_url": links["google_shopping_url"]
-                })
+                }
+                fallback_entry.update(links)
+                products.append(fallback_entry)
 
 
 
@@ -854,10 +905,21 @@ def process_video_and_generate_recipe(
             for idx, p in enumerate(meta["products"], 1):
                 price_str = f" (Price: {p['price']})" if p.get("price") else ""
                 formatted_file_content += f"{idx}. {p['name']}{price_str}\n"
+                formatted_file_content += f"   [Main Stores]\n"
                 formatted_file_content += f"   • Amazon: {p['amazon_url']}\n"
                 formatted_file_content += f"   • Flipkart: {p['flipkart_url']}\n"
+                formatted_file_content += f"   • Myntra: {p.get('myntra_url', '')}\n"
                 formatted_file_content += f"   • Meesho: {p['meesho_url']}\n"
-                formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n\n"
+                formatted_file_content += f"   [More Stores & Compare]\n"
+                formatted_file_content += f"   • AJIO: {p.get('ajio_url', '')}\n"
+                formatted_file_content += f"   • Nykaa: {p.get('nykaa_url', '')}\n"
+                formatted_file_content += f"   • Shopsy: {p.get('shopsy_url', '')}\n"
+                formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n"
+                formatted_file_content += f"   [⚡ 10-Min Quick Delivery]\n"
+                formatted_file_content += f"   • Blinkit: {p.get('blinkit_url', '')}\n"
+                formatted_file_content += f"   • Zepto: {p.get('zepto_url', '')}\n"
+                formatted_file_content += f"   • Swiggy Instamart: {p.get('instamart_url', '')}\n"
+                formatted_file_content += f"   • JioMart: {p.get('jiomart_url', '')}\n\n"
 
 
         if meta.get("resources") and len(meta["resources"]) > 0:
