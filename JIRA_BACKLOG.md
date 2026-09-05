@@ -25,7 +25,7 @@
 
 | 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done |
 | :--- | :--- | :--- | :--- |
-| `UPA-104` FastAPI Directory Skeleton<br>`UPA-105` Supabase Auth & JWT Middleware<br>`UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline<br>`UPA-101` Supabase Schema Migration (001)<br>`UPA-102` Row Level Security Policies<br>`UPA-103` SHA-256 URL Hash Cache Index |
+| `UPA-105` Supabase Auth & JWT Middleware<br>`UPA-106` `/v1/extract` Job Enqueue Endpoint<br>`UPA-107` `/status/{job_id}` Polling Endpoint | None | None | `UPA-001` Streamlit Prototype & Live Deployment<br>`UPA-002` Multi-Store Affiliate Links Engine<br>`UPA-003` 30-Test Automated Test Suite<br>`UPA-004` 3-Tier Environments & CI/CD Pipeline<br>`UPA-101` Supabase Schema Migration (001)<br>`UPA-102` Row Level Security Policies<br>`UPA-103` SHA-256 URL Hash Cache Index<br>`UPA-104` FastAPI Modular Backend Skeleton |
 
 ---
 
@@ -101,12 +101,13 @@
 ### ⚡ EPIC-2: Decoupled Asynchronous API Gateway (FastAPI)
 
 #### `UPA-104`: Scaffold FastAPI Modular Backend Skeleton
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 3 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 3 pts | **Status**: `[x] DONE`
 - **User Story**: *As a backend developer, I want a clean FastAPI directory structure, so that API routes, services, workers, and core configuration are logically separated.*
 - **Acceptance Criteria**:
-  - [ ] Directory layout created under `backend/app/` (`api/v1/`, `core/`, `workers/`, `services/`).
-  - [ ] `main.py` boots cleanly with CORS middleware and OpenAPI docs enabled (`/docs`).
-  - [ ] Environment settings managed via `pydantic-settings`.
+  - [x] Directory layout created under `backend/app/` (`api/v1/`, `core/`, `workers/`, `services/`).
+  - [x] `main.py` boots cleanly with CORS middleware, health check (`/health`), and OpenAPI docs enabled (`/docs`).
+  - [x] Environment settings managed via `pydantic-settings` with automatic `.env` discovery.
+  - [x] 5 automated unit tests in `tests/test_api_gateway.py` validate endpoints, CORS, and settings.
 - **Dependencies**: None.
 
 #### `UPA-105`: Supabase Auth & JWT Verification Middleware
