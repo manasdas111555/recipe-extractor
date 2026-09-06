@@ -91,6 +91,19 @@ class SupabaseRestClient:
             logger.error(f"Error incrementing quota for user {user_id}: {e}")
             return False
 
+    def log_affiliate_click(self, click_data: Dict[str, Any]) -> bool:
+        """Logs an affiliate click event into public.affiliate_clicks."""
+        if not self.is_configured():
+            logger.info(f"Supabase not configured, affiliate click logged locally: {click_data}")
+            return True
+        url = f"{self.base_url}/rest/v1/affiliate_clicks"
+        try:
+            r = requests.post(url, headers=self._get_headers(use_service_role=True), json=click_data, timeout=5)
+            return r.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Error logging affiliate click to Supabase: {e}")
+            return False
+
     # Aliases for worker tasks compatibility
     save_extraction = insert_extraction
     increment_daily_quota = increment_user_quota

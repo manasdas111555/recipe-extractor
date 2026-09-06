@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
+from backend.app.services.quota_service import get_quota_manager
 from backend.app.core.security import get_current_user, check_anonymous_rate_limit
 from backend.app.core.supabase_client import get_supabase_client
 from backend.app.services.job_manager import get_job_manager, run_extraction_worker_sync
@@ -81,15 +82,34 @@ async def enqueue_extraction(
                 detail="Rate limit exceeded: Anonymous tier allows 3 requests per minute. Upgrade or authenticate for higher throughput."
             )
 
-    # 2. Daily Quota Verification
+    # 2. Daily Quota Verification (UPA-601 Redis Quota Manager)
+    is_anonymous = current_user.get("is_anonymous", False)
     extractions_today = current_user.get("extractions_today", 0)
-    daily_limit = current_user.get("daily_quota_limit", 10 if current_user.get("is_anonymous") else 3)
+    daily_limit = current_user.get("daily_quota_limit", 3)
+    is_pro = current_user.get("plan_tier") in ["pro", "unlimited"]
 
-    if extractions_today >= daily_limit:
+    # Backward compatibility for mocked user objects in existing test suites
+    if extractions_today >= daily_limit and not is_pro:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Daily extraction quota limit reached for free tier. Upgrade to Pro for unlimited extractions."
         )
+
+    # Active Quota Consumption for registered users
+    if not is_anonymous and not is_pro:
+        quota_manager = get_quota_manager()
+        user_identifier = current_user.get("id") or current_user.get("user_id") or "user"
+        allowed, usage, remaining = quota_manager.check_and_consume_quota(
+            identifier=user_identifier,
+            is_pro=is_pro,
+            daily_limit=daily_limit
+        )
+
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Daily extraction quota limit reached for free tier. Upgrade to Pro for unlimited extractions."
+            )
 
     # Compute URL Hash for viral 0-cost caching
     canonical_url = payload.video_url.strip()

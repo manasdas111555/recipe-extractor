@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     MAX_MEDIA_DOWNLOAD_MB: int = 50
     MEDIA_DOWNLOAD_RESOLUTION: str = "360"
 
+    # Chat Ingestion & Webhook Settings (Sprint 3)
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
+    TELEGRAM_WEBHOOK_SECRET: Optional[str] = None
+    WHATSAPP_VERIFY_TOKEN: Optional[str] = None
+    WHATSAPP_ACCESS_TOKEN: Optional[str] = None
+    WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
+
+    # Quota & Rate Limiting (Sprint 3)
+    DAILY_FREE_QUOTA_LIMIT: int = 3
+
     # CORS Allowed Origins
     CORS_ORIGINS: List[str] = ["*"]
 

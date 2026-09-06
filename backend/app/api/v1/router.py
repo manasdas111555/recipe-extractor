@@ -36,9 +36,13 @@ async def get_v1_info():
 from fastapi import Depends
 from backend.app.core.security import get_current_user
 from backend.app.api.v1.extract import router as extract_router
+from backend.app.api.v1.affiliate import router as affiliate_router
+from backend.app.api.v1.webhooks import router as webhooks_router
 
-# Mount Extraction Sub-Router (UPA-106 & UPA-107)
+# Mount Sub-Routers
 router.include_router(extract_router)
+router.include_router(affiliate_router)
+router.include_router(webhooks_router)
 
 @router.get("/auth/me", summary="Get Current Authenticated or Guest Profile", tags=["Authentication"])
 async def get_my_profile(current_user: dict = Depends(get_current_user)):
