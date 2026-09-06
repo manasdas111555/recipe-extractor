@@ -729,6 +729,63 @@ def extract_apt_recipe_title(recipe_text: str) -> str:
     return sanitized if sanitized else "Recipe"
 
 
+def format_downloadable_txt(meta: Dict[str, Any]) -> str:
+    """
+    Formats structured intelligence into a clean, complete, downloadable .txt file.
+    Guarantees actionable YouTube tutorial links, Google/GitHub links, and Shoppable product buy links are included.
+    """
+    formatted = f"""==================================================
+{meta.get('emoji', '📝')} {meta.get('title', 'Extracted Content')} ({meta.get('category_name', 'General Intelligence')})
+==================================================
+"""
+    if meta.get("summary"):
+        clean_sum = meta['summary'].strip()
+        clean_sum = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*', '', clean_sum, flags=re.DOTALL | re.IGNORECASE).strip()
+        formatted += f"\n📋 Summary:\n{clean_sum}\n"
+
+    if meta.get("resources") and len(meta["resources"]) > 0:
+        formatted += f"\n{'='*50}\n🎓 Recommended YouTube Tutorials & Learning Links:\n{'='*50}\n"
+        for idx, r in enumerate(meta["resources"], 1):
+            plat = r.get("platform", "YouTube")
+            formatted += f"{idx}. {r.get('name', 'Tutorial')} ({plat})\n"
+            if r.get("youtube_url"):
+                formatted += f"   • ▶️ Watch on YouTube: {r['youtube_url']}\n"
+            if r.get("google_url"):
+                formatted += f"   • 🔍 Google Search: {r['google_url']}\n"
+            if r.get("github_url") and any(k in f"{r.get('name', '')} {r.get('platform', '')}".lower() for k in ["github", "code", "project", "repo", "framework", "library", "git", "api"]):
+                formatted += f"   • 🐙 GitHub Search: {r['github_url']}\n"
+            formatted += "\n"
+
+    if meta.get("products") and len(meta["products"]) > 0:
+        formatted += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Buy Links:\n{'='*50}\n"
+        for idx, p in enumerate(meta["products"], 1):
+            price_str = f" ({p['price']})" if p.get("price") else ""
+            formatted += f"{idx}. {p['name']}{price_str}\n"
+            if p.get("amazon_url"):
+                formatted += f"   • Amazon: {p['amazon_url']}\n"
+            if p.get("flipkart_url"):
+                formatted += f"   • Flipkart: {p['flipkart_url']}\n"
+            if p.get("myntra_url"):
+                formatted += f"   • Myntra: {p['myntra_url']}\n"
+            if p.get("meesho_url"):
+                formatted += f"   • Meesho: {p['meesho_url']}\n"
+            if p.get("blinkit_url"):
+                formatted += f"   • Blinkit (10-Min): {p['blinkit_url']}\n"
+            if p.get("zepto_url"):
+                formatted += f"   • Zepto (10-Min): {p['zepto_url']}\n"
+            if p.get("instamart_url"):
+                formatted += f"   • Swiggy Instamart: {p['instamart_url']}\n"
+            if p.get("google_shopping_url"):
+                formatted += f"   • Compare Stores: {p['google_shopping_url']}\n"
+            formatted += "\n"
+
+    clean_details = meta.get("details", "").strip()
+    if clean_details:
+        formatted += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{clean_details}\n"
+
+    return formatted
+
+
 def process_video_and_generate_recipe(
     video_path: str, 
     custom_api_key: str = None, 
@@ -894,47 +951,7 @@ def process_video_and_generate_recipe(
         txt_filename = output_dir / f"{apt_title}.txt"
 
         # Format clean .txt document
-        formatted_file_content = f"""==================================================
-{meta['emoji']} {meta['title']} ({meta['category_name']})
-==================================================
-"""
-        if meta.get("summary"):
-            formatted_file_content += f"\n📋 Summary:\n{meta['summary']}\n"
-
-        if meta.get("products") and len(meta["products"]) > 0:
-            formatted_file_content += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Purchase Links:\n{'='*50}\n"
-            for idx, p in enumerate(meta["products"], 1):
-                price_str = f" (Price: {p['price']})" if p.get("price") else ""
-                formatted_file_content += f"{idx}. {p['name']}{price_str}\n"
-                formatted_file_content += f"   [Main Stores]\n"
-                formatted_file_content += f"   • Amazon: {p['amazon_url']}\n"
-                formatted_file_content += f"   • Flipkart: {p['flipkart_url']}\n"
-                formatted_file_content += f"   • Myntra: {p.get('myntra_url', '')}\n"
-                formatted_file_content += f"   • Meesho: {p['meesho_url']}\n"
-                formatted_file_content += f"   [More Stores & Compare]\n"
-                formatted_file_content += f"   • AJIO: {p.get('ajio_url', '')}\n"
-                formatted_file_content += f"   • Nykaa: {p.get('nykaa_url', '')}\n"
-                formatted_file_content += f"   • Shopsy: {p.get('shopsy_url', '')}\n"
-                formatted_file_content += f"   • Google Shopping: {p['google_shopping_url']}\n"
-                formatted_file_content += f"   [⚡ 10-Min Quick Delivery]\n"
-                formatted_file_content += f"   • Blinkit: {p.get('blinkit_url', '')}\n"
-                formatted_file_content += f"   • Zepto: {p.get('zepto_url', '')}\n"
-                formatted_file_content += f"   • Swiggy Instamart: {p.get('instamart_url', '')}\n"
-                formatted_file_content += f"   • JioMart: {p.get('jiomart_url', '')}\n\n"
-
-
-        if meta.get("resources") and len(meta["resources"]) > 0:
-            formatted_file_content += f"\n{'='*50}\n🎓 Recommended YouTube Tutorials & Resources:\n{'='*50}\n"
-            for idx, r in enumerate(meta["resources"], 1):
-                plat = r.get("platform", "YouTube")
-                formatted_file_content += f"{idx}. {r['name']} ({plat})\n"
-                formatted_file_content += f"   • ▶️ Watch on YouTube: {r['youtube_url']}\n"
-                formatted_file_content += f"   • 🔍 Google Search: {r['google_url']}\n"
-                if "github" in r['name'].lower() or "project" in r['name'].lower() or "code" in r['name'].lower():
-                    formatted_file_content += f"   • 🐙 GitHub Search: {r['github_url']}\n"
-                formatted_file_content += "\n"
-
-        formatted_file_content += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{meta['details']}\n"
+        formatted_file_content = format_downloadable_txt(meta)
 
 
         # Save TXT file with utf-8 encoding

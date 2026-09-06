@@ -450,6 +450,45 @@ Detailed Steps & Notes:
         # 3. Assert message is safe URL length
         self.assertLessEqual(len(url), 4000)
 
+    def test_format_downloadable_txt_includes_links(self):
+        from gemini_processor import format_downloadable_txt
+        meta = {
+            "title": "Scratch to AI Engineer in a Week",
+            "category_name": "Tutorial & How-To Guide",
+            "emoji": "💻",
+            "summary": "Step-by-step roadmap to become an AI Engineer using LangChain framework.",
+            "resources": [
+                {
+                    "name": "LangChain Framework",
+                    "platform": "Documentation",
+                    "youtube_url": "https://www.youtube.com/results?search_query=LangChain+AI+framework+tutorial+for+beginners",
+                    "google_url": "https://www.google.com/search?q=LangChain+AI+framework+tutorial+for+beginners",
+                    "github_url": "https://github.com/search?q=LangChain+AI+framework+tutorial+for+beginners"
+                }
+            ],
+            "products": [
+                {
+                    "name": "Python Crash Course Book",
+                    "price": "₹650",
+                    "amazon_url": "https://www.amazon.in/s?k=Python+Crash+Course",
+                    "flipkart_url": "https://www.flipkart.com/search?q=Python+Crash+Course",
+                    "blinkit_url": "https://blinkit.com/s/?q=Python+Crash+Course"
+                }
+            ],
+            "details": "- Core Concepts\n- Prerequisites\n- Step-by-Step Procedures"
+        }
+        txt_content = format_downloadable_txt(meta)
+        self.assertIn("Scratch to AI Engineer in a Week", txt_content)
+        self.assertIn("📋 Summary:", txt_content)
+        self.assertIn("Recommended YouTube Tutorials & Learning Links:", txt_content)
+        self.assertIn("https://www.youtube.com/results?search_query=LangChain+AI+framework+tutorial+for+beginners", txt_content)
+        self.assertIn("https://www.google.com/search?q=LangChain+AI+framework+tutorial+for+beginners", txt_content)
+        self.assertIn("https://github.com/search?q=LangChain+AI+framework+tutorial+for+beginners", txt_content)
+        self.assertIn("Featured Products & 1-Click Buy Links:", txt_content)
+        self.assertIn("https://www.amazon.in/s?k=Python+Crash+Course", txt_content)
+        self.assertIn("https://blinkit.com/s/?q=Python+Crash+Course", txt_content)
+        self.assertIn("Detailed Steps & Notes:", txt_content)
+
     def test_dispatch_whatsapp_cli_helper(self):
         success, msg = dispatch_whatsapp("918056804940", "C:/test.txt", "Some content", category="RECIPE")
         self.assertTrue(success)

@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import re
 import sys
 import time
 import textwrap
@@ -1149,6 +1150,7 @@ if process_btn:
                     )
 
                 deck.complete_all(total_elapsed)
+                preview_placeholder.empty()
                 st.balloons()
                 
                 # High-Visibility Latency & Performance Benchmark
@@ -1160,129 +1162,203 @@ if process_btn:
                 b4.metric(f"🧠 AI ({model_display})", f"{ai_duration:.1f}s")
                 st.markdown("---")
                 
-                # AI Domain Classification Banner
-                classification_html = f"""
-                <div class="classification-banner">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <span style="font-size:1.85rem; line-height:1;">{cat_emoji}</span>
-                        <div>
-                            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#94A3B8; font-weight:700;">AI Domain Classification</div>
-                            <div style="font-size:1.18rem; font-weight:800; color:#38BDF8; font-family:'Outfit',sans-serif; letter-spacing:-0.01em;">{cat_name}</div>
+                # Unified 2-Column Responsive Layout: Left = Intelligence & Actions, Right = Single Video Stream
+                col_content, col_media = st.columns([1.25, 0.75], gap="large")
+
+                with col_content:
+                    # AI Domain Classification Banner
+                    classification_html = f"""
+                    <div class="classification-banner">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span style="font-size:1.85rem; line-height:1;">{cat_emoji}</span>
+                            <div>
+                                <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#94A3B8; font-weight:700;">AI Domain Classification</div>
+                                <div style="font-size:1.18rem; font-weight:800; color:#38BDF8; font-family:'Outfit',sans-serif; letter-spacing:-0.01em;">{cat_name}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <span style="background:rgba(56, 189, 248, 0.12); color:#38BDF8; border:1px solid rgba(56, 189, 248, 0.35); font-size:0.76rem; font-weight:700; padding:4px 12px; border-radius:9999px;">✓ Verified Domain</span>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <span style="background:rgba(56, 189, 248, 0.12); color:#38BDF8; border:1px solid rgba(56, 189, 248, 0.35); font-size:0.76rem; font-weight:700; padding:4px 12px; border-radius:9999px;">✓ Verified Domain</span>
-                    </div>
-                </div>
-                """
-                st.markdown(textwrap.dedent(classification_html).strip(), unsafe_allow_html=True)
-                st.markdown(f"### {item_title}")
-                
-                if meta.get("summary"):
-                    st.info(f"**Executive Summary**: {meta['summary']}")
-
-                # Featured Products & 1-Click Purchase Links
-                products_list = meta.get("products", [])
-                if products_list:
-                    st.markdown("### 🛍️ Featured Products & 1-Click Buy Links")
-                    st.caption("AI identified the following products in this video. Click any store to view or purchase:")
+                    """
+                    st.markdown(textwrap.dedent(classification_html).strip(), unsafe_allow_html=True)
+                    st.markdown(f"### {item_title}")
                     
-                    for prod in products_list:
-                        p_name = prod["name"]
-                        p_price = prod.get("price", "")
-                        price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
+                    if meta.get("summary"):
+                        clean_summary_disp = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*', '', meta['summary'], flags=re.DOTALL | re.IGNORECASE).strip()
+                        st.info(f"**Executive Summary**: {clean_summary_disp}")
+
+                    # Featured Products & 1-Click Purchase Links
+                    products_list = meta.get("products", [])
+                    if products_list:
+                        st.markdown("### 🛍️ Featured Products & 1-Click Buy Links")
+                        st.caption("AI identified the following products in this video. Click any store to view or purchase:")
                         
-                        prod_html = f"""
-                        <div class="product-box-luxury">
-                            <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 4px;">
-                                <span>📦</span> <span>{p_name}</span> {price_html}
-                            </div>
-                            <!-- Main 4 Brands (Always Visible) -->
-                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 8px;">
-                                <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
-                                <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
-                                <a href="{prod.get('myntra_url', f'https://www.myntra.com/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-myntra">🛍️ Myntra</a>
-                                <a href="{prod.get('meesho_url', f'https://www.meesho.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-meesho">🌸 Meesho</a>
-                            </div>
+                        for prod in products_list:
+                            p_name = prod["name"]
+                            p_price = prod.get("price", "")
+                            price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
                             
-                            <!-- More Stores Dropdown -->
-                            <details class="more-stores-details">
-                                <summary class="more-stores-summary">🏷️ More Stores & Price Compare ▾</summary>
-                                <div class="more-stores-shelf">
-                                    <a href="{prod.get('ajio_url', f'https://www.ajio.com/search/?text={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-ajio">👔 AJIO</a>
-                                    <a href="{prod.get('nykaa_url', f'https://www.nykaa.com/search/result/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-nykaa">💄 Nykaa</a>
-                                    <a href="{prod.get('shopsy_url', f'https://www.shopsy.in/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-shopsy">🟣 Shopsy</a>
-                                    <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
+                            prod_html = f"""
+                            <div class="product-box-luxury">
+                                <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 4px;">
+                                    <span>📦</span> <span>{p_name}</span> {price_html}
                                 </div>
-                            </details>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 8px;">
+                                    <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
+                                    <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
+                                    <a href="{prod.get('myntra_url', f'https://www.myntra.com/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-myntra">🛍️ Myntra</a>
+                                    <a href="{prod.get('meesho_url', f'https://www.meesho.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-meesho">🌸 Meesho</a>
+                                </div>
+                                
+                                <details class="more-stores-details">
+                                    <summary class="more-stores-summary">🏷️ More Stores & Price Compare ▾</summary>
+                                    <div class="more-stores-shelf">
+                                        <a href="{prod.get('ajio_url', f'https://www.ajio.com/search/?text={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-ajio">👔 AJIO</a>
+                                        <a href="{prod.get('nykaa_url', f'https://www.nykaa.com/search/result/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-nykaa">💄 Nykaa</a>
+                                        <a href="{prod.get('shopsy_url', f'https://www.shopsy.in/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-shopsy">🟣 Shopsy</a>
+                                        <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
+                                    </div>
+                                </details>
 
-                            <!-- Dedicated Quick Commerce (10-Minute Delivery) Shelf -->
-                            <div class="qc-shelf-container">
-                                <div class="qc-shelf-title">⚡ 10-Minute Instant Delivery (Quick Commerce)</div>
-                                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                                    <a href="{prod.get('blinkit_url', f'https://blinkit.com/s/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-blinkit">🟡 Blinkit</a>
-                                    <a href="{prod.get('zepto_url', f'https://www.zeptonow.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-zepto">⚡ Zepto</a>
-                                    <a href="{prod.get('instamart_url', f'https://www.swiggy.com/instamart/search?custom_back=true&query={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-instamart">🛵 Swiggy Instamart</a>
-                                    <a href="{prod.get('jiomart_url', f'https://www.jiomart.com/search/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-jiomart">📦 JioMart</a>
+                                <div class="qc-shelf-container">
+                                    <div class="qc-shelf-title">⚡ 10-Minute Instant Delivery (Quick Commerce)</div>
+                                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                        <a href="{prod.get('blinkit_url', f'https://blinkit.com/s/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-blinkit">🟡 Blinkit</a>
+                                        <a href="{prod.get('zepto_url', f'https://www.zeptonow.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-zepto">⚡ Zepto</a>
+                                        <a href="{prod.get('instamart_url', f'https://www.swiggy.com/instamart/search?custom_back=true&query={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-instamart">🛵 Swiggy Instamart</a>
+                                        <a href="{prod.get('jiomart_url', f'https://www.jiomart.com/search/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-jiomart">📦 JioMart</a>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        """
-                        st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
+                            """
+                            st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
 
-                # Recommended YouTube Tutorials & Learning Links
-                resources_list = meta.get("resources", [])
-                if resources_list:
-                    st.markdown("### 🎓 Recommended YouTube Tutorials & Learning Links")
-                    st.caption("AI identified the following tutorials, lectures, and resources in this video. Click to watch directly on YouTube:")
-                    
-                    for res in resources_list:
-                        r_name = res.get("name", "Tutorial")
-                        r_plat = res.get("platform", "YouTube")
-                        plat_badge = f"<span style='background-color:rgba(239, 68, 68, 0.15); color:#F87171; border:1px solid rgba(239, 68, 68, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>📺 {html.escape(r_plat)}</span>"
+                    # Recommended YouTube Tutorials & Learning Links
+                    resources_list = meta.get("resources", [])
+                    if resources_list:
+                        st.markdown("### 🎓 Recommended YouTube Tutorials & Learning Links")
+                        st.caption("AI identified the following tutorials, lectures, and resources in this video. Click to watch directly on YouTube:")
                         
-                        yt_url = res.get("youtube_url", "")
-                        gh_url = res.get("github_url", "")
-                        google_url = res.get("google_url", "")
+                        for res in resources_list:
+                            r_name = res.get("name", "Tutorial")
+                            r_plat = res.get("platform", "YouTube")
+                            plat_badge = f"<span style='background-color:rgba(239, 68, 68, 0.15); color:#F87171; border:1px solid rgba(239, 68, 68, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>📺 {html.escape(r_plat)}</span>"
+                            
+                            yt_url = res.get("youtube_url", "")
+                            gh_url = res.get("github_url", "")
+                            google_url = res.get("google_url", "")
 
-                        btn_items = [
-                            f'<a href="{yt_url}" target="_blank" class="watch-btn-yt">▶️ Watch on YouTube</a>'
-                        ]
-                        if any(k in r_name.lower() for k in ["github", "code", "project", "repo"]):
-                            btn_items.append(f'<a href="{gh_url}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🐙 Search GitHub</a>')
-                        btn_items.append(f'<a href="{google_url}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🔍 Search Google</a>')
-                        btn_html = " ".join(btn_items)
+                            btn_items = [
+                                f'<a href="{yt_url}" target="_blank" class="watch-btn-yt">▶️ Watch on YouTube</a>'
+                            ]
+                            if any(k in r_name.lower() for k in ["github", "code", "project", "repo"]):
+                                btn_items.append(f'<a href="{gh_url}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🐙 Search GitHub</a>')
+                            btn_items.append(f'<a href="{google_url}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🔍 Search Google</a>')
+                            btn_html = " ".join(btn_items)
 
-                        tut_html = f'<div class="tutorial-box-luxury"><div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom:8px;"><span>▶️</span> <span>{html.escape(r_name)}</span> {plat_badge}</div><div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">{btn_html}</div></div>'
-                        if hasattr(st, "html"):
-                            st.html(tut_html)
+                            tut_html = f'<div class="tutorial-box-luxury"><div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom:8px;"><span>▶️</span> <span>{html.escape(r_name)}</span> {plat_badge}</div><div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">{btn_html}</div></div>'
+                            if hasattr(st, "html"):
+                                st.html(tut_html)
+                            else:
+                                st.markdown(tut_html, unsafe_allow_html=True)
+
+                    st.markdown("---")
+                    
+                    # WhatsApp & Download Action Buttons
+                    st.markdown(f"#### 📱 Forward & Download {cat_name}")
+
+                    txt_filename = os.path.basename(txt_filepath)
+                    with open(txt_filepath, "r", encoding="utf-8") as file_data:
+                        file_bytes = file_data.read()
+
+                    col_btn1, col_btn2 = st.columns([1, 1])
+                    with col_btn1:
+                        st.download_button(
+                            label=f"💾 Download `.txt` Notes",
+                            data=file_bytes,
+                            file_name=txt_filename,
+                            mime="text/plain",
+                            type="primary",
+                            use_container_width=True
+                        )
+                    with col_btn2:
+                        if phone_number_input:
+                            wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code, products=products_list, resources=resources_list)
+                            st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn-luxury">📲 1-Click WhatsApp Forward</a>', unsafe_allow_html=True)
                         else:
-                            st.markdown(tut_html, unsafe_allow_html=True)
+                            st.info("💡 Enter WhatsApp Number in sidebar!")
 
-                st.markdown("---")
-                
-                # WhatsApp & Download Action Buttons
-                st.subheader(f"📱 Forward & Download {cat_name}")
+                    # Native Mobile Document Share (Android & iOS)
+                    import json
+                    safe_filename = json.dumps(txt_filename)
+                    safe_content = json.dumps(recipe_text)
+                    safe_caption = json.dumps(f"Here is {cat_name.lower()} file for - {item_title} !")
+                    
+                    share_html = f"""
+                    <div style="margin: 12px 0;">
+                        <button id="mobileShareBtn" style="
+                            background: linear-gradient(135deg, #25D366, #128C7E);
+                            color: white;
+                            border: none;
+                            padding: 13px 22px;
+                            border-radius: 12px;
+                            font-weight: 700;
+                            font-size: 0.98rem;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            width: 100%;
+                            justify-content: center;
+                            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
+                            transition: all 0.25s ease;
+                        ">
+                            📎 Share .TXT Document Directly to WhatsApp (Mobile)
+                        </button>
+                    </div>
+                    <script>
+                    document.getElementById("mobileShareBtn").addEventListener("click", async () => {{
+                        try {{
+                            const file = new File([{safe_content}], {safe_filename}, {{ type: "text/plain" }});
+                            if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
+                                await navigator.share({{
+                                    files: [file],
+                                    title: {safe_filename},
+                                    text: {safe_caption}
+                                }});
+                            }} else {{
+                                alert("Native file sharing is supported on mobile devices (Android / iOS). On PC, download the .txt and video files above and drag them into WhatsApp Web!");
+                            }}
+                        }} catch (err) {{
+                            if (err.name !== 'AbortError') {{
+                                console.error("Share error:", err);
+                            }}
+                        }}
+                    }});
+                    </script>
+                    """
+                    if hasattr(st, "html"):
+                        st.html(share_html)
+                    else:
+                        st.components.v1.html(share_html, height=65)
 
-                txt_filename = os.path.basename(txt_filepath)
-                with open(txt_filepath, "r", encoding="utf-8") as file_data:
-                    file_bytes = file_data.read()
+                    st.caption(f"ℹ️ **Sending to WhatsApp**: Tap **1-Click WhatsApp Forward** for crisp summary & clickable links. On mobile, tap **Share .TXT Document** for the full file!")
 
-                # Action columns
-                col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+                    # Collapsible Detailed Steps & Code Notes
+                    with st.expander(f"📖 Complete Step-by-Step {cat_name} Notes & Code", expanded=True):
+                        st.text_area("Full Extracted Content", recipe_text, height=350)
 
-                with col_btn1:
-                    st.download_button(
-                        label=f"💾 Download `.txt` Notes",
-                        data=file_bytes,
-                        file_name=txt_filename,
-                        mime="text/plain",
-                        type="primary",
-                        use_container_width=True
-                    )
+                with col_media:
+                    st.markdown(f"""
+                    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:0.88rem; color:#F1F5F9;">🎬 {detected_plat} Preview</span>
+                        <span style="background:rgba(56,189,248,0.15); color:#38BDF8; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:6px; border:1px solid rgba(56,189,248,0.3);">HD Stream</span>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                with col_btn2:
                     if final_video_path and os.path.exists(final_video_path):
+                        st.video(final_video_path)
                         video_filename = os.path.basename(final_video_path)
                         with open(final_video_path, "rb") as vf:
                             video_bytes = vf.read()
@@ -1294,91 +1370,16 @@ if process_btn:
                             type="secondary",
                             use_container_width=True
                         )
-
-                with col_btn3:
-                    if phone_number_input:
-                        wa_url = generate_whatsapp_deep_link(phone_number_input, txt_filepath, recipe_text, category=cat_code, products=products_list, resources=resources_list)
-                        st.markdown(f'<a href="{wa_url}" target="_blank" class="wa-btn-luxury">📲 1-Click WhatsApp Forward</a>', unsafe_allow_html=True)
-                    else:
-                        st.info("💡 Enter WhatsApp Number in sidebar!")
-
-                # Native Mobile Document Share (Android & iOS)
-                import json
-                safe_filename = json.dumps(txt_filename)
-                safe_content = json.dumps(recipe_text)
-                safe_caption = json.dumps(f"Here is {cat_name.lower()} file for - {item_title} !")
-                
-                share_html = f"""
-                <div style="margin: 12px 0;">
-                    <button id="mobileShareBtn" style="
-                        background: linear-gradient(135deg, #25D366, #128C7E);
-                        color: white;
-                        border: none;
-                        padding: 13px 22px;
-                        border-radius: 12px;
-                        font-weight: 700;
-                        font-size: 0.98rem;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                        width: 100%;
-                        justify-content: center;
-                        box-shadow: 0 6px 20px rgba(37, 211, 102, 0.35);
-                        transition: all 0.25s ease;
-                    ">
-                        📎 Share .TXT Document Directly to WhatsApp (Mobile)
-                    </button>
-                </div>
-                <script>
-                document.getElementById("mobileShareBtn").addEventListener("click", async () => {{
-                    try {{
-                        const file = new File([{safe_content}], {safe_filename}, {{ type: "text/plain" }});
-                        if (navigator.canShare && navigator.canShare({{ files: [file] }})) {{
-                            await navigator.share({{
-                                files: [file],
-                                title: {safe_filename},
-                                text: {safe_caption}
-                            }});
-                        }} else {{
-                            alert("Native file sharing is supported on mobile devices (Android / iOS). On PC, download the .txt and video files above and drag them into WhatsApp Web!");
-                        }}
-                    }} catch (err) {{
-                        if (err.name !== 'AbortError') {{
-                            console.error("Share error:", err);
-                        }}
-                    }}
-                }});
-                </script>
-                """
-                if hasattr(st, "html"):
-                    st.html(share_html)
-                else:
-                    st.components.v1.html(share_html, height=65)
-
-                st.caption(f"ℹ️ **Sending Video + {cat_name} to WhatsApp**: Download both the `.txt` notes and `.mp4` video above and drag them into WhatsApp Web. On mobile, tap the green **Share .TXT Document** button!")
-
-                # Local vs Cloud Storage Location Info
-                storage_folder = os.path.dirname(txt_filepath)
-                st.info(f"📂 **Stored Files Location**: `{storage_folder}`\n- `.txt` File: `{txt_filename}`\n- `.mp4` Video: `{os.path.basename(final_video_path) if final_video_path else 'Downloaded video'}`")
-
-                callmebot_key = os.getenv("CALLMEBOT_API_KEY", "")
-                if callmebot_key and phone_number_input:
-                    wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key, category=cat_code, products=products_list)
-                    if wa_sent:
-                        st.success(wa_msg)
-                    else:
-                        st.warning(f"CallMeBot API Notice: {wa_msg}")
-
-                st.markdown("---")
-
-                col_preview1, col_preview2 = st.columns([1, 1])
-                with col_preview1:
-                    st.subheader(f"📖 Extracted {cat_name} Notes")
-                    st.text_area("Detailed Content", recipe_text, height=380)
-                with col_preview2:
-                    st.subheader(f"🎬 {detected_plat} Preview")
-                    if final_video_path and os.path.exists(final_video_path):
-                        st.video(final_video_path)
                     else:
                         st.write("Video preview unavailable.")
+
+                    storage_folder = os.path.dirname(txt_filepath)
+                    st.info(f"📂 **Stored Files Location**: `{storage_folder}`\n- `.txt` File: `{txt_filename}`\n- `.mp4` Video: `{os.path.basename(final_video_path) if final_video_path else 'Downloaded video'}`")
+
+                    callmebot_key = os.getenv("CALLMEBOT_API_KEY", "")
+                    if callmebot_key and phone_number_input:
+                        wa_sent, wa_msg = send_via_callmebot_api(phone_number_input, txt_filepath, recipe_text, callmebot_key, category=cat_code, products=products_list, resources=resources_list)
+                        if wa_sent:
+                            st.success(wa_msg)
+                        else:
+                            st.warning(f"CallMeBot API Notice: {wa_msg}")

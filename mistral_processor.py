@@ -10,7 +10,7 @@ from typing import Tuple, Dict, Any, List
 
 from config import get_mistral_api_key, ensure_download_dir, get_affiliate_tags
 from media_utils import extract_audio_from_video, extract_keyframes
-from gemini_processor import get_prompt_for_mode, parse_extracted_content, safe_print
+from gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
 
 def process_video_with_mistral(
     video_path: str,
@@ -157,24 +157,7 @@ Analyze the following visual keyframes from this short video.
     apt_title = meta["clean_filename"]
     txt_filename = output_dir / f"{apt_title}.txt"
 
-    formatted_file_content = f"""==================================================
-{meta['emoji']} {meta['title']} ({meta['category_name']})
-==================================================
-"""
-    if meta.get("summary"):
-        formatted_file_content += f"\n📋 Summary:\n{meta['summary']}\n"
-
-    if meta.get("products") and len(meta["products"]) > 0:
-        formatted_file_content += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Purchase Links:\n{'='*50}\n"
-        for idx, p in enumerate(meta["products"], 1):
-            price_str = f" (Price: {p['price']})" if p.get("price") else ""
-            formatted_file_content += f"{idx}. {p['name']}{price_str}\n"
-            if p.get("buy_links"):
-                for store, link in p["buy_links"].items():
-                    formatted_file_content += f"   - {store}: {link}\n"
-            formatted_file_content += "\n"
-
-    formatted_file_content += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{meta['details']}\n"
+    formatted_file_content = format_downloadable_txt(meta)
 
     with open(txt_filename, "w", encoding="utf-8") as f:
         f.write(formatted_file_content)

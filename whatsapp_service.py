@@ -116,32 +116,35 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
         links_parts.append(product_section.strip())
     links_block = "\n\n".join(links_parts).strip()
 
-    # 3. Clean raw internal non-clickable tags from body text
-    clean_body = recipe_content or ""
-    clean_body = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*?(?=\n\s*(?:={3,}|[A-Z#])|\n\n|\Z)', '', clean_body, flags=re.DOTALL | re.IGNORECASE).strip()
-
-    # 4. Assemble with link priority: Header -> Links Block -> Clean Content Body
-    if links_block:
-        top_section = f"{top_header}\n\n{links_block}"
+    # 3. Extract precise summary (omit the voluminous raw translation/detailed steps)
+    raw_text = recipe_content or ""
+    summary_match = re.search(r'📋\s*Summary:\s*(.+?)(?=\n\s*(?:={3,}|[🎓🛍️A-Z#])|\Z)', raw_text, re.DOTALL | re.IGNORECASE)
+    if summary_match:
+        summary_text = summary_match.group(1).strip()
     else:
-        top_section = top_header
+        # If no explicit summary header, extract clean initial lines
+        clean_first_para = re.sub(r'={3,}.*?={3,}', '', raw_text, flags=re.DOTALL).strip()
+        summary_text = clean_first_para[:450].strip()
 
-    # Calculate remaining character budget for body (safe WhatsApp URL limit ~3500 chars after url-encoding)
-    max_total_len = 2000
-    reserved_len = len(top_section) + 80  # buffer for newlines & truncation suffix
-    available_body_len = max(300, max_total_len - reserved_len)
+    # Strip any internal prompt tags if present
+    summary_text = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*', '', summary_text, flags=re.DOTALL | re.IGNORECASE).strip()
 
-    if len(clean_body) > available_body_len:
-        clean_body = clean_body[:available_body_len].rstrip() + "\n\n...(Full text available in downloadable .txt file)"
-
-    full_message = f"{top_section}\n\n{clean_body}".strip() if clean_body else top_section
+    # 4. Assemble message: Header -> Precise Summary -> Actionable Links -> Download Notice
+    msg_parts = [top_header]
+    if summary_text:
+        msg_parts.append(f"📋 *Summary:*\n{summary_text}")
+    if links_block:
+        msg_parts.append(links_block)
+    
+    msg_parts.append("💡 _Full detailed steps, code & notes available in the downloaded .txt file!_")
+    full_message = "\n\n".join(msg_parts).strip()
         
     encoded_text = urllib.parse.quote(full_message)
     return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_text}"
 
 def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_content: str, api_key: str, category: str = "RECIPE", products: list = None, resources: list = None) -> Tuple[bool, str]:
     """
-    Sends WhatsApp message directly via free CallMeBot API with product buy links and YouTube tutorial links.
+    Sends WhatsApp message directly via free CallMeBot API with precise summary, product buy links and YouTube tutorial links.
     """
     if not api_key:
         return False, "CallMeBot API key not provided."
@@ -170,13 +173,23 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
         links_parts.append(product_section.strip())
     links_block = "\n\n".join(links_parts).strip()
 
-    clean_body = recipe_content or ""
-    clean_body = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*?(?=\n\s*(?:={3,}|[A-Z#])|\n\n|\Z)', '', clean_body, flags=re.DOTALL | re.IGNORECASE).strip()
-
-    if links_block:
-        full_message = f"{top_header}\n\n{links_block}\n\n{clean_body[:1000]}".strip()
+    raw_text = recipe_content or ""
+    summary_match = re.search(r'📋\s*Summary:\s*(.+?)(?=\n\s*(?:={3,}|[🎓🛍️A-Z#])|\Z)', raw_text, re.DOTALL | re.IGNORECASE)
+    if summary_match:
+        summary_text = summary_match.group(1).strip()
     else:
-        full_message = f"{top_header}\n\n{clean_body[:1200]}".strip()
+        clean_first_para = re.sub(r'={3,}.*?={3,}', '', raw_text, flags=re.DOTALL).strip()
+        summary_text = clean_first_para[:450].strip()
+
+    summary_text = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*', '', summary_text, flags=re.DOTALL | re.IGNORECASE).strip()
+
+    msg_parts = [top_header]
+    if summary_text:
+        msg_parts.append(f"📋 *Summary:*\n{summary_text}")
+    if links_block:
+        msg_parts.append(links_block)
+    msg_parts.append("💡 _Full detailed notes available in the downloaded .txt file!_")
+    full_message = "\n\n".join(msg_parts).strip()
     
     encoded_text = urllib.parse.quote(full_message)
     url = f"https://api.callmebot.com/whatsapp.php?phone={clean_phone}&text={encoded_text}&apikey={api_key}"
