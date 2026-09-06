@@ -164,45 +164,72 @@ def generate_whatsapp_deep_link(
         cat_u = (category or "RECIPE").upper()
         is_recipe = any(c in cat_u for c in ["RECIPE", "COOK", "BAKE", "CULINARY", "FOOD"])
         is_fashion = any(c in cat_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+        is_tutorial = any(c in cat_u for c in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "CODE", "DIY", "HOWTO"])
 
-        product_section = "🛍️ *Featured Products & 1-Click Buy Links:*\n"
-        for p in products[:5]:
-            price_tag = f" ({p['price']})" if p.get("price") else ""
-            product_section += f"• *{p['name']}*{price_tag}\n"
-            if is_recipe:
-                # Grocery & 10-Min Quick Commerce only (Strictly no Myntra/Meesho)
-                if p.get("blinkit_url"):
-                    product_section += f"  🟡 Blinkit (10-Min): {p['blinkit_url']}\n"
-                elif p.get("zepto_url"):
-                    product_section += f"  ⚡ Zepto (10-Min): {p['zepto_url']}\n"
-                elif p.get("instamart_url"):
-                    product_section += f"  🛵 Instamart: {p['instamart_url']}\n"
-                if p.get("amazon_url"):
-                    product_section += f"  🛒 Amazon Fresh: {p['amazon_url']}\n"
-            elif is_fashion:
-                # Fashion portals only
-                if p.get("myntra_url"):
-                    product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
-                if p.get("ajio_url"):
-                    product_section += f"  👔 AJIO: {p['ajio_url']}\n"
-                if p.get("meesho_url"):
-                    product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
-                if p.get("amazon_url"):
-                    product_section += f"  👗 Amazon Fashion: {p['amazon_url']}\n"
-            else:
-                # General Tech / Kitchen / Multi-domain Finds
-                if p.get("amazon_url"):
-                    product_section += f"  🛒 Amazon: {p['amazon_url']}\n"
-                if p.get("flipkart_url"):
-                    product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
-                if p.get("myntra_url"):
-                    product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
-                if p.get("meesho_url"):
-                    product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
-                if p.get("blinkit_url"):
-                    product_section += f"  ⚡ 10-Min Delivery: {p['blinkit_url']}\n"
-                if p.get("shopsy_url"):
-                    product_section += f"  🟣 Shopsy: {p['shopsy_url']}\n"
+        digital_keywords = [
+            "ai model", "model", "plugin", "installer", "api", "framework",
+            "library", "llm", "software", "repo", "repository", "package",
+            "extension", "sdk", "algorithm", "prompt", "token", "cli",
+            "sqlite", "claude-mem", "claude code", "gemini", "gpt",
+            "deepseek", "kimi", "glm", "llama", "mistral", "chatgpt"
+        ]
+
+        filtered_products = []
+        for p in products:
+            p_name_l = (p.get("name") or "").lower()
+            p_price_l = (p.get("price") or "").lower()
+            if is_tutorial:
+                if any(kw in p_name_l for kw in digital_keywords) or any(kw in p_price_l for kw in ["free", "n/a", "bundled"]):
+                    continue
+            filtered_products.append(p)
+
+        product_section = ""
+        if filtered_products:
+            sec_title = "🛒 *Ingredients & Quick Delivery:*" if is_recipe else ("👗 *Featured Fashion Items:*" if is_fashion else ("🛠️ *Featured Hardware & Tools:*" if is_tutorial else "🛍️ *Featured Products:*"))
+            product_section = f"{sec_title}\n"
+            for p in filtered_products[:5]:
+                price_tag = f" ({p['price']})" if p.get("price") else ""
+                product_section += f"• *{p['name']}*{price_tag}\n"
+                if is_recipe:
+                    # Grocery & 10-Min Quick Commerce only (Strictly no Myntra/Meesho)
+                    if p.get("blinkit_url"):
+                        product_section += f"  🟡 Blinkit (10-Min): {p['blinkit_url']}\n"
+                    elif p.get("zepto_url"):
+                        product_section += f"  ⚡ Zepto (10-Min): {p['zepto_url']}\n"
+                    elif p.get("instamart_url"):
+                        product_section += f"  🛵 Instamart: {p['instamart_url']}\n"
+                    if p.get("amazon_url"):
+                        product_section += f"  🛒 Amazon Fresh: {p['amazon_url']}\n"
+                elif is_fashion:
+                    # Fashion portals only
+                    if p.get("myntra_url"):
+                        product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
+                    if p.get("ajio_url"):
+                        product_section += f"  👔 AJIO: {p['ajio_url']}\n"
+                    if p.get("meesho_url"):
+                        product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
+                    if p.get("amazon_url"):
+                        product_section += f"  👗 Amazon Fashion: {p['amazon_url']}\n"
+                elif is_tutorial:
+                    # Hardware and equipment only (no grocery or fashion)
+                    if p.get("amazon_url"):
+                        product_section += f"  🛒 Amazon: {p['amazon_url']}\n"
+                    if p.get("flipkart_url"):
+                        product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
+                else:
+                    # General Tech / Kitchen / Multi-domain Finds
+                    if p.get("amazon_url"):
+                        product_section += f"  🛒 Amazon: {p['amazon_url']}\n"
+                    if p.get("flipkart_url"):
+                        product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
+                    if p.get("myntra_url"):
+                        product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
+                    if p.get("meesho_url"):
+                        product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
+                    if p.get("blinkit_url"):
+                        product_section += f"  ⚡ 10-Min Delivery: {p['blinkit_url']}\n"
+                    if p.get("shopsy_url"):
+                        product_section += f"  🟣 Shopsy: {p['shopsy_url']}\n"
 
     links_parts = []
     if resource_section:
@@ -260,9 +287,34 @@ def send_via_callmebot_api(
     
     product_section = ""
     if include_commerce_links and products and len(products) > 0:
-        product_section = "🛍️ *Featured Products:*\n"
-        for p in products[:3]:
-            product_section += f"• {p['name']}: {p.get('amazon_url') or p.get('blinkit_url') or ''}\n"
+        cat_u = (category or "RECIPE").upper()
+        is_recipe = any(c in cat_u for c in ["RECIPE", "COOK", "BAKE", "CULINARY", "FOOD"])
+        is_fashion = any(c in cat_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+        is_tutorial = any(c in cat_u for c in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "CODE", "DIY", "HOWTO"])
+
+        digital_keywords = [
+            "ai model", "model", "plugin", "installer", "api", "framework",
+            "library", "llm", "software", "repo", "repository", "package",
+            "extension", "sdk", "algorithm", "prompt", "token", "cli",
+            "sqlite", "claude-mem", "claude code", "gemini", "gpt",
+            "deepseek", "kimi", "glm", "llama", "mistral", "chatgpt"
+        ]
+
+        filtered_products = []
+        for p in products:
+            p_name_l = (p.get("name") or "").lower()
+            p_price_l = (p.get("price") or "").lower()
+            if is_tutorial:
+                if any(kw in p_name_l for kw in digital_keywords) or any(kw in p_price_l for kw in ["free", "n/a", "bundled"]):
+                    continue
+            filtered_products.append(p)
+
+        if filtered_products:
+            sec_title = "🛒 *Ingredients:*" if is_recipe else ("👗 *Featured Fashion:*" if is_fashion else ("🛠️ *Hardware Tools:*" if is_tutorial else "🛍️ *Featured Products:*"))
+            product_section = f"{sec_title}\n"
+            for p in filtered_products[:3]:
+                url = p.get('amazon_url') or (p.get('blinkit_url') if is_recipe else "") or p.get('flipkart_url') or ''
+                product_section += f"• {p['name']}: {url}\n"
 
     resource_section = ""
     if resources and len(resources) > 0:

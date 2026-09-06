@@ -1259,14 +1259,33 @@ if active_res:
         cat_code_u = (cat_code or "RECIPE").upper()
         is_recipe_domain = any(c in cat_code_u for c in ["RECIPE", "COOK", "BAKE", "FOOD", "CULINARY"])
         is_fashion_domain = any(c in cat_code_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+        is_tutorial_domain = any(c in cat_code_u for c in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "CODE", "DIY", "HOWTO"])
 
-        if products_list:
+        # Filter out digital software, AI models, plugins, APIs from e-commerce buy links
+        digital_keywords = [
+            "ai model", "model", "plugin", "installer", "api", "framework",
+            "library", "llm", "software", "repo", "repository", "package",
+            "extension", "sdk", "algorithm", "prompt", "token", "cli",
+            "sqlite", "claude-mem", "claude code", "gemini", "gpt",
+            "deepseek", "kimi", "glm", "llama", "mistral", "chatgpt"
+        ]
+
+        valid_products = []
+        for p in (products_list or []):
+            p_name_l = (p.get("name") or "").lower()
+            p_price_l = (p.get("price") or "").lower()
+            if is_tutorial_domain:
+                if any(kw in p_name_l for kw in digital_keywords) or any(kw in p_price_l for kw in ["free", "n/a", "bundled"]):
+                    continue
+            valid_products.append(p)
+
+        if valid_products:
             if is_recipe_domain:
                 st.markdown("### 🛒 Ingredients & 10-Minute Delivery")
                 st.caption("AI identified the following ingredients. Order instantly via Quick Commerce or fresh grocery:")
 
                 # 1-Click Copy Ingredient Checklist Button
-                checklist_lines = [f"[ ] {p['name']}" + (f" ({p['price']})" if p.get('price') else "") for p in products_list]
+                checklist_lines = [f"[ ] {p['name']}" + (f" ({p['price']})" if p.get('price') else "") for p in valid_products]
                 raw_checklist = f"🛒 Ingredient Checklist for {item_title}:\n" + "\n".join(checklist_lines)
                 safe_checklist_js = json.dumps(raw_checklist)
 
@@ -1292,7 +1311,7 @@ if active_res:
                 else:
                     st.markdown(checklist_btn_html, unsafe_allow_html=True)
 
-                for prod in products_list:
+                for prod in valid_products:
                     p_name = prod["name"]
                     p_price = prod.get("price", "")
                     price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
@@ -1323,7 +1342,7 @@ if active_res:
             elif is_fashion_domain:
                 st.markdown("### 👗 Featured Apparel & Shop the Look")
                 st.caption("AI identified the following fashion items. Click any storefront to browse or purchase:")
-                for prod in products_list:
+                for prod in valid_products:
                     p_name = prod["name"]
                     p_price = prod.get("price", "")
                     price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
@@ -1350,11 +1369,34 @@ if active_res:
                     """
                     st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
 
+            elif is_tutorial_domain:
+                # Hardware & Tools featured in Tutorial
+                st.markdown("### 🛠️ Hardware & Physical Tools Featured")
+                st.caption("AI identified the following hardware tools or equipment in this video:")
+                for prod in valid_products:
+                    p_name = prod["name"]
+                    p_price = prod.get("price", "")
+                    price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
+
+                    prod_html = f"""
+                    <div class="product-box-luxury">
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 6px;">
+                            <span>🛠️</span> <span>{p_name}</span> {price_html}
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 6px;">
+                            <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
+                            <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
+                            <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
+
             else:
-                # Gadgets, Kitchen Products & Tech DIY
+                # Gadgets, Kitchen Products & General Finds
                 st.markdown("### 🛍️ Featured Products & 1-Click Buy Links")
                 st.caption("AI identified the following products in this video. Click any store to view or purchase:")
-                for prod in products_list:
+                for prod in valid_products:
                     p_name = prod["name"]
                     p_price = prod.get("price", "")
                     price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""

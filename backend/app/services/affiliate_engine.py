@@ -120,12 +120,15 @@ class AffiliateEngine:
         cat_u = (category or "ALL").upper()
         is_recipe = (cat_u != "ALL") and any(c in cat_u for c in ["RECIPE", "COOK", "BAKE", "CULINARY", "FOOD"])
         is_fashion = any(c in cat_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+        is_tutorial = any(c in cat_u for c in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "CODE", "DIY", "HOWTO", "HOW-TO"])
 
         enriched["amazon_url"] = self.generate_amazon_url(name, custom_tag=custom_amz)
         enriched["flipkart_url"] = self.generate_flipkart_url(name, custom_id=custom_ek)
+        enriched["google_shopping_url"] = self.generate_google_shopping_url(name)
 
-        # Contextual Store Allocation (P0 Directive)
-        if cat_u == "ALL" or is_fashion or not is_recipe:
+        # Contextual Fashion Marketplaces (Myntra, Meesho, AJIO, Nykaa)
+        # Suppressed for recipes and tutorials, populated for fashion or general catalog
+        if is_fashion or (cat_u not in ["RECIPE", "CULINARY", "COOKING", "FOOD"] and not is_recipe and not is_tutorial):
             enriched["myntra_url"] = self.generate_myntra_url(name)
             enriched["meesho_url"] = self.generate_meesho_url(name, custom_id=custom_ek)
             enriched["ajio_url"] = self.generate_ajio_url(name, custom_id=custom_ek)
@@ -136,14 +139,20 @@ class AffiliateEngine:
             enriched["ajio_url"] = ""
             enriched["nykaa_url"] = ""
 
-        enriched["google_shopping_url"] = self.generate_google_shopping_url(name)
-
-        # Quick Commerce links (always populated for instant fulfillment)
-        enriched["blinkit_url"] = self.generate_blinkit_url(name)
-        enriched["zepto_url"] = self.generate_zepto_url(name)
-        enriched["instamart_url"] = self.generate_instamart_url(name)
-        enriched["jiomart_url"] = self.generate_jiomart_url(name)
-        enriched["bigbasket_url"] = f"https://www.bigbasket.com/ps/?q={urllib.parse.quote_plus(name)}"
+        # Contextual Quick Commerce & Grocery (Blinkit, Zepto, Instamart, JioMart, BigBasket)
+        # Strictly populated for cooking/recipe domain; never for software tutorials or apparel
+        if is_recipe or cat_u == "ALL":
+            enriched["blinkit_url"] = self.generate_blinkit_url(name)
+            enriched["zepto_url"] = self.generate_zepto_url(name)
+            enriched["instamart_url"] = self.generate_instamart_url(name)
+            enriched["jiomart_url"] = self.generate_jiomart_url(name)
+            enriched["bigbasket_url"] = f"https://www.bigbasket.com/ps/?q={urllib.parse.quote_plus(name)}"
+        else:
+            enriched["blinkit_url"] = ""
+            enriched["zepto_url"] = ""
+            enriched["instamart_url"] = ""
+            enriched["jiomart_url"] = ""
+            enriched["bigbasket_url"] = ""
 
         return enriched
 

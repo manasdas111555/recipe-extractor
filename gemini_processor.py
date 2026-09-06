@@ -170,9 +170,10 @@ If no external tutorials, courses, or tools are mentioned, write:
 [RESOURCES & TUTORIALS]: NONE
 
 [PRODUCTS]:
-If any specific tech gadgets, hardware, devices, tools, craft supplies, or peripherals are featured or recommended to buy, list each one in this exact line format:
+If any specific physical tech gadgets, hardware, devices, tools, craft supplies, or peripherals are featured or recommended to buy, list each one in this exact line format:
 - PRODUCT: <Brand/Model Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
-If no hardware or physical products are featured, write:
+CRITICAL NEGATIVE GUARDRAIL: DO NOT list software, APIs, coding libraries, plugins, AI models, frameworks, or web tools under [PRODUCTS]. Software and AI models belong EXCLUSIVELY under [RESOURCES & TUTORIALS].
+If no physical hardware or gadgets are featured, write:
 [PRODUCTS]: NONE
 
 ---
@@ -320,10 +321,10 @@ If no external tutorials or learning resources are featured, write:
 [RESOURCES & TUTORIALS]: NONE
 
 [PRODUCTS]:
-For EVERY physical item, gadget, cosmetic, book, or product showcased, reviewed, or unboxed in this video, list each one in this exact line format:
+For EVERY physical item, physical gadget, cosmetic, book, or hardware tool showcased, reviewed, or unboxed in this video, list each one in this exact line format:
 - PRODUCT: <Brand & Model / Item Name> | PRICE: <Price if stated or estimated, e.g. Under ₹1000, or 'N/A'> | SEARCH: <Targeted search query to find and buy this exact item online>
 
-If no specific purchasable products or equipment are featured, write:
+CRITICAL NEGATIVE GUARDRAIL: DO NOT list software, APIs, coding libraries, plugins, AI models, frameworks, or web services under [PRODUCTS]. Software and AI models belong EXCLUSIVELY under [RESOURCES & TUTORIALS]. If no tangible physical products or hardware equipment are featured, write:
 [PRODUCTS]: NONE
 
 ---
@@ -362,6 +363,7 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None, ca
 
     is_recipe = any(c in cat_upper for c in ["RECIPE", "COOK", "BAKE", "CULINARY", "FOOD"])
     is_fashion = any(c in cat_upper for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+    is_tutorial = any(c in cat_upper for c in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "CODE", "DIY", "HOWTO", "HOW-TO"])
 
     # --- 1. Amazon ---
     amz_tag = (affiliate_tags.get("amazon") or "").strip()
@@ -387,8 +389,8 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None, ca
         flipkart_url = raw_flp_url
 
     # --- 3. Fashion Marketplaces (Myntra, Meesho, AJIO, Nykaa) ---
-    # Strictly populated for Fashion; suppressed for pure culinary recipes
-    if is_fashion or not is_recipe:
+    # Suppressed for recipes and tutorials; populated for fashion or general/all categories
+    if is_fashion or (cat_upper not in ["RECIPE", "CULINARY", "COOKING", "FOOD"] and not is_recipe and not is_tutorial):
         raw_myntra_url = f"https://www.myntra.com/{encoded_q}"
         if cuelinks_id:
             myntra_url = f"https://linksredirect.com/?cid={urllib.parse.quote_plus(cuelinks_id)}&url={urllib.parse.quote_plus(raw_myntra_url)}"
@@ -424,7 +426,7 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None, ca
         else:
             nykaa_url = raw_nykaa_url
     else:
-        # Contextual suppression for food recipes to maintain consumer trust
+        # Contextual suppression for non-fashion domains
         myntra_url = ""
         meesho_url = ""
         ajio_url = ""
@@ -440,13 +442,21 @@ def build_product_store_links(search_query: str, affiliate_tags: dict = None, ca
         shopsy_url = raw_shopsy_url
 
     google_shopping_url = f"https://www.google.com/search?tbm=shop&q={encoded_q}"
-    bigbasket_url = f"https://www.bigbasket.com/ps/?q={encoded_q}"
 
-    # --- 5. Quick Commerce (10-Minute Delivery) ---
-    blinkit_url = f"https://blinkit.com/s/?q={encoded_q}"
-    zepto_url = f"https://www.zeptonow.com/search?q={encoded_q}"
-    instamart_url = f"https://www.swiggy.com/instamart/search?custom_back=true&query={encoded_q}"
-    jiomart_url = f"https://www.jiomart.com/search/{encoded_q}"
+    # --- 5. Quick Commerce & Grocery ---
+    # Suppressed for tutorials and fashion; populated for recipes and general/all
+    if is_recipe or (not is_tutorial and not is_fashion):
+        blinkit_url = f"https://blinkit.com/s/?q={encoded_q}"
+        zepto_url = f"https://www.zeptonow.com/search?q={encoded_q}"
+        instamart_url = f"https://www.swiggy.com/instamart/search?custom_back=true&query={encoded_q}"
+        jiomart_url = f"https://www.jiomart.com/search/{encoded_q}"
+        bigbasket_url = f"https://www.bigbasket.com/ps/?q={encoded_q}"
+    else:
+        blinkit_url = ""
+        zepto_url = ""
+        instamart_url = ""
+        jiomart_url = ""
+        bigbasket_url = ""
 
     return {
         # Core
@@ -482,6 +492,7 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     summary = ""
     details = raw_text
     products = []
+    promoted_software_resources = []
 
     cat_match = re.search(r'\[CATEGORY\]:\s*([A-Za-z_]+)', raw_text, re.IGNORECASE)
     if cat_match:
@@ -582,6 +593,24 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                 if not p_name_clean:
                     continue
 
+                # Digital/Software Guardrail: Exclude software, AI models, plugins, APIs from e-commerce products
+                is_tutorial_cat = category in ["TUTORIAL", "TECH_TUTORIAL", "EDUCATIONAL", "LIFE_HACKS"]
+                is_digital_tool = any(kw in p_name_clean.lower() for kw in [
+                    "ai model", "model", "plugin", "installer", "api", "framework",
+                    "library", "llm", "software", "repo", "repository", "package",
+                    "extension", "sdk", "algorithm", "prompt", "token", "cli",
+                    "sqlite", "claude-mem", "claude code", "gemini", "gpt",
+                    "deepseek", "kimi", "glm", "llama", "mistral", "chatgpt"
+                ]) or any(kw in (p_price or "").lower() for kw in ["free", "bundled", "open source", "n/a (likely free", "free tier"])
+
+                if is_tutorial_cat and is_digital_tool:
+                    promoted_software_resources.append({
+                        "name": p_name_clean,
+                        "platform": "Documentation",
+                        "query": p_search_clean
+                    })
+                    continue
+
                 links = build_product_store_links(p_search_clean, affiliate_tags, category=category)
                 prod_entry = {
                     "name": p_name_clean,
@@ -680,6 +709,22 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                 "github_url": f"https://github.com/search?q={encoded_q}"
             })
 
+    # Merge any digital software items that were promoted from [PRODUCTS]
+    if promoted_software_resources:
+        existing_names = {r.get("name", "").lower() for r in resources}
+        for psr in promoted_software_resources:
+            if psr["name"].lower() not in existing_names:
+                enc_q = urllib.parse.quote_plus(psr["query"])
+                resources.append({
+                    "name": psr["name"],
+                    "platform": psr.get("platform", "Documentation"),
+                    "query": psr["query"],
+                    "youtube_url": f"https://www.youtube.com/results?search_query={enc_q}",
+                    "google_url": f"https://www.google.com/search?q={enc_q}",
+                    "github_url": f"https://github.com/search?q={enc_q}"
+                })
+                existing_names.add(psr["name"].lower())
+
     details_match = re.search(r'(?:\[DETAILS\]:|---\s*\n\[DETAILS\]:)\s*(.+)', raw_text, re.DOTALL | re.IGNORECASE)
     if details_match:
         details = details_match.group(1).strip()
@@ -772,24 +817,32 @@ def format_downloadable_txt(meta: Dict[str, Any]) -> str:
             formatted += "\n"
 
     if meta.get("products") and len(meta["products"]) > 0:
+        cat_str = str(meta.get("category", "") or meta.get("category_name", "")).upper()
+        is_recipe = any(k in cat_str for k in ["RECIPE", "FOOD", "COOKING"])
+        is_fashion = any(k in cat_str for k in ["FASHION", "BEAUTY", "STYLE", "CLOTH"])
         formatted += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Buy Links:\n{'='*50}\n"
         for idx, p in enumerate(meta["products"], 1):
             price_str = f" ({p['price']})" if p.get("price") else ""
             formatted += f"{idx}. {p['name']}{price_str}\n"
             if p.get("amazon_url"):
-                formatted += f"   • Amazon: {p['amazon_url']}\n"
+                amz_lbl = "Amazon Fresh" if is_recipe else ("Amazon Fashion" if is_fashion else "Amazon")
+                formatted += f"   • {amz_lbl}: {p['amazon_url']}\n"
             if p.get("flipkart_url"):
                 formatted += f"   • Flipkart: {p['flipkart_url']}\n"
             if p.get("myntra_url"):
                 formatted += f"   • Myntra: {p['myntra_url']}\n"
             if p.get("meesho_url"):
                 formatted += f"   • Meesho: {p['meesho_url']}\n"
+            if p.get("ajio_url"):
+                formatted += f"   • AJIO: {p['ajio_url']}\n"
             if p.get("blinkit_url"):
                 formatted += f"   • Blinkit (10-Min): {p['blinkit_url']}\n"
             if p.get("zepto_url"):
                 formatted += f"   • Zepto (10-Min): {p['zepto_url']}\n"
             if p.get("instamart_url"):
                 formatted += f"   • Swiggy Instamart: {p['instamart_url']}\n"
+            if p.get("bigbasket_url"):
+                formatted += f"   • BigBasket: {p['bigbasket_url']}\n"
             if p.get("google_shopping_url"):
                 formatted += f"   • Compare Stores: {p['google_shopping_url']}\n"
             formatted += "\n"

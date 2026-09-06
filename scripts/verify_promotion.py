@@ -111,7 +111,9 @@ def run_unit_tests() -> bool:
         [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
         cwd=str(ROOT_DIR),
         capture_output=True,
-        text=True
+        text=True,
+        encoding="utf-8",
+        errors="replace"
     )
     
     print(res.stdout)
