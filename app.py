@@ -4,6 +4,7 @@ import sys
 import time
 import textwrap
 import urllib.parse
+import html
 from pathlib import Path
 
 # Force UTF-8 encoding on Windows console for currency symbols (₹) and emojis
@@ -1236,24 +1237,27 @@ if process_btn:
                     st.caption("AI identified the following tutorials, lectures, and resources in this video. Click to watch directly on YouTube:")
                     
                     for res in resources_list:
-                        r_name = res["name"]
+                        r_name = res.get("name", "Tutorial")
                         r_plat = res.get("platform", "YouTube")
-                        plat_badge = f"<span style='background-color:rgba(239, 68, 68, 0.15); color:#F87171; border:1px solid rgba(239, 68, 68, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>📺 {r_plat}</span>"
-                        github_btn = f'<a href="{res["github_url"]}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🐙 Search GitHub</a>' if any(k in r_name.lower() for k in ["github", "code", "project", "repo"]) else ""
+                        plat_badge = f"<span style='background-color:rgba(239, 68, 68, 0.15); color:#F87171; border:1px solid rgba(239, 68, 68, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>📺 {html.escape(r_plat)}</span>"
+                        
+                        yt_url = res.get("youtube_url", "")
+                        gh_url = res.get("github_url", "")
+                        google_url = res.get("google_url", "")
 
-                        tut_html = f"""
-                        <div class="tutorial-box-luxury">
-                            <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9;">
-                                <span>▶️</span> <span>{r_name}</span> {plat_badge}
-                            </div>
-                            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                                <a href="{res['youtube_url']}" target="_blank" class="watch-btn-yt">▶️ Watch on YouTube</a>
-                                {github_btn}
-                                <a href="{res['google_url']}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:'Outfit',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🔍 Search Google</a>
-                            </div>
-                        </div>
-                        """
-                        st.markdown(textwrap.dedent(tut_html).strip(), unsafe_allow_html=True)
+                        btn_items = [
+                            f'<a href="{yt_url}" target="_blank" class="watch-btn-yt">▶️ Watch on YouTube</a>'
+                        ]
+                        if any(k in r_name.lower() for k in ["github", "code", "project", "repo"]):
+                            btn_items.append(f'<a href="{gh_url}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🐙 Search GitHub</a>')
+                        btn_items.append(f'<a href="{google_url}" target="_blank" style="text-decoration:none; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#E2E8F0; font-family:\'Outfit\',sans-serif; font-weight:600; padding:7px 14px; border-radius:8px; font-size:0.82rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">🔍 Search Google</a>')
+                        btn_html = " ".join(btn_items)
+
+                        tut_html = f'<div class="tutorial-box-luxury"><div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom:8px;"><span>▶️</span> <span>{html.escape(r_name)}</span> {plat_badge}</div><div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">{btn_html}</div></div>'
+                        if hasattr(st, "html"):
+                            st.html(tut_html)
+                        else:
+                            st.markdown(tut_html, unsafe_allow_html=True)
 
                 st.markdown("---")
                 

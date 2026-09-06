@@ -529,9 +529,10 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     else:
         title = extract_apt_recipe_title(raw_text)
 
-    summary_match = re.search(r'\[SUMMARY\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|\[PRODUCTS\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+    summary_match = re.search(r'\[SUMMARY\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|\[PRODUCTS\]|\[RESOURCES(?:\s*&\s*TUTORIALS)?\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
     if summary_match:
         summary = summary_match.group(1).strip()
+        summary = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*', '', summary, flags=re.DOTALL | re.IGNORECASE).strip()
 
     # Extract Products section
     prod_section_match = re.search(r'\[PRODUCTS\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|\[CATEGORY\]|\[TITLE\]|\[SUMMARY\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
@@ -619,8 +620,8 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
                     else:
                         continue
 
-                r_name_clean = re.sub(r'[*_#]', '', r_name).strip()
-                r_search_clean = re.sub(r'[*_#]', '', r_search).strip()
+                r_name_clean = re.sub(r'[*_#"\u201c\u201d\']', '', r_name).strip()
+                r_search_clean = re.sub(r'[*_#"\u201c\u201d\']', '', r_search).strip()
                 if not r_name_clean:
                     continue
 

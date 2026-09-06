@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 import requests
 from pathlib import Path
@@ -73,15 +74,29 @@ def get_category_header(recipe_name: str, category: str = "RECIPE") -> Tuple[str
 def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, resources: list = None) -> str:
     """
     Generates a WhatsApp Deep Link (wa.me / api.whatsapp.com).
-    When opened on mobile or web, it opens WhatsApp with caption, content, products & YouTube tutorial links pre-filled!
+    When opened on mobile or web, it opens WhatsApp with caption, clickable links & content pre-filled!
+    Prioritizes clickable tutorial/resource links and shoppable product links at the top so they are never truncated.
     """
     clean_phone = format_phone_number(phone_number)
     recipe_name = get_recipe_display_name(recipe_txt_path)
     header, icon = get_category_header(recipe_name, category)
+    top_header = f"{icon} *{header}*"
     
+    # 1. Build Clickable Resource / Tutorial Links
+    resource_section = ""
+    if resources and len(resources) > 0:
+        resource_section = "🎓 *Recommended YouTube Tutorials & Learning Links:*\n"
+        for r in resources[:5]:
+            r_name = r.get("name", "").strip()
+            yt_url = r.get("youtube_url", "").strip()
+            plat = r.get("platform", "").strip()
+            plat_str = f" ({plat})" if plat and plat.lower() != "youtube" else ""
+            resource_section += f"• *{r_name}*{plat_str}\n  ▶️ Watch: {yt_url}\n"
+
+    # 2. Build Clickable Product & Quick-Commerce Links
     product_section = ""
     if products and len(products) > 0:
-        product_section = "\n\n🛍️ *Featured Products & 1-Click Buy Links:*\n"
+        product_section = "🛍️ *Featured Products & 1-Click Buy Links:*\n"
         for p in products[:5]:
             price_tag = f" ({p['price']})" if p.get("price") else ""
             product_section += f"• *{p['name']}*{price_tag}\n  🛒 Amazon: {p['amazon_url']}\n"
@@ -94,18 +109,32 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
             if p.get("blinkit_url"):
                 product_section += f"  ⚡ 10-Min Delivery: {p['blinkit_url']}\n"
 
+    links_parts = []
+    if resource_section:
+        links_parts.append(resource_section.strip())
+    if product_section:
+        links_parts.append(product_section.strip())
+    links_block = "\n\n".join(links_parts).strip()
 
-    resource_section = ""
-    if resources and len(resources) > 0:
-        resource_section = "\n\n🎓 *Recommended YouTube Tutorials:*\n"
-        for r in resources[:5]:
-            resource_section += f"• *{r['name']}*\n  ▶️ YouTube: {r['youtube_url']}\n"
-    
-    full_message = f"{icon} *{header}*\n\n{recipe_content}{product_section}{resource_section}"
-    
-    # Truncate if exceptionally long for URL safety
-    if len(full_message) > 3000:
-        full_message = full_message[:2950] + "\n\n...(Full text available in downloadable .txt file)"
+    # 3. Clean raw internal non-clickable tags from body text
+    clean_body = recipe_content or ""
+    clean_body = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*?(?=\n\s*(?:={3,}|[A-Z#])|\n\n|\Z)', '', clean_body, flags=re.DOTALL | re.IGNORECASE).strip()
+
+    # 4. Assemble with link priority: Header -> Links Block -> Clean Content Body
+    if links_block:
+        top_section = f"{top_header}\n\n{links_block}"
+    else:
+        top_section = top_header
+
+    # Calculate remaining character budget for body (safe WhatsApp URL limit ~3500 chars after url-encoding)
+    max_total_len = 2000
+    reserved_len = len(top_section) + 80  # buffer for newlines & truncation suffix
+    available_body_len = max(300, max_total_len - reserved_len)
+
+    if len(clean_body) > available_body_len:
+        clean_body = clean_body[:available_body_len].rstrip() + "\n\n...(Full text available in downloadable .txt file)"
+
+    full_message = f"{top_section}\n\n{clean_body}".strip() if clean_body else top_section
         
     encoded_text = urllib.parse.quote(full_message)
     return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_text}"
@@ -120,20 +149,34 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
     clean_phone = format_phone_number(phone_number)
     recipe_name = get_recipe_display_name(recipe_txt_path)
     header, icon = get_category_header(recipe_name, category)
+    top_header = f"{icon} *{header}*"
     
     product_section = ""
     if products and len(products) > 0:
-        product_section = "\n\n🛍️ *Products:*\n"
+        product_section = "🛍️ *Featured Products:*\n"
         for p in products[:3]:
             product_section += f"• {p['name']}: {p['amazon_url']}\n"
 
     resource_section = ""
     if resources and len(resources) > 0:
-        resource_section = "\n\n🎓 *Tutorials:*\n"
+        resource_section = "🎓 *Recommended Tutorials:*\n"
         for r in resources[:3]:
             resource_section += f"• {r['name']}: {r['youtube_url']}\n"
 
-    full_message = f"{icon} *{header}*\n\n{recipe_content[:1000]}{product_section}{resource_section}"
+    links_parts = []
+    if resource_section:
+        links_parts.append(resource_section.strip())
+    if product_section:
+        links_parts.append(product_section.strip())
+    links_block = "\n\n".join(links_parts).strip()
+
+    clean_body = recipe_content or ""
+    clean_body = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*?(?=\n\s*(?:={3,}|[A-Z#])|\n\n|\Z)', '', clean_body, flags=re.DOTALL | re.IGNORECASE).strip()
+
+    if links_block:
+        full_message = f"{top_header}\n\n{links_block}\n\n{clean_body[:1000]}".strip()
+    else:
+        full_message = f"{top_header}\n\n{clean_body[:1200]}".strip()
     
     encoded_text = urllib.parse.quote(full_message)
     url = f"https://api.callmebot.com/whatsapp.php?phone={clean_phone}&text={encoded_text}&apikey={api_key}"

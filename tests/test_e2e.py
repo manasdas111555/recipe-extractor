@@ -406,6 +406,50 @@ Price: ₹349
         self.assertIn("Stanford LLM Fundamentals", decoded)
         self.assertIn("https://www.youtube.com/results?search_query=Stanford+LLM+Fundamentals+tutorial", decoded)
 
+    def test_generate_whatsapp_deep_link_long_text_preserves_links(self):
+        # When reel content has over 3,500 characters and raw internal blocks,
+        # ensure clickable tutorial links are NEVER truncated and raw markers are removed
+        long_body = "Detailed steps and code notes.\n" * 150  # ~4,500 characters
+        raw_content = f"""📋 Summary:
+Introductory guide to becoming an AI engineer.
+
+[RESOURCES & TUTORIALS]:
+- RESOURCE: LangChain Framework | PLATFORM: Documentation | SEARCH: "LangChain AI framework tutorial for beginners"
+
+==================================================
+Detailed Steps & Notes:
+==================================================
+{long_body}
+"""
+        resources = [
+            {
+                "name": "LangChain Framework",
+                "platform": "Documentation",
+                "youtube_url": "https://www.youtube.com/results?search_query=LangChain+AI+framework+tutorial+for+beginners"
+            },
+            {
+                "name": "AI Engineering Roadmap",
+                "platform": "YouTube",
+                "youtube_url": "https://www.youtube.com/results?search_query=AI+Engineer+roadmap+for+beginners"
+            }
+        ]
+        url = generate_whatsapp_deep_link(
+            "918056804940",
+            "C:/downloads/Scratch_to_AI_Engineer.txt",
+            raw_content,
+            category="TECH_TUTORIAL",
+            resources=resources
+        )
+        decoded = urllib.parse.unquote(url)
+        # 1. Assert clickable links are present in decoded WhatsApp message
+        self.assertIn("https://www.youtube.com/results?search_query=LangChain+AI+framework+tutorial+for+beginners", decoded)
+        self.assertIn("https://www.youtube.com/results?search_query=AI+Engineer+roadmap+for+beginners", decoded)
+        # 2. Assert raw unclickable block was stripped from body
+        self.assertNotIn('[RESOURCES & TUTORIALS]:', decoded)
+        self.assertNotIn('SEARCH: "LangChain AI framework', decoded)
+        # 3. Assert message is safe URL length
+        self.assertLessEqual(len(url), 4000)
+
     def test_dispatch_whatsapp_cli_helper(self):
         success, msg = dispatch_whatsapp("918056804940", "C:/test.txt", "Some content", category="RECIPE")
         self.assertTrue(success)
