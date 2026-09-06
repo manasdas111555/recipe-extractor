@@ -127,11 +127,20 @@ def get_category_header(recipe_name: str, category: str = "RECIPE") -> Tuple[str
         return f"Here is recipe file for - {recipe_name} !", "🍳"
 
 
-def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, resources: list = None) -> str:
+def generate_whatsapp_deep_link(
+    phone_number: str,
+    recipe_txt_path: str,
+    recipe_content: str,
+    category: str = "RECIPE",
+    products: list = None,
+    resources: list = None,
+    include_commerce_links: bool = True
+) -> str:
     """
     Generates a WhatsApp Deep Link (wa.me / api.whatsapp.com).
     When opened on mobile or web, it opens WhatsApp with caption, clickable links & content pre-filled!
     Prioritizes clickable tutorial/resource links and shoppable product links at the top so they are never truncated.
+    Enforces category-conditional storefront display (no fashion portals on food recipes).
     """
     clean_phone = format_phone_number(phone_number)
     recipe_name = get_recipe_display_name(recipe_txt_path)
@@ -149,21 +158,51 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
             plat_str = f" ({plat})" if plat and plat.lower() != "youtube" else ""
             resource_section += f"• *{r_name}*{plat_str}\n  ▶️ Watch: {yt_url}\n"
 
-    # 2. Build Clickable Product & Quick-Commerce Links
+    # 2. Build Clickable Product & Quick-Commerce Links (Category Conditional)
     product_section = ""
-    if products and len(products) > 0:
+    if include_commerce_links and products and len(products) > 0:
+        cat_u = (category or "RECIPE").upper()
+        is_recipe = any(c in cat_u for c in ["RECIPE", "COOK", "BAKE", "CULINARY", "FOOD"])
+        is_fashion = any(c in cat_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+
         product_section = "🛍️ *Featured Products & 1-Click Buy Links:*\n"
         for p in products[:5]:
             price_tag = f" ({p['price']})" if p.get("price") else ""
-            product_section += f"• *{p['name']}*{price_tag}\n  🛒 Amazon: {p['amazon_url']}\n"
-            if p.get("flipkart_url"):
-                product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
-            if p.get("myntra_url"):
-                product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
-            if p.get("meesho_url"):
-                product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
-            if p.get("blinkit_url"):
-                product_section += f"  ⚡ 10-Min Delivery: {p['blinkit_url']}\n"
+            product_section += f"• *{p['name']}*{price_tag}\n"
+            if is_recipe:
+                # Grocery & 10-Min Quick Commerce only (Strictly no Myntra/Meesho)
+                if p.get("blinkit_url"):
+                    product_section += f"  🟡 Blinkit (10-Min): {p['blinkit_url']}\n"
+                elif p.get("zepto_url"):
+                    product_section += f"  ⚡ Zepto (10-Min): {p['zepto_url']}\n"
+                elif p.get("instamart_url"):
+                    product_section += f"  🛵 Instamart: {p['instamart_url']}\n"
+                if p.get("amazon_url"):
+                    product_section += f"  🛒 Amazon Fresh: {p['amazon_url']}\n"
+            elif is_fashion:
+                # Fashion portals only
+                if p.get("myntra_url"):
+                    product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
+                if p.get("ajio_url"):
+                    product_section += f"  👔 AJIO: {p['ajio_url']}\n"
+                if p.get("meesho_url"):
+                    product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
+                if p.get("amazon_url"):
+                    product_section += f"  👗 Amazon Fashion: {p['amazon_url']}\n"
+            else:
+                # General Tech / Kitchen / Multi-domain Finds
+                if p.get("amazon_url"):
+                    product_section += f"  🛒 Amazon: {p['amazon_url']}\n"
+                if p.get("flipkart_url"):
+                    product_section += f"  ⚡ Flipkart: {p['flipkart_url']}\n"
+                if p.get("myntra_url"):
+                    product_section += f"  🛍️ Myntra: {p['myntra_url']}\n"
+                if p.get("meesho_url"):
+                    product_section += f"  🌸 Meesho: {p['meesho_url']}\n"
+                if p.get("blinkit_url"):
+                    product_section += f"  ⚡ 10-Min Delivery: {p['blinkit_url']}\n"
+                if p.get("shopsy_url"):
+                    product_section += f"  🟣 Shopsy: {p['shopsy_url']}\n"
 
     links_parts = []
     if resource_section:
@@ -198,7 +237,16 @@ def generate_whatsapp_deep_link(phone_number: str, recipe_txt_path: str, recipe_
     encoded_text = urllib.parse.quote(full_message)
     return f"https://api.whatsapp.com/send?phone={clean_phone}&text={encoded_text}"
 
-def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_content: str, api_key: str, category: str = "RECIPE", products: list = None, resources: list = None) -> Tuple[bool, str]:
+def send_via_callmebot_api(
+    phone_number: str,
+    recipe_txt_path: str,
+    recipe_content: str,
+    api_key: str,
+    category: str = "RECIPE",
+    products: list = None,
+    resources: list = None,
+    include_commerce_links: bool = True
+) -> Tuple[bool, str]:
     """
     Sends WhatsApp message directly via free CallMeBot API with precise summary, product buy links and YouTube tutorial links.
     """
@@ -211,10 +259,10 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
     top_header = f"{icon} *{header}*"
     
     product_section = ""
-    if products and len(products) > 0:
+    if include_commerce_links and products and len(products) > 0:
         product_section = "🛍️ *Featured Products:*\n"
         for p in products[:3]:
-            product_section += f"• {p['name']}: {p['amazon_url']}\n"
+            product_section += f"• {p['name']}: {p.get('amazon_url') or p.get('blinkit_url') or ''}\n"
 
     resource_section = ""
     if resources and len(resources) > 0:
@@ -259,16 +307,42 @@ def send_via_callmebot_api(phone_number: str, recipe_txt_path: str, recipe_conte
     except Exception as e:
         return False, f"CallMeBot API Request Error: {str(e)}"
 
-def dispatch_whatsapp(phone_number: str, recipe_txt_path: str, recipe_content: str, category: str = "RECIPE", products: list = None, resources: list = None, callmebot_api_key: str = None) -> Tuple[bool, str]:
+def dispatch_whatsapp(
+    phone_number: str,
+    recipe_txt_path: str,
+    recipe_content: str,
+    category: str = "RECIPE",
+    products: list = None,
+    resources: list = None,
+    callmebot_api_key: str = None,
+    include_commerce_links: bool = True
+) -> Tuple[bool, str]:
     """
     Unified WhatsApp dispatcher for CLI and automated workflows.
     If callmebot_api_key is provided, attempts direct API message.
     Otherwise, generates and returns the pre-filled WhatsApp deep link.
     """
     if callmebot_api_key:
-        return send_via_callmebot_api(phone_number, recipe_txt_path, recipe_content, callmebot_api_key, category=category, products=products, resources=resources)
+        return send_via_callmebot_api(
+            phone_number,
+            recipe_txt_path,
+            recipe_content,
+            callmebot_api_key,
+            category=category,
+            products=products,
+            resources=resources,
+            include_commerce_links=include_commerce_links
+        )
     
-    deep_link = generate_whatsapp_deep_link(phone_number, recipe_txt_path, recipe_content, category=category, products=products, resources=resources)
+    deep_link = generate_whatsapp_deep_link(
+        phone_number,
+        recipe_txt_path,
+        recipe_content,
+        category=category,
+        products=products,
+        resources=resources,
+        include_commerce_links=include_commerce_links
+    )
     return True, f"WhatsApp link generated: {deep_link}"
 
 

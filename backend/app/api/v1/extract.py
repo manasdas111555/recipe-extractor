@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-from backend.app.core.security import get_current_user
+from backend.app.core.security import get_current_user, check_anonymous_rate_limit
 from backend.app.core.supabase_client import get_supabase_client
 from backend.app.services.job_manager import get_job_manager, run_extraction_worker_sync
 from backend.app.workers.celery_app import is_celery_broker_reachable, celery_app
@@ -65,14 +65,25 @@ async def enqueue_extraction(
 ):
     """
     Submits a short-form video for multimodal extraction.
-    1. Validates user daily quota (returns 429 if exceeded).
-    2. Computes SHA-256 URL hash and checks PostgreSQL cache.
-    3. If cached, returns HTTP 200 with zero-cost data immediately.
-    4. If new, enqueues to Celery distributed worker pool (or BackgroundTasks fallback)
+    1. Enforces strict anonymous sliding-window rate limit (3 req/min).
+    2. Validates user daily quota (returns 429 if exceeded).
+    3. Computes SHA-256 URL hash and checks PostgreSQL cache.
+    4. If cached, returns HTTP 200 with zero-cost data immediately.
+    5. If new, enqueues to Celery distributed worker pool (or BackgroundTasks fallback)
        and returns HTTP 202 with job_id and poll_url.
     """
+    # 1. Anonymous Tier Rate Limiter (P0 PO Directive: 3 req/min)
+    if current_user.get("is_anonymous"):
+        client_ip = current_user.get("client_ip", "127.0.0.1")
+        if not check_anonymous_rate_limit(client_ip, max_requests=3, window_seconds=60):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded: Anonymous tier allows 3 requests per minute. Upgrade or authenticate for higher throughput."
+            )
+
+    # 2. Daily Quota Verification
     extractions_today = current_user.get("extractions_today", 0)
-    daily_limit = current_user.get("daily_quota_limit", 3)
+    daily_limit = current_user.get("daily_quota_limit", 10 if current_user.get("is_anonymous") else 3)
 
     if extractions_today >= daily_limit:
         raise HTTPException(

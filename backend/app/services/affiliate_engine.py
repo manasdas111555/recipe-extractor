@@ -103,11 +103,13 @@ class AffiliateEngine:
     def enrich_product_links(
         self,
         product: Dict[str, Any],
-        user_affiliate_tags: Optional[Dict[str, str]] = None
+        user_affiliate_tags: Optional[Dict[str, str]] = None,
+        category: str = "ALL"
     ) -> Dict[str, Any]:
         """
         Enriches a product dictionary with monetized e-commerce and quick-commerce URLs.
         Allows custom affiliate overrides for Pro and Creator tiers.
+        Contextually suppresses irrelevant store links (e.g. no Myntra/Meesho on food recipes).
         """
         user_tags = user_affiliate_tags or {}
         custom_amz = user_tags.get("amazon_tag")
@@ -115,19 +117,33 @@ class AffiliateEngine:
 
         name = product.get("name", "Product").strip()
         enriched = dict(product)
+        cat_u = (category or "ALL").upper()
+        is_recipe = (cat_u != "ALL") and any(c in cat_u for c in ["RECIPE", "COOK", "BAKE", "CULINARY", "FOOD"])
+        is_fashion = any(c in cat_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+
         enriched["amazon_url"] = self.generate_amazon_url(name, custom_tag=custom_amz)
         enriched["flipkart_url"] = self.generate_flipkart_url(name, custom_id=custom_ek)
-        enriched["myntra_url"] = self.generate_myntra_url(name)
-        enriched["meesho_url"] = self.generate_meesho_url(name, custom_id=custom_ek)
-        enriched["ajio_url"] = self.generate_ajio_url(name, custom_id=custom_ek)
-        enriched["nykaa_url"] = self.generate_nykaa_url(name, custom_id=custom_ek)
+
+        # Contextual Store Allocation (P0 Directive)
+        if cat_u == "ALL" or is_fashion or not is_recipe:
+            enriched["myntra_url"] = self.generate_myntra_url(name)
+            enriched["meesho_url"] = self.generate_meesho_url(name, custom_id=custom_ek)
+            enriched["ajio_url"] = self.generate_ajio_url(name, custom_id=custom_ek)
+            enriched["nykaa_url"] = self.generate_nykaa_url(name, custom_id=custom_ek)
+        else:
+            enriched["myntra_url"] = ""
+            enriched["meesho_url"] = ""
+            enriched["ajio_url"] = ""
+            enriched["nykaa_url"] = ""
+
         enriched["google_shopping_url"] = self.generate_google_shopping_url(name)
 
-        # Quick Commerce links
+        # Quick Commerce links (always populated for instant fulfillment)
         enriched["blinkit_url"] = self.generate_blinkit_url(name)
         enriched["zepto_url"] = self.generate_zepto_url(name)
         enriched["instamart_url"] = self.generate_instamart_url(name)
         enriched["jiomart_url"] = self.generate_jiomart_url(name)
+        enriched["bigbasket_url"] = f"https://www.bigbasket.com/ps/?q={urllib.parse.quote_plus(name)}"
 
         return enriched
 

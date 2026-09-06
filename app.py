@@ -869,12 +869,19 @@ st.sidebar.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+if "saved_user_phone" not in st.session_state:
+    st.session_state["saved_user_phone"] = ""
+if "saved_user_cc" not in st.session_state:
+    st.session_state["saved_user_cc"] = get_default_country_code()
+
+default_cc = st.session_state.get("saved_user_cc") or get_default_country_code()
+saved_phone_val = st.session_state.get("saved_user_phone", "")
+
 col_cc, col_num = st.sidebar.columns([1.1, 2.4])
 with col_cc:
-    default_cc = get_default_country_code()
     country_code_input = st.text_input("Code", value=default_cc, help="Country calling code (e.g. +91)")
 with col_num:
-    local_phone_input = st.text_input("Phone Number", value="", placeholder="9999999999", help="Mobile number without country code")
+    local_phone_input = st.text_input("Phone Number", value=saved_phone_val, placeholder="9999999999", help="Mobile number without country code")
 
 sidebar_phone = local_phone_input.strip()
 phone_number_input = ""
@@ -883,6 +890,14 @@ if sidebar_phone:
     if is_valid_sb:
         clean_sb_cc = country_code_input.strip().replace("+", "").strip()
         phone_number_input = f"{clean_sb_cc}{sidebar_phone}"
+        st.session_state["saved_user_phone"] = sidebar_phone
+        st.session_state["saved_user_cc"] = country_code_input
+        st.sidebar.markdown("""
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:-6px; margin-bottom:8px;">
+            <span style="background:rgba(16,185,129,0.15); color:#34D399; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:9999px; border:1px solid rgba(16,185,129,0.3);">✓ Number Saved</span>
+            <span style="font-size:0.7rem; color:#94A3B8;">Auto-filled</span>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         st.sidebar.warning(f"⚠️ {err_sb}")
 
@@ -1193,13 +1208,25 @@ if active_res:
     products_list = meta.get("products", [])
     resources_list = meta.get("resources", [])
 
-    # High-Visibility Latency & Performance Benchmark
-    st.markdown(f"#### ⚡ Latency & Execution Benchmark (`{total_elapsed:.1f}s` Total Turnaround)")
-    b1, b2, b3, b4 = st.columns(4)
-    b1.metric("⏱️ Total Turnaround", f"{total_elapsed:.1f}s")
-    b2.metric("📥 Stream Download", f"{dl_duration:.1f}s")
-    b3.metric("☁️ Cloud Upload & Prep", f"{cloud_prep_time:.1f}s")
-    b4.metric(f"🧠 AI ({model_display})", f"{ai_duration:.1f}s")
+    # Consumer-Grade Performance Metric Pill (P0 PO Directive)
+    st.markdown(f"""
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(16, 185, 129, 0.12); border:1px solid rgba(16, 185, 129, 0.35); border-radius:9999px; padding:5px 15px;">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; box-shadow:0 0 8px #10B981;"></span>
+            <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:0.86rem; color:#34D399;">⚡ Processed in {total_elapsed:.1f}s</span>
+        </div>
+        <span style="font-size:0.75rem; color:#94A3B8;">Model: {model_display} • {detected_plat}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Detailed Pipeline Telemetry demoted to expandable developer drawer (P0 PO Directive)
+    is_admin_mode = bool(st.query_params.get("admin") == "1")
+    with st.expander("🛠️ Pipeline Telemetry & Latency Breakdown (Developer View)", expanded=is_admin_mode):
+        b1, b2, b3, b4 = st.columns(4)
+        b1.metric("⏱️ Total Turnaround", f"{total_elapsed:.1f}s")
+        b2.metric("📥 Stream Download", f"{dl_duration:.1f}s")
+        b3.metric("☁️ Cloud Upload & Prep", f"{cloud_prep_time:.1f}s")
+        b4.metric(f"🧠 AI ({model_display})", f"{ai_duration:.1f}s")
     st.markdown("---")
 
     # Unified 2-Column Responsive Layout: Left = Intelligence & Actions, Right = Single Video Stream
@@ -1228,50 +1255,160 @@ if active_res:
             clean_summary_disp = re.sub(r'\[(?:RESOURCES(?:\s*&\s*TUTORIALS)?|PRODUCTS)\]:.*', '', meta['summary'], flags=re.DOTALL | re.IGNORECASE).strip()
             st.info(f"**Executive Summary**: {clean_summary_disp}")
 
-        # Featured Products & 1-Click Purchase Links
+        # Domain Conditional Store Routing (P0 PO Directive)
+        cat_code_u = (cat_code or "RECIPE").upper()
+        is_recipe_domain = any(c in cat_code_u for c in ["RECIPE", "COOK", "BAKE", "FOOD", "CULINARY"])
+        is_fashion_domain = any(c in cat_code_u for c in ["BEAUTY_FASHION", "FASHION", "OOTD", "STYLE", "BEAUTY", "APPAREL"])
+
         if products_list:
-            st.markdown("### 🛍️ Featured Products & 1-Click Buy Links")
-            st.caption("AI identified the following products in this video. Click any store to view or purchase:")
+            if is_recipe_domain:
+                st.markdown("### 🛒 Ingredients & 10-Minute Delivery")
+                st.caption("AI identified the following ingredients. Order instantly via Quick Commerce or fresh grocery:")
 
-            for prod in products_list:
-                p_name = prod["name"]
-                p_price = prod.get("price", "")
-                price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
+                # 1-Click Copy Ingredient Checklist Button
+                checklist_lines = [f"[ ] {p['name']}" + (f" ({p['price']})" if p.get('price') else "") for p in products_list]
+                raw_checklist = f"🛒 Ingredient Checklist for {item_title}:\n" + "\n".join(checklist_lines)
+                safe_checklist_js = json.dumps(raw_checklist)
 
-                prod_html = f"""
-                <div class="product-box-luxury">
-                    <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 4px;">
-                        <span>📦</span> <span>{p_name}</span> {price_html}
+                checklist_btn_html = f"""
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                    <button id="copyChecklistBtn" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399; padding: 7px 15px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                        📋 Copy Ingredient Checklist
+                    </button>
+                    <span id="checklistCopiedToast" style="display: none; color: #34D399; font-size: 0.82rem; font-weight: 600;">✓ Copied to Clipboard!</span>
+                </div>
+                <script>
+                document.getElementById("copyChecklistBtn").addEventListener("click", () => {{
+                    navigator.clipboard.writeText({safe_checklist_js}).then(() => {{
+                        const toast = document.getElementById("checklistCopiedToast");
+                        toast.style.display = "inline";
+                        setTimeout(() => {{ toast.style.display = "none"; }}, 2500);
+                    }});
+                }});
+                </script>
+                """
+                if hasattr(st, "html"):
+                    st.html(checklist_btn_html)
+                else:
+                    st.markdown(checklist_btn_html, unsafe_allow_html=True)
+
+                for prod in products_list:
+                    p_name = prod["name"]
+                    p_price = prod.get("price", "")
+                    price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
+
+                    prod_html = f"""
+                    <div class="product-box-luxury">
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 6px;">
+                            <span>🥬</span> <span>{p_name}</span> {price_html}
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top: 6px;">
+                            <a href="{prod.get('blinkit_url', f'https://blinkit.com/s/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-blinkit">🟡 Blinkit (10-Min)</a>
+                            <a href="{prod.get('zepto_url', f'https://www.zeptonow.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-zepto">⚡ Zepto</a>
+                            <a href="{prod.get('instamart_url', f'https://www.swiggy.com/instamart/search?custom_back=true&query={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-instamart">🛵 Instamart</a>
+                            <a href="{prod.get('jiomart_url', f'https://www.jiomart.com/search/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-jiomart">📦 JioMart</a>
+                            <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Fresh</a>
+                        </div>
+                        <details class="more-stores-details" style="margin-top:8px;">
+                            <summary class="more-stores-summary">🏷️ More Grocery Stores & Price Compare ▾</summary>
+                            <div class="more-stores-shelf">
+                                <a href="{prod.get('bigbasket_url', f'https://www.bigbasket.com/ps/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-flipkart">🧺 BigBasket</a>
+                                <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
+                            </div>
+                        </details>
                     </div>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 8px;">
-                        <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
-                        <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
-                        <a href="{prod.get('myntra_url', f'https://www.myntra.com/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-myntra">🛍️ Myntra</a>
-                        <a href="{prod.get('meesho_url', f'https://www.meesho.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-meesho">🌸 Meesho</a>
-                    </div>
+                    """
+                    st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
 
-                    <details class="more-stores-details">
-                        <summary class="more-stores-summary">🏷️ More Stores & Price Compare ▾</summary>
-                        <div class="more-stores-shelf">
+            elif is_fashion_domain:
+                st.markdown("### 👗 Featured Apparel & Shop the Look")
+                st.caption("AI identified the following fashion items. Click any storefront to browse or purchase:")
+                for prod in products_list:
+                    p_name = prod["name"]
+                    p_price = prod.get("price", "")
+                    price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
+
+                    prod_html = f"""
+                    <div class="product-box-luxury">
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 6px;">
+                            <span>👗</span> <span>{p_name}</span> {price_html}
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 6px;">
+                            <a href="{prod.get('myntra_url', f'https://www.myntra.com/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-myntra">🛍️ Myntra</a>
                             <a href="{prod.get('ajio_url', f'https://www.ajio.com/search/?text={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-ajio">👔 AJIO</a>
-                            <a href="{prod.get('nykaa_url', f'https://www.nykaa.com/search/result/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-nykaa">💄 Nykaa</a>
+                            <a href="{prod.get('meesho_url', f'https://www.meesho.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-meesho">🌸 Meesho</a>
+                            <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Fashion</a>
+                        </div>
+                        <details class="more-stores-details" style="margin-top:8px;">
+                            <summary class="more-stores-summary">🏷️ More Stores & Price Compare ▾</summary>
+                            <div class="more-stores-shelf">
+                                <a href="{prod.get('nykaa_url', f'https://www.nykaa.com/search/result/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-nykaa">💄 Nykaa Fashion</a>
+                                <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
+                            </div>
+                        </details>
+                    </div>
+                    """
+                    st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
+
+            else:
+                # Gadgets, Kitchen Products & Tech DIY
+                st.markdown("### 🛍️ Featured Products & 1-Click Buy Links")
+                st.caption("AI identified the following products in this video. Click any store to view or purchase:")
+                for prod in products_list:
+                    p_name = prod["name"]
+                    p_price = prod.get("price", "")
+                    price_html = f"<span style='background-color:rgba(16, 185, 129, 0.15); color:#34D399; border:1px solid rgba(16, 185, 129, 0.35); font-size:0.78rem; padding:3px 10px; border-radius:9999px; margin-left:8px; font-weight:700;'>💰 {p_price}</span>" if p_price else ""
+
+                    prod_html = f"""
+                    <div class="product-box-luxury">
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.98rem; font-weight:700; color:#F1F5F9; margin-bottom: 6px;">
+                            <span>📦</span> <span>{p_name}</span> {price_html}
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 6px;">
+                            <a href="{prod['amazon_url']}" target="_blank" class="shop-btn-amazon">🛒 Amazon Prime</a>
+                            <a href="{prod['flipkart_url']}" target="_blank" class="shop-btn-flipkart">⚡ Flipkart</a>
                             <a href="{prod.get('shopsy_url', f'https://www.shopsy.in/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="shop-btn-shopsy">🟣 Shopsy</a>
                             <a href="{prod['google_shopping_url']}" target="_blank" class="shop-btn-google">🔍 Google Shopping</a>
                         </div>
-                    </details>
+                    </div>
+                    """
+                    st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
 
-                    <div class="qc-shelf-container">
-                        <div class="qc-shelf-title">⚡ 10-Minute Instant Delivery (Quick Commerce)</div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                            <a href="{prod.get('blinkit_url', f'https://blinkit.com/s/?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-blinkit">🟡 Blinkit</a>
-                            <a href="{prod.get('zepto_url', f'https://www.zeptonow.com/search?q={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-zepto">⚡ Zepto</a>
-                            <a href="{prod.get('instamart_url', f'https://www.swiggy.com/instamart/search?custom_back=true&query={urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-instamart">🛵 Swiggy Instamart</a>
-                            <a href="{prod.get('jiomart_url', f'https://www.jiomart.com/search/{urllib.parse.quote_plus(p_name)}')}" target="_blank" class="qc-btn-jiomart">📦 JioMart</a>
+        # 1-Click Code Blocks for Technical Tutorials (P0 PO Directive)
+        raw_code_blocks = re.findall(r'```([a-zA-Z0-9_\-\+]*)\n(.*?)```', recipe_text, re.DOTALL)
+        if raw_code_blocks:
+            st.markdown("### 💻 Executable Code & Syntax Blocks")
+            for c_idx, (lang, c_code) in enumerate(raw_code_blocks, 1):
+                clean_lang = (lang or "code").lower()
+                clean_code = c_code.strip()
+                safe_code_js = json.dumps(clean_code)
+                is_py = clean_lang in ["python", "py"]
+                colab_btn = f'<a href="https://colab.research.google.com/#create=true" target="_blank" style="text-decoration:none; background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#FB923C; padding:6px 12px; border-radius:6px; font-size:0.8rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;">🚀 Open in Colab</a>' if is_py else ""
+
+                st.markdown(f"""
+                <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:0.82rem; color:#38BDF8; text-transform:uppercase;">Snippet #{c_idx} ({clean_lang})</span>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            {colab_btn}
+                            <button id="copyCodeBtn_{c_idx}" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); color:#38BDF8; padding:5px 12px; border-radius:6px; font-weight:700; font-size:0.78rem; cursor:pointer;">
+                                📋 Copy Code
+                            </button>
+                            <span id="codeToast_{c_idx}" style="display:none; color:#34D399; font-size:0.75rem; font-weight:700;">✓ Copied!</span>
                         </div>
                     </div>
+                    <pre style="background:#090D16; border-radius:8px; padding:10px; overflow-x:auto; color:#E2E8F0; font-size:0.85rem; font-family:'Fira Code',monospace; margin:0;"><code>{html.escape(clean_code)}</code></pre>
                 </div>
-                """
-                st.markdown(textwrap.dedent(prod_html).strip(), unsafe_allow_html=True)
+                <script>
+                document.getElementById("copyCodeBtn_{c_idx}").addEventListener("click", () => {{
+                    navigator.clipboard.writeText({safe_code_js}).then(() => {{
+                        const t = document.getElementById("codeToast_{c_idx}");
+                        t.style.display = "inline";
+                        setTimeout(() => {{ t.style.display = "none"; }}, 2500);
+                    }});
+                }});
+                </script>
+                """, unsafe_allow_html=True)
 
         # Recommended YouTube Tutorials & Learning Links
         if resources_list:
@@ -1437,12 +1574,12 @@ if active_res:
         st.markdown(f"""
         <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:0.88rem; color:#F1F5F9;">🎬 {detected_plat} Preview</span>
-            <span style="background:rgba(56,189,248,0.15); color:#38BDF8; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:6px; border:1px solid rgba(56,189,248,0.3);">HD Stream</span>
+            <span style="background:rgba(56,189,248,0.15); color:#38BDF8; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:6px; border:1px solid rgba(56,189,248,0.3);">▶️ Previewing Source Reel (Muted)</span>
         </div>
         """, unsafe_allow_html=True)
 
         if final_video_path and os.path.exists(final_video_path):
-            st.video(final_video_path)
+            st.video(final_video_path, autoplay=True, muted=True)
             video_filename = os.path.basename(final_video_path)
             with open(final_video_path, "rb") as vf:
                 video_bytes = vf.read()
