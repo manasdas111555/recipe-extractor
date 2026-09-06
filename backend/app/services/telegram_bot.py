@@ -40,11 +40,11 @@ def format_telegram_markdown(result: Dict[str, Any], canonical_url: str) -> Tupl
     Formats extraction intelligence into readable Telegram Markdown
     and constructs an interactive inline button keyboard.
     """
-    title = result.get("title", "Extracted Intelligence")
+    title = result.get("recipe_title") or result.get("title", "Extracted Intelligence")
     category = result.get("category_name", "Content Summary")
     summary = result.get("summary", "").strip()
     ingredients = result.get("ingredients", [])
-    steps = result.get("steps", [])
+    steps = result.get("steps") or result.get("instructions", [])
     products = result.get("products", [])
 
     msg_lines = [
@@ -69,31 +69,50 @@ def format_telegram_markdown(result: Dict[str, Any], canonical_url: str) -> Tupl
         for idx, step in enumerate(steps[:5], 1):
             msg_lines.append(f"*{idx}.* {step}")
         if len(steps) > 5:
-            msg_lines.append(f"_...and {len(steps) - 5} more steps_")
+            msg_lines.append(f"_...and {len(steps) - 5} more steps in web app_")
         msg_lines.append("")
 
     msg_lines.append("🚀 _Powered by Universal Pro AI_")
     text_content = "\n".join(msg_lines)
 
-    # Construct Inline Keyboard Buttons
+    # Construct Inline Keyboard Buttons (PO Directive: Wrapped via /api/v1/affiliate/redirect)
     inline_keyboard = []
 
-    # 1. Product Buy Link (Primary Amazon or first available store)
+    # 1. Product Buy Link (Routed via /api/v1/affiliate/redirect for telemetry)
     primary_buy_url = None
+    first_prod_name = "Product"
+    merchant = "amazon"
     if products and len(products) > 0:
         first_prod = products[0]
-        primary_buy_url = (
-            first_prod.get("amazon_url") or
-            first_prod.get("flipkart_url") or
-            first_prod.get("blinkit_url") or
-            first_prod.get("zepto_url")
-        )
+        first_prod_name = first_prod.get("name", "Product")
+        if first_prod.get("amazon_url"):
+            primary_buy_url = first_prod["amazon_url"]
+            merchant = "amazon"
+        elif first_prod.get("blinkit_url"):
+            primary_buy_url = first_prod["blinkit_url"]
+            merchant = "blinkit"
+        elif first_prod.get("flipkart_url"):
+            primary_buy_url = first_prod["flipkart_url"]
+            merchant = "flipkart"
+        elif first_prod.get("zepto_url"):
+            primary_buy_url = first_prod["zepto_url"]
+            merchant = "zepto"
+        elif first_prod.get("buy_url"):
+            primary_buy_url = first_prod["buy_url"]
+            merchant = "amazon" if "amazon" in primary_buy_url else "external"
 
     action_row = []
     if primary_buy_url:
+        import urllib.parse
+        from backend.app.core.config import get_settings
+        settings = get_settings()
+        encoded_dest = urllib.parse.quote_plus(primary_buy_url)
+        encoded_item = urllib.parse.quote_plus(first_prod_name)
+        redirect_wrapped_url = f"/api/v1/affiliate/redirect?url={encoded_dest}&merchant={merchant}&item_name={encoded_item}"
+        
         action_row.append({
             "text": "🛒 Buy Ingredients (1-Click)",
-            "url": primary_buy_url
+            "url": redirect_wrapped_url
         })
 
     action_row.append({
@@ -102,6 +121,13 @@ def format_telegram_markdown(result: Dict[str, Any], canonical_url: str) -> Tupl
     })
 
     inline_keyboard.append(action_row)
+
+    # 2. Web View Button (PO Directive: Option A - Bridge into Web App)
+    web_app_url = "https://universalpro-stage.streamlit.app"
+    inline_keyboard.append([{
+        "text": "🌐 View Full Interactive Recipe",
+        "url": web_app_url
+    }])
 
     return text_content, inline_keyboard
 

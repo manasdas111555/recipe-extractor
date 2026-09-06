@@ -73,7 +73,7 @@ async def get_current_user(
                 "id": user_id,
                 "email": email or (db_profile.get("email") if db_profile else "user@universalpro.ai"),
                 "plan_tier": db_profile.get("plan_tier", "free") if db_profile else "free",
-                "daily_quota_limit": db_profile.get("daily_quota_limit", 3) if db_profile else 3,
+                "daily_quota_limit": (db_profile.get("daily_quota_limit") or (999999 if (db_profile and db_profile.get("plan_tier") in ["pro", "unlimited"]) else 10)) if db_profile else 10,
                 "extractions_today": db_profile.get("extractions_today", 0) if db_profile else 0,
                 "custom_amazon_tag": db_profile.get("custom_amazon_tag") if db_profile else None,
                 "custom_earnkaro_id": db_profile.get("custom_earnkaro_id") if db_profile else None,
@@ -103,3 +103,21 @@ async def get_current_user(
         "is_anonymous": True,
         "client_ip": client_ip
     }
+
+
+def get_user_quota_limits(user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Tiered Quota Helper (Sprint 4 PO Policy):
+    - Guest: 3 daily extractions
+    - Authenticated Free: 10 daily extractions
+    - Pro: -1 (unlimited)
+    """
+    if not user or user.get("is_anonymous", False) or user.get("tier") == "guest":
+        return {"tier": "guest", "daily_quota_limit": 3}
+    
+    tier = user.get("plan_tier") or user.get("role") or user.get("tier", "free")
+    if tier in ["pro", "unlimited"]:
+        return {"tier": "pro", "daily_quota_limit": -1}
+    
+    return {"tier": "free", "daily_quota_limit": 10}
+

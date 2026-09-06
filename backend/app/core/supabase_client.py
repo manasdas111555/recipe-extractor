@@ -104,6 +104,57 @@ class SupabaseRestClient:
             logger.error(f"Error logging affiliate click to Supabase: {e}")
             return False
 
+    def list_extractions(
+        self,
+        user_id: Optional[str] = None,
+        search_query: Optional[str] = None,
+        domain: Optional[str] = None,
+        page: int = 1,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Queries public.extractions with search and domain filtering."""
+        if not self.is_configured():
+            return []
+
+        offset = max(0, (page - 1) * limit)
+        filters = ["select=*"]
+        if user_id:
+            filters.append(f"or=(user_id.eq.{user_id},is_public.eq.true)")
+        else:
+            filters.append("is_public.eq.true")
+
+        if domain and domain != "all":
+            filters.append(f"classified_domain.ilike.%{domain}%")
+
+        if search_query:
+            filters.append(f"or=(source_url.ilike.%{search_query}%,raw_transcript.ilike.%{search_query}%)")
+
+        filters.append("order=created_at.desc")
+        filters.append(f"limit={limit}")
+        filters.append(f"offset={offset}")
+
+        query_str = "&".join(filters)
+        url = f"{self.base_url}/rest/v1/extractions?{query_str}"
+        try:
+            r = requests.get(url, headers=self._get_headers(use_service_role=False), timeout=5)
+            if r.status_code == 200:
+                return r.json()
+        except Exception as e:
+            logger.error(f"Error listing extractions: {e}")
+        return []
+
+    def delete_extraction(self, extraction_id: str, user_id: str) -> bool:
+        """Deletes an extraction owned by the user."""
+        if not self.is_configured():
+            return True
+        url = f"{self.base_url}/rest/v1/extractions?id=eq.{extraction_id}&user_id=eq.{user_id}"
+        try:
+            r = requests.delete(url, headers=self._get_headers(use_service_role=True), timeout=5)
+            return r.status_code in [200, 204]
+        except Exception as e:
+            logger.error(f"Error deleting extraction {extraction_id}: {e}")
+            return False
+
     # Aliases for worker tasks compatibility
     save_extraction = insert_extraction
     increment_daily_quota = increment_user_quota

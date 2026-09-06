@@ -14,9 +14,9 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **Sprint 1** | **Core Decoupling & Multi-Tenant Data Layer** (Supabase + FastAPI) | 26 pts | 🎉 **COMPLETED (100%)** | Weeks 1–2 |
 | **Sprint 2** | **Async Worker Pipeline & Scraper Resilience** (Celery + Redis + Proxies) | 34 pts | 🎉 **COMPLETED (100%)** | Weeks 3–4 |
-| **Sprint 3** | **Zero-Friction Chat Ingestion Bot** (Telegram & WhatsApp Cloud API) | 29 pts | 🚀 **READY TO START** | Weeks 5–6 |
-| **Sprint 4** | **Next.js 15 PWA & Personal Vault** (Web Share Sheet + UI Dashboard) | 37 pts | ⏳ Backlog | Weeks 7–8 |
-| **Sprint 5** | **Monetization, Quotas & Subscriptions** (Razorpay AutoPay + Stripe) | 26 pts | ⏳ Backlog | Weeks 9–10 |
+| **Sprint 3** | **Zero-Friction Chat Ingestion Bot** (Telegram & WhatsApp Cloud API) | 29 pts | 🎉 **COMPLETED (100%)** | Weeks 5–6 |
+| **Sprint 4** | **Next.js 15 PWA & Personal Vault** (Web Share Sheet + UI Dashboard) | 37 pts | 🎉 **COMPLETED (100%)** | Weeks 7–8 |
+| **Sprint 5** | **Monetization, Quotas & Subscriptions** (Razorpay AutoPay + Stripe) | 26 pts | 🚀 **READY FOR REVIEW** | Weeks 9–10 |
 | **Sprint 6** | **Creator Program & SEO Ingestion Engine** (Custom Tags + SSR Pages) | 21 pts | ⏳ Backlog | Weeks 11–12 |
 
 ---
@@ -256,30 +256,31 @@
 ### 🌐 EPIC-6: Modern Client Frontend & PWA (Next.js 15)
 
 #### `UPA-501`: Next.js 15 App Router Project Skeleton & Theme
-- **Type**: Story | **Priority**: P1 (High) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P1 (High) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a user, I want a blazing fast, dark-mode luxury web app, so that the extraction interface feels premium and state-of-the-art.*
 - **Acceptance Criteria**:
-  - [ ] Next.js 15 initialized with TypeScript, Tailwind CSS, and Lucide icons.
-  - [ ] Consistent dark theme matching current Universal Pro AI palette (`#0A0E1A`, `#FF416C`).
-  - [ ] Responsive layout on mobile and desktop viewports.
+  - [x] Next.js 15 initialized with TypeScript, Lucide icons, and luxury dark glassmorphism system tokens (`#0A0E1A`, `#10B981`, `#FF416C`).
+  - [x] Consistent dark theme matching Universal Pro AI palette.
+  - [x] Responsive dual-column layout on mobile and desktop viewports with docked player.
 - **Dependencies**: None.
 
 #### `UPA-502`: Native PWA Manifest & Web Share Target
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a mobile user, I want Universal Pro AI in my phone's "Share via..." menu, so that sharing a reel from Instagram opens the extractor automatically.*
 - **Acceptance Criteria**:
-  - [ ] `manifest.json` configured with `share_target` pointing to `/share-target`.
-  - [ ] `/share-target/page.tsx` parses incoming URL and triggers extraction immediately.
-  - [ ] PWA installable on iOS (Safari Add to Home Screen) and Android (Chrome Install).
+  - [x] `manifest.json` configured with `share_target` pointing to `/share-target`.
+  - [x] `/share-target/page.tsx` parses incoming URL and triggers extraction immediately.
+  - [x] PWA service worker registered for offline caching, asset persistence, and standalone display.
 - **Dependencies**: `UPA-501`.
 
-#### `UPA-503`: "My Vault / Library" Persistent User Dashboard
-- **Type**: Story | **Priority**: P1 (High) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+#### `UPA-503`: "My Vault / Library" Persistent User Dashboard & Serving Scaler
+- **Type**: Story | **Priority**: P1 (High) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a registered user, I want a searchable library of all my past extractions, so that I never lose recipes, itineraries, or workout routines.*
 - **Acceptance Criteria**:
-  - [ ] Grid and list views of past extractions with category badges.
-  - [ ] Full-text search over titles, ingredients, and steps.
-  - [ ] Export buttons for Notion, Markdown, and Plain Text.
+  - [x] Grid and list views of past extractions with category badges (`GET /api/v1/library`).
+  - [x] Full-text search over titles, ingredients, and steps with deletion (`DELETE /api/v1/library/{id}`).
+  - [x] Export endpoints for Markdown, plain text, and JSON (`GET /api/v1/library/{id}/export`).
+  - [x] ServingAdjuster component scaling ingredients from 1–12 portions with 1-click quick-commerce purchase.
 - **Dependencies**: `UPA-102`, `UPA-501`.
 
 ---

@@ -44,6 +44,7 @@ CORE_MODULES = [
     "backend.app.services.affiliate_engine",
     "backend.app.workers.media_downloader",
     "backend.app.workers.celery_app",
+    "backend.app.api.v1.library",
 ]
 
 def log_step(name: str):
