@@ -78,3 +78,50 @@ python scripts/promote.py --to staging
 ```powershell
 python scripts/promote.py --to main
 ```
+
+---
+
+## 🔐 How to Update Streamlit Cloud Secrets
+
+Whenever you add new API keys, database credentials, or affiliate IDs (such as **Cuelinks**, **Supabase**, or **Gemini**), update your secrets on Streamlit Cloud:
+
+### Method A: From the Live App in Your Browser (Fastest)
+1. Open your live app:
+   - **Production**: [manas-recipe-extractor.streamlit.app](https://manas-recipe-extractor.streamlit.app/)
+   - **Staging**: [universalpro-stage.streamlit.app](https://universalpro-stage.streamlit.app/)
+2. At the bottom-right corner of the page, click the **"Manage app"** button.
+3. In the dock panel that slides open, click the **three dots menu (`⋮`)** next to your app name, then select **"Settings"**.
+4. In the Settings modal, select the **"Secrets"** tab on the left.
+5. Add or update your keys in the TOML editor (see template below).
+6. Click **"Save"**. The app will automatically restart with the new secrets in ~5 seconds.
+
+### Method B: From the Streamlit Cloud Dashboard
+1. Go to [share.streamlit.io](https://share.streamlit.io) and log in.
+2. In your list of deployed apps, locate the app card (**`manas-recipe-extractor`** or **`universalpro-stage`**).
+3. Click the **three vertical dots (`⋮`)** on the far right of the app row $\rightarrow$ click **"Settings"**.
+4. Click the **"Secrets"** tab on the left sidebar.
+5. Add or update your keys, then click **"Save"**.
+
+---
+
+### 📋 Secrets Reference Template
+
+#### For Production (`manas-recipe-extractor`):
+```toml
+GEMINI_API_KEY = "your_gemini_api_key"
+AMAZON_AFFILIATE_TAG = "manasdas11155-21"
+EARNKARO_ID = "5608766"
+CUELINKS_ID = "317820"
+MISTRALAI_API_KEY = "your_mistral_api_key"
+GROQ_API_KEY = "your_groq_api_key"
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_ANON_KEY = "your_supabase_anon_key"
+SUPABASE_SERVICE_ROLE_KEY = "your_supabase_service_role_key"
+```
+
+#### For Staging (`universalpro-stage`):
+Same as above, but with Staging Channel ID:
+```toml
+CUELINKS_ID = "317821"
+```
+
