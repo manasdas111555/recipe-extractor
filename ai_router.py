@@ -28,7 +28,7 @@ def route_video_intelligence(
     custom_mistral_key: str = None,
     custom_groq_key: str = None,
     status_callback = None,
-    gemini_model_preference: str = "gemini-3.5-flash",
+    gemini_model_preference: str = "gemini-3.8-flash",
     extraction_mode: str = "Auto-Detect",
     affiliate_tags: dict = None
 ) -> Tuple[bool, str, str, str, Dict[str, Any]]:
@@ -80,13 +80,13 @@ def route_video_intelligence(
             affiliate_tags=tags
         )
 
-    # 4. Auto-Universal Strategy: Gemini 3.5 Flash -> Mistral -> Groq
-    notify("Auto-Universal Mode: Primary dispatch to Gemini 3.5 Flash...")
+    # 4. Auto-Universal Strategy: Gemini 3.8 Flash -> Mistral -> Groq
+    notify("Auto-Universal Mode: Primary dispatch to Gemini 3.8 Flash...")
     gemini_res = process_video_and_generate_recipe(
         video_path=video_path,
         custom_api_key=custom_gemini_key or get_api_key(),
         status_callback=status_callback,
-        model_preference=gemini_model_preference or "gemini-3.5-flash",
+        model_preference=gemini_model_preference or "gemini-3.8-flash",
         extraction_mode=extraction_mode,
         affiliate_tags=tags
     )

@@ -6,3 +6,4 @@ downloads/
 *.txt
 !packages.txt
 !requirements.txt
+scratch/

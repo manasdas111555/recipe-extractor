@@ -36,3 +36,8 @@
 ## 7. UI/UX Performance Contract
 - **Sub-3s Turnaround Contract**: Any changes to the ingestion or inference pipeline must preserve our core benchmark (<1.5s first-paint video preview, <3s completed structured extraction).
 - **Single Docked Video Player**: Never duplicate HTML5 `<video>` player elements on the screen. The media preview player must remain single-docked to prevent duplicate audio tracks and mobile viewport collisions.
+
+## 8. Gemini Model Lifecycle & Deprecation Governance
+- **Catalog Alignment**: Continuously monitor Google Gemini's official model catalog (https://ai.google.dev/gemini-api/docs/models).
+- **Proactive Pruning of Deprecated Endpoints**: As soon as any model endpoint is marked shutdown or deprecated by Google (e.g., `gemini-2.0-flash`, `gemini-2.0-flash-lite`), agents must promptly prune it from `preferred_candidates` across `gemini_processor.py`, `ai_router.py`, and `app.py` to prevent wasted retry cycles and 404/410 latency spikes.
+- **Flagship Alignment**: The primary dispatch model should always point to Google's latest stable production Flash model (currently `gemini-3.8-flash`), followed by high-reliability fallbacks (`gemini-3.7-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`), before external provider failover.

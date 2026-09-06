@@ -921,21 +921,19 @@ def process_video_and_generate_recipe(
 
         notify(f"Video ready in {prep_duration:.1f}s. Beginning multi-modal AI reasoning...")
 
-        # Step 3: Model execution priority covering all Gemini models in your account
+        # Step 3: Model execution priority covering active Gemini models
         preferred_candidates = [
-            "gemini-3.5-flash",       # Verified ultra-fast (1.5s - 13.5s) with full multimodal video & product extraction
+            "gemini-3.8-flash",       # 🚀 Google's Newest Stable Flagship (Highest Reasoning & Multimodal Quality)
+            "gemini-3.7-flash",       # High-Reliability Agentic Flash
             "gemini-3.6-flash",       # Gemini 3.6 Flash
-            "gemini-3.7-flash",       # Gemini 3.7 Flash
-            "gemini-3.8-flash",       # Gemini 3.8 Flash
-            "gemini-3.5-flash-lite",  # Gemini 3.5 Flash Lite
+            "gemini-3.5-flash",       # Proven High-Throughput Workhorse
+            "gemini-3.5-flash-lite",  # Ultra-Fast High-Throughput Fallback
             "gemini-3.1-pro",         # Gemini 3.1 Pro
-            "gemini-3.1-flash-lite",  # Gemini 3.1 Flash Lite
+            "gemini-3.1-flash-lite",  # Frontier-Class Low Cost Fallback
             "gemini-3-flash",         # Gemini 3 Flash
             "gemini-2.5-flash",       # Gemini 2.5 Flash
             "gemini-2.5-pro",         # Gemini 2.5 Pro
             "gemini-2.5-flash-lite",  # Gemini 2.5 Flash Lite
-            "gemini-2.0-flash",       # Gemini 2.0 Flash
-            "gemini-2.0-flash-lite",  # Gemini 2.0 Flash Lite
         ]
 
         models_to_try = list(preferred_candidates)
@@ -1011,7 +1009,7 @@ def process_video_and_generate_recipe(
             "prep_s": round(prep_duration, 2),
             "inference_s": round(inference_duration, 2),
             "total_ai_s": round(time.perf_counter() - t_gemini_start, 2),
-            "model_used": successful_model or "gemini-3.5-flash"
+            "model_used": successful_model or "gemini-3.8-flash"
         }
 
 
