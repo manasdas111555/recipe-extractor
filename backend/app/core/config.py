@@ -35,9 +35,15 @@ class Settings(BaseSettings):
     AMAZON_AFFILIATE_TAG: str = "manasdas11155-21"
     EARNKARO_ID: str = "5608766"
 
-    # Queue & Worker URLs
+    # Queue & Worker Configuration
     REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: Optional[str] = None
+    CELERY_RESULT_BACKEND: Optional[str] = None
+    CELERY_TASK_TIMEOUT: int = 180
+    USE_PROXIES: bool = False
     RESIDENTIAL_PROXY_URL: Optional[str] = None
+    MAX_MEDIA_DOWNLOAD_MB: int = 50
+    MEDIA_DOWNLOAD_RESOLUTION: str = "360"
 
     # CORS Allowed Origins
     CORS_ORIGINS: List[str] = ["*"]

@@ -91,6 +91,11 @@ class SupabaseRestClient:
             logger.error(f"Error incrementing quota for user {user_id}: {e}")
             return False
 
+    # Aliases for worker tasks compatibility
+    save_extraction = insert_extraction
+    increment_daily_quota = increment_user_quota
+
+
 _supabase_client: Optional[SupabaseRestClient] = None
 
 def get_supabase_client() -> SupabaseRestClient:

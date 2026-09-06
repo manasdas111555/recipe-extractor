@@ -40,6 +40,10 @@ CORE_MODULES = [
     "whatsapp_service",
     "groq_processor",
     "mistral_processor",
+    "backend.app.core.config",
+    "backend.app.services.affiliate_engine",
+    "backend.app.workers.media_downloader",
+    "backend.app.workers.celery_app",
 ]
 
 def log_step(name: str):
@@ -49,7 +53,12 @@ def log_step(name: str):
 
 def check_compilation() -> bool:
     log_step("Step 1: Validating Python Syntax Compilation")
-    py_files = list(ROOT_DIR.glob("*.py")) + list((ROOT_DIR / "tests").glob("*.py"))
+    py_files = (
+        list(ROOT_DIR.glob("*.py")) +
+        list((ROOT_DIR / "scripts").glob("*.py")) +
+        list((ROOT_DIR / "tests").glob("*.py")) +
+        list((ROOT_DIR / "backend").rglob("*.py"))
+    )
     all_clean = True
     
     for file_path in py_files:

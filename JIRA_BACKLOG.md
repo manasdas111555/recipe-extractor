@@ -13,11 +13,19 @@
 | Sprint | Goal / Theme | Story Points | Status | Target Timeline |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sprint 1** | **Core Decoupling & Multi-Tenant Data Layer** (Supabase + FastAPI) | 26 pts | 🎉 **COMPLETED (100%)** | Weeks 1–2 |
-| **Sprint 2** | **Async Worker Pipeline & Scraper Resilience** (Celery + Redis + Proxies) | 34 pts | 🚀 **READY TO START** | Weeks 3–4 |
-| **Sprint 3** | **Zero-Friction Chat Ingestion Bot** (Telegram & WhatsApp Cloud API) | 29 pts | ⏳ Backlog | Weeks 5–6 |
+| **Sprint 2** | **Async Worker Pipeline & Scraper Resilience** (Celery + Redis + Proxies) | 34 pts | 🎉 **COMPLETED (100%)** | Weeks 3–4 |
+| **Sprint 3** | **Zero-Friction Chat Ingestion Bot** (Telegram & WhatsApp Cloud API) | 29 pts | 🚀 **READY TO START** | Weeks 5–6 |
 | **Sprint 4** | **Next.js 15 PWA & Personal Vault** (Web Share Sheet + UI Dashboard) | 37 pts | ⏳ Backlog | Weeks 7–8 |
 | **Sprint 5** | **Monetization, Quotas & Subscriptions** (Razorpay AutoPay + Stripe) | 26 pts | ⏳ Backlog | Weeks 9–10 |
 | **Sprint 6** | **Creator Program & SEO Ingestion Engine** (Custom Tags + SSR Pages) | 21 pts | ⏳ Backlog | Weeks 11–12 |
+
+---
+
+## 📌 Sprint 2 Kanban Board (Completed)
+
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (34 pts) |
+| :--- | :--- | :--- | :--- |
+| None | None | None | `UPA-201` Upstash Redis & Celery Worker Container<br>`UPA-202` Worker Media Downloader (360p & Disk Cleanup)<br>`UPA-203` Residential Proxy Rotation Middleware<br>`UPA-204` Multimodal AI Worker Pipeline & Fallbacks<br>`UPA-205` Supabase Persistence & Quota Accounting<br>`UPA-301` Multi-Store Affiliate Link Engine<br>`UPA-302` 10-Minute Quick-Commerce Cart Deep Search |
 
 ---
 
@@ -147,48 +155,48 @@
 ### ⚙️ EPIC-3: High-Concurrency Async Media Worker & Extraction Pipeline (Celery + Redis)
 
 #### `UPA-201`: Configure Upstash Redis & Celery Worker Container
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a DevOps engineer, I want Celery configured with Upstash Redis, so that background workers can process jobs asynchronously across cloud instances.*
 - **Acceptance Criteria**:
-  - [ ] Celery app initialized with Redis broker and result backend.
-  - [ ] Hard task execution timeout set to 180 seconds.
-  - [ ] Worker processes tasks and tracks execution start state.
+  - [x] Celery app initialized with Redis broker and result backend (`backend/app/workers/celery_app.py`).
+  - [x] Hard task execution timeout set to 180 seconds.
+  - [x] Worker processes tasks and tracks execution start state.
 - **Dependencies**: `UPA-104`.
 
 #### `UPA-202`: Worker Media Downloader with 360p Limit & Disk Cleanup
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a worker process, I want to download video streams using 360p resolution limits and auto-cleanup temporary files, so that server disk space is never exhausted.*
 - **Acceptance Criteria**:
-  - [ ] `yt-dlp` configured with `bestvideo[height<=360]+bestaudio/best[height<=360]`.
-  - [ ] Maximum download size capped at 50 MB.
-  - [ ] Downloaded file deleted in `finally:` block regardless of task success or failure.
+  - [x] `yt-dlp` configured with `bestvideo[height<=360]+bestaudio/best[height<=360]`.
+  - [x] Maximum download size capped at 50 MB.
+  - [x] Downloaded file deleted in `finally:` block regardless of task success or failure (`managed_worker_download`).
 - **Dependencies**: `UPA-201`.
 
 #### `UPA-203`: Residential Proxy Rotation Middleware for `yt-dlp`
-- **Type**: Story | **Priority**: P1 (High) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P1 (High) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a scraping worker, I want outbound downloads routed through rotating residential proxies, so that Instagram and TikTok never trigger HTTP 429 rate limit blocks.*
 - **Acceptance Criteria**:
-  - [ ] `RESIDENTIAL_PROXY_URL` injected into `ydl_opts['proxy']`.
-  - [ ] Automatic retry logic if proxy drops connection.
-  - [ ] Local fallback mode maintained for local development (`.env` toggle).
+  - [x] `RESIDENTIAL_PROXY_URL` injected into `ydl_opts['proxy']`.
+  - [x] Automatic retry logic if proxy drops connection (`ProxyRotator`).
+  - [x] Local fallback mode maintained for local development (`.env` toggle).
 - **Dependencies**: `UPA-202`.
 
 #### `UPA-204`: Port Multimodal AI Processor with Whisper/Keyframe Fallback
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 8 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 8 pts | **Status**: `[x] DONE`
 - **User Story**: *As an extraction engine, I want to analyze videos via Gemini 2.5 Flash, and automatically fall back to Whisper audio transcription + Vision keyframes if direct video upload fails.*
 - **Acceptance Criteria**:
-  - [ ] Primary path: Direct Gemini 2.5 Flash video upload via Files API.
-  - [ ] Fallback path: Keyframe extraction + Groq/Whisper transcription if video upload is unsupported.
-  - [ ] Strict JSON schema enforced across all domains (`recipe`, `product_gadget`, `tech_diy`, `fitness_workout`, `travel_guide`).
+  - [x] Primary path: Direct Gemini 2.5 Flash video upload via Files API.
+  - [x] Fallback path: Keyframe extraction + Groq/Whisper transcription if video upload is unsupported.
+  - [x] Strict JSON schema enforced across all domains (`recipe`, `product_gadget`, `tech_diy`, `fitness_workout`, `travel_guide`).
 - **Dependencies**: `UPA-202`.
 
 #### `UPA-205`: Save Extraction Results to Supabase Database
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 3 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 3 pts | **Status**: `[x] DONE`
 - **User Story**: *As a worker, I want completed extraction JSON saved to Supabase, so that user libraries and public cache remain synchronized.*
 - **Acceptance Criteria**:
-  - [ ] Successful extraction updates row in `extractions` table (`status = 'completed'`).
-  - [ ] User's `extractions_today` counter incremented via atomic RPC function.
-  - [ ] Error messages captured and logged on task failure (`status = 'failed'`).
+  - [x] Successful extraction updates row in `extractions` table (`status = 'completed'`).
+  - [x] User's `extractions_today` counter incremented via atomic RPC function.
+  - [x] Error messages captured and logged on task failure (`status = 'failed'`).
 - **Dependencies**: `UPA-101`, `UPA-204`.
 
 ---
@@ -196,20 +204,20 @@
 ### 🛒 EPIC-4: Contextual Multi-Store Commerce & Quick-Delivery Router
 
 #### `UPA-301`: Affiliate Link Generator Engine
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
 - **User Story**: *As a business owner, I want every extracted item converted into monetized Amazon and EarnKaro links, so that the platform earns affiliate revenue.*
 - **Acceptance Criteria**:
-  - [ ] Amazon links formatted with tag `manasdas11155-21`.
-  - [ ] Flipkart and Meesho links wrapped through EarnKaro redirect with ID `5608766`.
-  - [ ] Pro and Creator tier users can override default tags with their own custom affiliate credentials.
+  - [x] Amazon links formatted with tag `manasdas11155-21`.
+  - [x] Flipkart and Meesho links wrapped through EarnKaro redirect with ID `5608766`.
+  - [x] Pro and Creator tier users can override default tags with their own custom affiliate credentials.
 - **Dependencies**: `UPA-101`.
 
 #### `UPA-302`: 10-Minute Quick-Commerce Cart Deep Search
-- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 3 pts | **Status**: `[ ] TO DO`
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 3 pts | **Status**: `[x] DONE`
 - **User Story**: *As an Indian user extracting a recipe, I want 1-click search buttons for Blinkit, Zepto, and Swiggy Instamart, so that I can order missing ingredients in 10 minutes.*
 - **Acceptance Criteria**:
-  - [ ] Deep search URLs generated for Blinkit, Zepto, and Instamart with URL-encoded item names.
-  - [ ] Unit tested against special characters, spices, and brand names.
+  - [x] Deep search URLs generated for Blinkit, Zepto, and Instamart with URL-encoded item names.
+  - [x] Unit tested against special characters, spices, and brand names.
 - **Dependencies**: None.
 
 #### `UPA-303`: Click-Through Analytics Logging

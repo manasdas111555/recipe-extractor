@@ -7,6 +7,7 @@ FastAPI Extraction Endpoints (UPA-106 & UPA-107)
 
 import uuid
 import hashlib
+import logging
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from fastapi.responses import JSONResponse
@@ -15,6 +16,10 @@ from pydantic import BaseModel, Field, field_validator
 from backend.app.core.security import get_current_user
 from backend.app.core.supabase_client import get_supabase_client
 from backend.app.services.job_manager import get_job_manager, run_extraction_worker_sync
+from backend.app.workers.celery_app import is_celery_broker_reachable, celery_app
+from backend.app.workers.tasks import extract_video_task
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/extract", tags=["Extraction"])
 
@@ -63,7 +68,8 @@ async def enqueue_extraction(
     1. Validates user daily quota (returns 429 if exceeded).
     2. Computes SHA-256 URL hash and checks PostgreSQL cache.
     3. If cached, returns HTTP 200 with zero-cost data immediately.
-    4. If new, enqueues background extraction and returns HTTP 202 with job_id and poll_url.
+    4. If new, enqueues to Celery distributed worker pool (or BackgroundTasks fallback)
+       and returns HTTP 202 with job_id and poll_url.
     """
     extractions_today = current_user.get("extractions_today", 0)
     daily_limit = current_user.get("daily_quota_limit", 3)
@@ -105,15 +111,43 @@ async def enqueue_extraction(
         user_id=str(current_user.get("id"))
     )
 
-    background_tasks.add_task(
-        run_extraction_worker_sync,
-        job_id=job_id,
-        video_url=canonical_url,
-        url_hash=url_hash,
-        user_id=str(current_user.get("id")),
-        preferred_language=payload.preferred_language or "en",
-        domain_hint=payload.domain_hint or "auto"
-    )
+    dispatched_via = "background_tasks"
+    if is_celery_broker_reachable():
+        try:
+            extract_video_task.apply_async(
+                kwargs={
+                    "job_id": job_id,
+                    "video_url": canonical_url,
+                    "url_hash": url_hash,
+                    "user_id": str(current_user.get("id")),
+                    "preferred_language": payload.preferred_language or "en",
+                    "domain_hint": payload.domain_hint or "auto"
+                },
+                task_id=job_id
+            )
+            dispatched_via = "celery_redis_queue"
+            logger.info("[%s] Dispatched extraction task to Celery worker pool", job_id)
+        except Exception as exc:
+            logger.warning("[%s] Failed to enqueue to Celery, falling back to BackgroundTasks: %s", job_id, exc)
+            background_tasks.add_task(
+                run_extraction_worker_sync,
+                job_id=job_id,
+                video_url=canonical_url,
+                url_hash=url_hash,
+                user_id=str(current_user.get("id")),
+                preferred_language=payload.preferred_language or "en",
+                domain_hint=payload.domain_hint or "auto"
+            )
+    else:
+        background_tasks.add_task(
+            run_extraction_worker_sync,
+            job_id=job_id,
+            video_url=canonical_url,
+            url_hash=url_hash,
+            user_id=str(current_user.get("id")),
+            preferred_language=payload.preferred_language or "en",
+            domain_hint=payload.domain_hint or "auto"
+        )
 
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
@@ -121,7 +155,7 @@ async def enqueue_extraction(
             "job_id": job_id,
             "status": "queued",
             "is_cached": False,
-            "message": "Extraction job enqueued successfully.",
+            "message": f"Extraction job enqueued successfully ({dispatched_via}).",
             "poll_url": f"/api/v1/extract/status/{job_id}",
             "data": None
         }
@@ -135,43 +169,89 @@ async def get_extraction_status(
 ):
     """
     Polls the real-time status and stage of an enqueued extraction job.
-    Returns current stage ('downloading_media', 'multimodal_ai_inference', 'completed', 'failed')
-    and complete data payload once finished.
+    Checks in-memory JobManager, Celery AsyncResult (if active), and Supabase persistence.
     """
     job_manager = get_job_manager()
     job = job_manager.get_job(job_id)
 
-    if not job:
-        # Fallback: check if job is stored in Supabase extractions table by ID
-        supabase = get_supabase_client()
-        if supabase.is_configured():
-            try:
-                import requests
-                url = f"{supabase.base_url}/rest/v1/extractions?id=eq.{job_id}&select=*"
-                r = requests.get(url, headers=supabase._get_headers(use_service_role=True), timeout=4)
-                if r.status_code == 200 and r.json():
-                    rec = r.json()[0]
-                    return ExtractStatusResponse(
-                        job_id=job_id,
-                        status=rec.get("status", "completed"),
-                        stage="completed",
-                        progress_percent=100,
-                        data=rec.get("content_payload"),
-                        error=None
-                    )
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Extraction job '{job_id}' not found."
+    if job and (job.get("status") == "completed" or job.get("status") == "failed"):
+        return ExtractStatusResponse(
+            job_id=job["job_id"],
+            status=job["status"],
+            stage=job.get("stage"),
+            progress_percent=job.get("progress_percent", 0),
+            data=job.get("data"),
+            error=job.get("error")
         )
 
-    return ExtractStatusResponse(
-        job_id=job["job_id"],
-        status=job["status"],
-        stage=job.get("stage"),
-        progress_percent=job.get("progress_percent", 0),
-        data=job.get("data"),
-        error=job.get("error")
+    # Check Celery task state if broker is reachable
+    if is_celery_broker_reachable():
+        try:
+            from celery.result import AsyncResult
+            res = AsyncResult(job_id, app=celery_app)
+            if res.state == "SUCCESS":
+                task_result = res.result or {}
+                return ExtractStatusResponse(
+                    job_id=job_id,
+                    status="completed",
+                    stage="completed",
+                    progress_percent=100,
+                    data=task_result.get("data") if isinstance(task_result, dict) else None,
+                    error=None
+                )
+            elif res.state == "PROGRESS":
+                info = res.info or {}
+                return ExtractStatusResponse(
+                    job_id=job_id,
+                    status="processing",
+                    stage=info.get("stage", "processing"),
+                    progress_percent=info.get("progress_percent", 50),
+                    data=None,
+                    error=None
+                )
+            elif res.state == "FAILURE":
+                return ExtractStatusResponse(
+                    job_id=job_id,
+                    status="failed",
+                    stage="failed",
+                    progress_percent=100,
+                    data=None,
+                    error=str(res.result)
+                )
+        except Exception as celery_check_err:
+            logger.debug("[%s] Celery status check skipped: %s", job_id, celery_check_err)
+
+    if job:
+        return ExtractStatusResponse(
+            job_id=job["job_id"],
+            status=job["status"],
+            stage=job.get("stage"),
+            progress_percent=job.get("progress_percent", 0),
+            data=job.get("data"),
+            error=job.get("error")
+        )
+
+    # Fallback: check if job is stored in Supabase extractions table by ID
+    supabase = get_supabase_client()
+    if supabase.is_configured():
+        try:
+            import requests
+            url = f"{supabase.base_url}/rest/v1/extractions?id=eq.{job_id}&select=*"
+            r = requests.get(url, headers=supabase._get_headers(use_service_role=True), timeout=4)
+            if r.status_code == 200 and r.json():
+                rec = r.json()[0]
+                return ExtractStatusResponse(
+                    job_id=job_id,
+                    status=rec.get("status", "completed"),
+                    stage="completed",
+                    progress_percent=100,
+                    data=rec.get("content_payload"),
+                    error=None
+                )
+        except Exception:
+            pass
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Extraction job '{job_id}' not found."
     )

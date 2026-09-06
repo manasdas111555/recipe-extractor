@@ -92,105 +92,28 @@ def run_extraction_worker_sync(
     url_hash: str,
     user_id: str,
     preferred_language: str = "en",
-    domain_hint: str = "auto"
+    domain_hint: str = "auto",
+    custom_affiliate_tags: Optional[Dict[str, str]] = None
 ):
     """
     Synchronous worker pipeline executed in BackgroundTasks.
-    Stage 1: Downloading video stream and verifying duration.
-    Stage 2: Multimodal neural vision and speech inference.
-    Stage 3: Caching result in Supabase PostgreSQL extractions table.
+    Delegates to unified execute_extraction_pipeline to ensure identical
+    360p limits, proxy rotation, disk cleanup, affiliate synthesis, and Supabase sync.
     """
-    manager = get_job_manager()
-    supabase = get_supabase_client()
-
     try:
-        # Step 1: Download Media
-        manager.update_job(
-            job_id,
-            status="downloading",
-            stage="downloading_media",
-            progress_percent=25
+        from backend.app.workers.tasks import execute_extraction_pipeline
+        return execute_extraction_pipeline(
+            job_id=job_id,
+            video_url=video_url,
+            url_hash=url_hash,
+            user_id=user_id,
+            preferred_language=preferred_language,
+            domain_hint=domain_hint,
+            custom_affiliate_tags=custom_affiliate_tags
         )
-
-        from downloader import get_video_from_url
-        dl_success, dl_result = get_video_from_url(video_url, preferred_engine="ytdlp")
-
-        if not dl_success:
-            manager.update_job(
-                job_id,
-                status="failed",
-                stage="failed",
-                progress_percent=100,
-                error=f"Ingestion failed: {dl_result}"
-            )
-            return
-
-        # Step 2: AI Reasoning & Slicing
-        manager.update_job(
-            job_id,
-            status="processing",
-            stage="multimodal_ai_inference",
-            progress_percent=60
-        )
-
-        from ai_router import route_video_intelligence
-        import config
-        gemini_key = config.get_api_key()
-
-        def on_status_update(msg: str):
-            logger.info(f"[Job {job_id}] AI Status: {msg}")
-
-        success, txt_path, text_output, final_video, meta = route_video_intelligence(
-            video_path=dl_result,
-            custom_gemini_key=gemini_key,
-            status_callback=on_status_update,
-            extraction_mode=domain_hint
-        )
-
-        if not success:
-            manager.update_job(
-                job_id,
-                status="failed",
-                stage="failed",
-                progress_percent=100,
-                error=f"AI extraction failed: {text_output}"
-            )
-            return
-
-        # Step 3: Package Payload & Save to Supabase
-        content_payload = {
-            "title": meta.get("title", Path(txt_path).stem.replace("_", " ")),
-            "domain": meta.get("domain", domain_hint),
-            "language": preferred_language,
-            "raw_text": text_output,
-            "meta": meta,
-            "file_url": str(txt_path)
-        }
-
-        # Attempt caching in Supabase
-        db_record = {
-            "user_id": None if user_id.startswith("guest_") else user_id,
-            "source_url": video_url,
-            "url_hash": url_hash,
-            "domain": meta.get("domain", domain_hint),
-            "status": "completed",
-            "content_payload": content_payload
-        }
-        supabase.insert_extraction(db_record)
-        supabase.increment_user_quota(user_id)
-
-        # Mark job completed
-        manager.update_job(
-            job_id,
-            status="completed",
-            stage="completed",
-            progress_percent=100,
-            data=content_payload
-        )
-        logger.info(f"[Job {job_id}] Successfully extracted intelligence.")
-
     except Exception as e:
-        logger.exception(f"[Job {job_id}] Unhandled worker exception: {e}")
+        logger.exception(f"[Job {job_id}] Unhandled background worker exception: {e}")
+        manager = get_job_manager()
         manager.update_job(
             job_id,
             status="failed",
@@ -198,3 +121,4 @@ def run_extraction_worker_sync(
             progress_percent=100,
             error=str(e)
         )
+
