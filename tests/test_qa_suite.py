@@ -26,7 +26,8 @@ from downloader import detect_platform, MAX_VIDEO_DURATION
 from whatsapp_service import (
     generate_whatsapp_deep_link,
     format_phone_number,
-    get_category_header
+    get_category_header,
+    validate_phone_number
 )
 
 class TestQASuite(unittest.TestCase):
@@ -272,6 +273,61 @@ class TestVideoBenchmarkMatrix(unittest.TestCase):
 
         self.assertIn("youtube.com/results?search_query=", yt_query)
         self.assertIn("github.com/search?q=", gh_query)
+
+    # --------------------------------------------------------------------------
+    # 5. International Phone Number Validation Test Cases
+    # --------------------------------------------------------------------------
+
+    def test_phone_validation_india_valid(self):
+        """Verify standard Indian 10-digit mobile number starting with 6-9 is valid."""
+        is_valid, err = validate_phone_number("+91", "9999999999")
+        self.assertTrue(is_valid)
+        self.assertEqual(err, "")
+
+        is_valid2, _ = validate_phone_number("+91", "8056804940")
+        self.assertTrue(is_valid2)
+
+    def test_phone_validation_india_with_prefix(self):
+        """Verify 12-digit Indian number prefixed with 91 is automatically accepted."""
+        is_valid, err = validate_phone_number("+91", "919999999999")
+        self.assertTrue(is_valid)
+        self.assertEqual(err, "")
+
+    def test_phone_validation_india_invalid(self):
+        """Verify invalid Indian mobile numbers are rejected with clear messages."""
+        # Less than 10 digits
+        is_valid, err = validate_phone_number("+91", "12345")
+        self.assertFalse(is_valid)
+        self.assertIn("10 digits", err)
+
+        # Starts with invalid digit (e.g. 2)
+        is_valid, err = validate_phone_number("+91", "2345678901")
+        self.assertFalse(is_valid)
+        self.assertIn("start with 6, 7, 8, or 9", err)
+
+    def test_phone_validation_international(self):
+        """Verify US, UK, and Singapore number validation rules."""
+        # US: 10 digits
+        is_valid_us, _ = validate_phone_number("+1", "4155552671")
+        self.assertTrue(is_valid_us)
+
+        is_invalid_us, err_us = validate_phone_number("+1", "123")
+        self.assertFalse(is_invalid_us)
+        self.assertIn("10 digits", err_us)
+
+        # UK: 10 or 11 digits
+        is_valid_uk, _ = validate_phone_number("+44", "7911123456")
+        self.assertTrue(is_valid_uk)
+
+    def test_phone_validation_empty_and_non_numeric(self):
+        """Verify empty and non-numeric inputs are safely rejected."""
+        is_valid, err = validate_phone_number("+91", "")
+        self.assertFalse(is_valid)
+        self.assertIn("Please enter", err)
+
+        is_valid, err = validate_phone_number("+91", "abc123xyz")
+        self.assertFalse(is_valid)
+        self.assertIn("numeric", err)
 
 if __name__ == "__main__":
     unittest.main()

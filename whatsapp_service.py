@@ -37,6 +37,62 @@ def format_phone_number(phone: str) -> str:
     return phone
 
 
+def validate_phone_number(country_code: str, local_number: str) -> Tuple[bool, str]:
+    """
+    Validates mobile phone number based on selected country calling code.
+    Returns (is_valid, validation_message).
+    """
+    clean_cc = (country_code or "+91").strip().replace(" ", "").replace("-", "")
+    if not clean_cc.startswith("+"):
+        clean_cc = "+" + clean_cc
+    
+    clean_num = re.sub(r'[\s\-\(\)\.]', '', local_number or "")
+    if clean_num.startswith("0"):
+        clean_num = clean_num.lstrip("0")
+
+    if not clean_num:
+        return False, "Please enter a mobile phone number."
+    
+    if not clean_num.isdigit():
+        return False, "Phone number must contain only numeric digits."
+
+    # Country-specific validation rules
+    if clean_cc in ["+91", "91"]:
+        # India: exactly 10 digits starting with 6, 7, 8, or 9
+        if len(clean_num) == 12 and clean_num.startswith("91"):
+            clean_num = clean_num[2:]
+        if len(clean_num) != 10:
+            return False, f"Indian mobile numbers must be exactly 10 digits (entered {len(clean_num)} digits)."
+        if clean_num[0] not in "6789":
+            return False, "Indian mobile numbers must start with 6, 7, 8, or 9."
+        return True, ""
+    elif clean_cc in ["+1", "1"]:
+        # US / Canada: exactly 10 digits
+        if len(clean_num) != 10:
+            return False, f"US/Canada numbers must be exactly 10 digits (entered {len(clean_num)} digits)."
+        return True, ""
+    elif clean_cc in ["+44", "44"]:
+        # UK: 10 or 11 digits
+        if len(clean_num) not in [10, 11]:
+            return False, f"UK numbers must be 10 or 11 digits (entered {len(clean_num)} digits)."
+        return True, ""
+    elif clean_cc in ["+971", "971"]:
+        # UAE: 9 digits
+        if len(clean_num) != 9:
+            return False, f"UAE numbers must be 9 digits (entered {len(clean_num)} digits)."
+        return True, ""
+    elif clean_cc in ["+65", "65"]:
+        # Singapore: 8 digits
+        if len(clean_num) != 8:
+            return False, f"Singapore numbers must be 8 digits (entered {len(clean_num)} digits)."
+        return True, ""
+    else:
+        # General international validation: 7 to 15 digits
+        if len(clean_num) < 7 or len(clean_num) > 15:
+            return False, f"International numbers must be between 7 and 15 digits (entered {len(clean_num)} digits)."
+        return True, ""
+
+
 def get_recipe_display_name(txt_file_path: str) -> str:
     """Extract readable recipe title from filename."""
     stem = Path(txt_file_path).stem
