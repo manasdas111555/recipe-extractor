@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
+import UpgradeModal from '../components/UpgradeModal';
+import CreatorTagVault from '../components/CreatorTagVault';
 
 interface ExtractionResult {
   recipe_title?: string;
@@ -45,6 +47,9 @@ function RecipeDashboard() {
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState<boolean>(false);
+  const [upgradeReason, setUpgradeReason] = useState<string>('');
+  const [isCreatorVaultOpen, setIsCreatorVaultOpen] = useState<boolean>(false);
   const [quotaRemaining, setQuotaRemaining] = useState<number>(10);
 
   // Detect platform from URL
@@ -96,6 +101,11 @@ function RecipeDashboard() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          setUpgradeReason('Daily free quota limit reached. Upgrade for unlimited extractions!');
+          setIsUpgradeModalOpen(true);
+          throw new Error('Daily extraction quota reached. Upgrade to Pro for unlimited access.');
+        }
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.detail || 'Extraction failed. Please check the URL.');
       }
@@ -188,6 +198,17 @@ function RecipeDashboard() {
               <strong style={{ color: 'var(--accent-emerald)' }}>{quotaRemaining} left</strong>
             </div>
 
+            {/* Creator Vault Button */}
+            <button
+              onClick={() => setIsCreatorVaultOpen(true)}
+              className="btn-ghost"
+              style={{ padding: '0.45rem 0.85rem' }}
+              title="Configure Personal Amazon & EarnKaro Affiliate Tags"
+            >
+              <Share2 size={15} color="var(--accent-emerald)" />
+              <span>Creator Tags</span>
+            </button>
+
             {/* Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
@@ -196,6 +217,31 @@ function RecipeDashboard() {
             >
               <BookOpen size={16} color="var(--accent-emerald)" />
               <span>Recipe Vault</span>
+            </button>
+
+            {/* Upgrade to Pro Button */}
+            <button
+              onClick={() => {
+                setUpgradeReason('');
+                setIsUpgradeModalOpen(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                backgroundColor: '#10B981',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 'var(--radius-full)',
+                padding: '0.45rem 0.95rem',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)'
+              }}
+            >
+              <Sparkles size={14} />
+              <span>Upgrade Pro</span>
             </button>
           </div>
         </div>
@@ -583,6 +629,19 @@ function RecipeDashboard() {
         onSelectRecipe={(savedRecipe) => {
           setResult(savedRecipe);
         }}
+      />
+
+      {/* Pro Upgrade Checkout Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        reason={upgradeReason}
+      />
+
+      {/* Creator Tag Vault Drawer */}
+      <CreatorTagVault
+        isOpen={isCreatorVaultOpen}
+        onClose={() => setIsCreatorVaultOpen(false)}
       />
     </div>
   );

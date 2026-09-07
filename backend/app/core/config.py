@@ -52,8 +52,20 @@ class Settings(BaseSettings):
     WHATSAPP_ACCESS_TOKEN: Optional[str] = None
     WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
 
-    # Quota & Rate Limiting (Sprint 3)
-    DAILY_FREE_QUOTA_LIMIT: int = 3
+    # Quota & Rate Limiting (Sprint 3 & 5)
+    DAILY_GUEST_QUOTA_LIMIT: int = 3
+    DAILY_FREE_QUOTA_LIMIT: int = 10
+
+    # Billing & Subscriptions — Razorpay (Sprint 5)
+    RAZORPAY_KEY_ID: Optional[str] = "rzp_test_mockkey123"
+    RAZORPAY_KEY_SECRET: Optional[str] = "mock_razorpay_secret_key"
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = "whsec_razorpay_mock_secret"
+    RAZORPAY_PLAN_PRO_299_INR: str = "plan_pro_299_inr"
+
+    # Billing & Subscriptions — Stripe (Sprint 5)
+    STRIPE_API_KEY: Optional[str] = "sk_test_mockstripekey123"
+    STRIPE_WEBHOOK_SECRET: Optional[str] = "whsec_stripe_mock_secret"
+    STRIPE_PRICE_PRO_499_USD: str = "price_pro_499_usd"
 
     # CORS Allowed Origins
     CORS_ORIGINS: List[str] = ["*"]

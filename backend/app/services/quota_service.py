@@ -51,11 +51,22 @@ class QuotaManager:
         clean_id = identifier.strip().replace(":", "_")
         return f"quota:{clean_id}:{today}"
 
+    def get_limit_for_tier(self, tier: str) -> int:
+        """Resolves daily extraction limit for a given user tier string."""
+        clean_tier = tier.lower().strip()
+        if clean_tier in ["pro", "creator", "business", "enterprise"]:
+            return 999999
+        elif clean_tier in ["free", "user", "authenticated"]:
+            return getattr(self.settings, "DAILY_FREE_QUOTA_LIMIT", 10)
+        else:  # guest / anonymous
+            return getattr(self.settings, "DAILY_GUEST_QUOTA_LIMIT", 3)
+
     def check_and_consume_quota(
         self,
         identifier: str,
         is_pro: bool = False,
-        daily_limit: Optional[int] = None
+        daily_limit: Optional[int] = None,
+        tier: Optional[str] = None
     ) -> Tuple[bool, int, int]:
         """
         Atomically inspects and consumes one extraction from daily quota.
@@ -63,6 +74,13 @@ class QuotaManager:
         Returns:
             Tuple[allowed (bool), current_usage (int), remaining (int)]
         """
+        if tier:
+            clean_t = tier.lower().strip()
+            if clean_t in ["pro", "creator", "business", "enterprise"]:
+                is_pro = True
+            elif daily_limit is None:
+                daily_limit = self.get_limit_for_tier(clean_t)
+
         limit = daily_limit or self.settings.DAILY_FREE_QUOTA_LIMIT
 
         # Pro users have unlimited extractions

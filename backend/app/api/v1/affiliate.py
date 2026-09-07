@@ -71,3 +71,19 @@ def affiliate_redirect(
 
     # 5. Instant 307 Redirect (Preserves destination URL & HTTP method)
     return RedirectResponse(url=url, status_code=307)
+
+
+@router.get("/analytics", summary="Get Outbound Affiliate Click Analytics (UPA-303)")
+def get_affiliate_analytics(
+    user_id: Optional[str] = Query(None, description="Filter analytics by specific user ID")
+):
+    """
+    Returns aggregate outbound click count, merchant breakdown, and items clicked.
+    """
+    supabase = get_supabase_client()
+    analytics = supabase.get_affiliate_analytics(user_id=user_id)
+    return {
+        "status": "success",
+        "analytics": analytics
+    }
+

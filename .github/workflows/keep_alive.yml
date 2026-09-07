@@ -1,0 +1,29 @@
+name: Streamlit Cloud Keep-Alive & Wakeup
+
+on:
+  schedule:
+    # Runs every 6 hours (at 00:00, 06:00, 12:00, 18:00 UTC) to refresh activity
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # Allows manual one-click trigger from GitHub Actions tab
+
+jobs:
+  keep-alive:
+    name: Ping & Refresh Streamlit Instances
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install HTTP Dependencies
+        run: |
+          python -m pip install requests
+
+      - name: Execute Keep-Alive Ping Routine
+        run: |
+          python scripts/keep_alive.py

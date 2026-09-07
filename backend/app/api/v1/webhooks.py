@@ -14,6 +14,7 @@ from fastapi.responses import PlainTextResponse
 from backend.app.core.config import get_settings
 from backend.app.services.whatsapp_cloud import verify_whatsapp_webhook, handle_whatsapp_incoming
 from backend.app.services.telegram_bot import handle_telegram_update
+from backend.app.services.billing_service import get_billing_service
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +83,59 @@ async def receive_telegram_event(
     return {"status": "ok", "result": result}
 
 
-@router.get("/health", summary="Chat Webhooks Integration Health")
+@router.post("/razorpay", summary="Razorpay Subscription Webhook Receiver (UPA-602)")
+async def receive_razorpay_webhook(request: Request):
+    """
+    Receives and processes Razorpay subscription webhooks (`subscription.activated`, `subscription.halted`).
+    Validates HMAC-SHA256 signature in `X-Razorpay-Signature` header.
+    """
+    raw_body = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+
+    billing_service = get_billing_service()
+    if not billing_service.verify_razorpay_signature(raw_body, signature):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Razorpay webhook signature"
+        )
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    result = billing_service.handle_razorpay_webhook(payload)
+    return {"status": "ok", "result": result}
+
+
+@router.post("/stripe", summary="Stripe Subscription Webhook Receiver (UPA-603)")
+async def receive_stripe_webhook(request: Request):
+    """
+    Receives and processes Stripe subscription webhooks (`customer.subscription.created`, `deleted`).
+    Validates HMAC-SHA256 signature in `Stripe-Signature` header.
+    """
+    raw_body = await request.body()
+    sig_header = request.headers.get("Stripe-Signature", "")
+
+    billing_service = get_billing_service()
+    if not billing_service.verify_stripe_signature(raw_body, sig_header):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Stripe webhook signature"
+        )
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    result = billing_service.handle_stripe_webhook(payload)
+    return {"status": "ok", "result": result}
+
+
+@router.get("/health", summary="Webhooks Integration Health")
 def webhooks_health():
-    """Returns configuration status for Telegram and WhatsApp Cloud API."""
+    """Returns configuration status for Telegram, WhatsApp, Razorpay, and Stripe webhooks."""
     settings = get_settings()
     return {
         "status": "healthy",
@@ -95,5 +146,14 @@ def webhooks_health():
         "whatsapp": {
             "configured": bool(settings.WHATSAPP_PHONE_NUMBER_ID and settings.WHATSAPP_ACCESS_TOKEN),
             "verify_token_set": bool(settings.WHATSAPP_VERIFY_TOKEN)
+        },
+        "razorpay": {
+            "configured": bool(settings.RAZORPAY_KEY_ID),
+            "webhook_secret_set": bool(settings.RAZORPAY_WEBHOOK_SECRET)
+        },
+        "stripe": {
+            "configured": bool(settings.STRIPE_API_KEY),
+            "webhook_secret_set": bool(settings.STRIPE_WEBHOOK_SECRET)
         }
     }
+
