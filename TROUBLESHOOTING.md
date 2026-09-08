@@ -29,6 +29,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-017** | 2026-09-08 | Docker Runtime | `NameError: name 'Any' is not defined` in `quota_service.py` on Python 3.11 | ✅ Resolved |
 | **ISSUE-018** | 2026-09-08 | Frontend / AI | Next.js PWA reverted to recipe-only copy instead of multi-genre Universal AI | ✅ Resolved |
 | **ISSUE-019** | 2026-09-08 | Docker & Worker | Celery worker failed with `No module named 'ai_router'` | ✅ Resolved |
+| **ISSUE-020** | 2026-09-08 | Python 3.11 Runtime | `NameError: name 'Any' is not defined` in `gemini_processor.py:792` | ✅ Resolved |
 
 ---
 
@@ -548,6 +549,50 @@ The Celery background worker process (`universalpro-worker`) and BackgroundTasks
 - Executed full test suite (149 tests): 100% passed in 38.7s with zero regressions.
 - Pulled latest commit on the Oracle Cloud production server and restarted the worker container.
 - Ran live extraction verification.
+
+---
+
+### 🚨 ISSUE-020: `NameError: name 'Any' is not defined` in `gemini_processor.py:792` on Python 3.11
+- **Date**: 2026-09-08
+- **Affected Files**: `gemini_processor.py`, `backend/app/core/supabase_client.py`
+
+#### 1. What Happened (Symptom):
+During live extraction of an Instagram Reel on the production Oracle Cloud server, the background Celery task failed with:
+```text
+File "/app/gemini_processor.py", line 792, in <module>
+    def format_downloadable_txt(meta: Dict[str, Any]) -> str:
+NameError: name 'Any' is not defined
+```
+
+#### 2. Root Cause:
+`gemini_processor.py` line 7 imported `from typing import Tuple, List, Dict`. When `format_downloadable_txt` used `Dict[str, Any]`, Python 3.11 evaluated the type annotation at module load time and failed with an uncaught `NameError`. In Python 3.14 (local development), type annotations were evaluated lazily, masking this error in local runs. Additionally, `tasks.py` called `supabase.save_extraction` and `supabase.increment_daily_quota`, which were named `insert_extraction` and `increment_user_quota` in `supabase_client.py`.
+
+#### 3. Resolution (Code Changes):
+1. **Added `Any` and `Optional` to `gemini_processor.py`**:
+   ```python
+   # Before
+   from typing import Tuple, List, Dict
+   
+   # After
+   from typing import Tuple, List, Dict, Any, Optional
+   ```
+2. **Added method aliases in `supabase_client.py`**:
+   ```python
+   def save_extraction(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+       return self.insert_extraction(payload)
+
+   def increment_daily_quota(self, user_id: str) -> bool:
+       return self.increment_user_quota(user_id)
+   ```
+3. **Hot-reloaded production server**:
+   Hot-copied updated files via SCP and Docker CP directly into `universalpro-worker` and `universalpro-api`, then restarted the containers.
+
+#### 4. Testing & Verification:
+Submitted the exact same Instagram Reel (`https://www.instagram.com/reel/DcrYHLVyThI/`) to the live API endpoint.
+- Download succeeded in 0.6s at 12.10 MiB/s.
+- Gemini 3.8 Flash analyzed the video frames and audio cleanly.
+- Extracted: *"Three Essential Desk Setup Upgrades"* (Product Unboxing & Finds category) with 3 full product profiles (BenQ ScreenBar, Anker Nano, KUXIU Stand), monetized Amazon (`tag=manasdas11155-21`) & Flipkart affiliate tags, and 10-minute quick commerce links.
+- Verified progress transitioned to `completed` (100%) and saved in Supabase.
 
 ---
 
