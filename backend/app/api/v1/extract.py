@@ -8,9 +8,13 @@ FastAPI Extraction Endpoints (UPA-106 & UPA-107)
 import uuid
 import hashlib
 import logging
+import os
+import time
+import tempfile
+from pathlib import Path
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Request
+from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.app.services.quota_service import get_quota_manager
@@ -313,3 +317,74 @@ async def get_extraction_status(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Extraction job '{job_id}' not found."
     )
+
+
+MEDIA_CACHE_DIR = Path(tempfile.gettempdir()) / "universalpro_media_cache"
+MEDIA_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def cleanup_ephemeral_media_cache(max_age_seconds: int = 1800):
+    """Deletes cached stream files older than 30 minutes to satisfy AGENTS.md Rule 4."""
+    try:
+        now = time.time()
+        for f in MEDIA_CACHE_DIR.glob("*.*"):
+            if f.is_file() and (now - f.stat().st_mtime > max_age_seconds):
+                try:
+                    f.unlink(missing_ok=True)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+@router.get("/stream-video", summary="Stream Media File for In-Page Playback")
+async def stream_video(url: str, request: Request):
+    """
+    Streams media content directly as HTML5 video to allow in-page playback
+    and prevent third-party redirect gates (like Instagram's 'Watch on Instagram' button).
+    Supports HTTP Range requests for video scrubbing, pause, and play.
+    """
+    if not url or not url.strip():
+        raise HTTPException(status_code=400, detail="Missing video URL parameter.")
+
+    cleanup_ephemeral_media_cache()
+
+    target_url = url.strip()
+    url_hash = hashlib.sha256(target_url.encode("utf-8")).hexdigest()[:16]
+
+    # Look for cached file
+    cached_candidates = list(MEDIA_CACHE_DIR.glob(f"stream_{url_hash}.*"))
+    video_file = None
+    if cached_candidates and cached_candidates[0].exists():
+        video_file = str(cached_candidates[0])
+    else:
+        # Ingest media via media downloader
+        try:
+            from backend.app.workers.media_downloader import download_worker_media
+            success, result_path = download_worker_media(
+                video_url=target_url,
+                output_dir=MEDIA_CACHE_DIR
+            )
+            if success and os.path.exists(result_path):
+                video_file = result_path
+        except Exception as dl_err:
+            logger.warning("download_worker_media failed in stream_video: %s", dl_err)
+
+        if not video_file or not os.path.exists(video_file):
+            try:
+                from downloader import get_video_from_url
+                dl_success, dl_file = get_video_from_url(target_url)
+                if dl_success and os.path.exists(dl_file):
+                    video_file = dl_file
+            except Exception as dl_err2:
+                logger.warning("get_video_from_url fallback failed: %s", dl_err2)
+
+    if not video_file or not os.path.exists(video_file):
+        raise HTTPException(status_code=404, detail="Unable to stream media content.")
+
+    return FileResponse(
+        path=video_file,
+        media_type="video/mp4",
+        filename=f"video_{url_hash}.mp4"
+    )
+

@@ -143,7 +143,8 @@ function UniversalDashboard() {
     if (igMatch && igMatch[1]) {
       return {
         type: 'instagram' as const,
-        src: `https://www.instagram.com/reel/${igMatch[1]}/embed/`,
+        streamSrc: `/api/v1/extract/stream-video?url=${encodeURIComponent(target)}`,
+        embedSrc: `https://www.instagram.com/reel/${igMatch[1]}/embed/`,
         externalUrl: `https://www.instagram.com/reel/${igMatch[1]}/`,
         id: igMatch[1],
       };
@@ -1016,11 +1017,33 @@ function UniversalDashboard() {
 
                 {/* Video / Media Display */}
                 {mediaPreview?.type === 'instagram' ? (
-                  <div style={{ position: 'relative', width: '100%', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', width: '100%', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: '#05070D' }}>
+                    <video
+                      src={mediaPreview.streamSrc}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      style={{
+                        width: '100%',
+                        maxHeight: '460px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: '#05070D',
+                        objectFit: 'contain',
+                        display: 'block',
+                      }}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const fallbackIframe = document.getElementById('ig-fallback-iframe');
+                        if (fallbackIframe) fallbackIframe.style.display = 'block';
+                      }}
+                    />
                     <iframe
-                      src={mediaPreview.src}
+                      id="ig-fallback-iframe"
+                      src={mediaPreview.embedSrc}
                       title="Instagram Reel Preview"
                       style={{
+                        display: 'none',
                         width: '100%',
                         height: '460px',
                         border: 'none',
@@ -1148,7 +1171,7 @@ function UniversalDashboard() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
                     gap: '0.5rem',
                     marginTop: '1rem',
                   }}
@@ -1166,14 +1189,6 @@ function UniversalDashboard() {
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Domain</div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                       {result.category || result.dish_type || 'Intelligence'}
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
-                    <ShieldCheck size={16} color="#06B6D4" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Reasoning Engine</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#06B6D4' }}>
-                      Multimodal Neural
                     </div>
                   </div>
                 </div>
