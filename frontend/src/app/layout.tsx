@@ -10,8 +10,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Universal Pro AI — Social Recipe Extractor',
-  description: 'Sub-3s Multimodal Recipe Extraction & Instant Pantry Carting for Reels, Shorts & TikToks',
+  title: 'Universal Pro AI — An Intelligent Extractor',
+  description: 'Sub-3s Multimodal Video Intelligence Extraction & 1-Click Shopping for Reels, Shorts & TikToks',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
