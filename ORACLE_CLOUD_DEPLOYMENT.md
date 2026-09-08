@@ -220,3 +220,30 @@ curl http://localhost/health
 Access from any web browser:
 - **Health Check**: `http://140.245.214.28/health`
 - **Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+
+---
+
+## 🌐 Layer 7 Shield & Global CDN: Vercel Edge Frontend
+
+To protect the Oracle Cloud raw IP from DDoS attacks, scraping, and brute force attempts, we placed a **Vercel Edge Next.js 15 PWA frontend** in front of the Oracle Cloud VM:
+
+```
+End Users (Global Browsers, Mobile PWAs)
+                     │
+                     ▼ HTTPS (Let's Encrypt / Vercel Edge Network)
+      https://universal-pro-ai.vercel.app
+                     │
+         [Next.js Dynamic Rewrites]
+         /api/:path* ──► http://140.245.214.28/api/:path*
+                     │
+                     ▼
+          Oracle Cloud OCI Backend (Hyderabad)
+         (Shielded, Always-Free, 24/7 Compute)
+```
+
+### Benefits of this Architecture:
+1. **100% Free HTTPS & SSL**: Vercel handles automated TLS termination with zero certificate renewals needed.
+2. **Origin IP Shielding**: End users only see and interact with `https://universal-pro-ai.vercel.app`. The Oracle Cloud IP address is never directly exposed in user address bars.
+3. **Global Edge Caching**: Assets, images, and static routes are distributed across worldwide edge locations, achieving sub-second first-paint response times.
+4. **$0.00 Total Cost**: 100% Free on Vercel Hobby + 100% Free on Oracle Cloud Always Free.
+

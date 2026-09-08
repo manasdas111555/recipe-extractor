@@ -51,6 +51,7 @@ This document details:
 
 | Component | Platform / Host | Access URL / Identifier | Purpose |
 | :--- | :--- | :--- | :--- |
+| **Production Frontend (Primary)** | Vercel Edge Network | `https://universal-pro-ai.vercel.app` | Next.js 15 PWA web client, global CDN, HTTPS termination & origin IP shield |
 | **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
 | **Production UI (Fallback)** | Streamlit Community Cloud | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | Customer-facing extraction web app |
 | **Staging UI** | Streamlit Community Cloud | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Pre-production testing sandbox |
@@ -269,7 +270,23 @@ If the virtual machine was completely corrupted or terminated:
    - Click **Run workflow** $\rightarrow$ select branch `main` $\rightarrow$ click **Run workflow**.
 
 #### Step 2: Permanent Fix
-Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http://140.245.214.28`), which has zero hibernation timeouts.
+Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http://140.245.214.28`) or the global Vercel Edge frontend (`https://universal-pro-ai.vercel.app`), which have zero hibernation timeouts.
+
+---
+
+### 📘 Runbook 8: Vercel Edge Frontend Failover & Redeployment
+**Symptom**: Vercel frontend displays build errors or backend connection drops.
+
+#### Step 1: Trigger Instant Redeployment in Vercel
+1. Log into [vercel.com](https://vercel.com/dashboard).
+2. Open project `universal-pro-ai`.
+3. Go to **Deployments** $\rightarrow$ Click the `...` menu on the latest deployment $\rightarrow$ Click **Redeploy**.
+4. (Optional: Check "Redeploy with existing build cache" off to force a clean build).
+
+#### Step 2: Verify or Update Environment Variables
+1. Go to **Project Settings** $\rightarrow$ **Environment Variables**.
+2. Verify `NEXT_PUBLIC_API_URL` points to `http://140.245.214.28`.
+3. If the Oracle Cloud IP ever changes, update this variable and click **Redeploy**.
 
 ---
 
