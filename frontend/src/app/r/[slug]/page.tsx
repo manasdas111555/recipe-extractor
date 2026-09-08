@@ -10,8 +10,9 @@ interface Props {
 
 // Helper to fetch extraction with fallback
 async function getPublicExtraction(slug: string) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/v1/public/extractions/${slug}`, {
+    const res = await fetch(`${apiUrl}/api/v1/public/extractions/${slug}`, {
       next: { revalidate: 3600 }
     });
     if (res.ok) {

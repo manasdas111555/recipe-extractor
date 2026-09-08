@@ -18,8 +18,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   ];
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/v1/public/sitemap?limit=500', {
+    const res = await fetch(`${apiUrl}/api/v1/public/sitemap?limit=500`, {
       next: { revalidate: 86400 }
     });
     if (res.ok) {
