@@ -230,6 +230,15 @@ async def get_extraction_status(
             res = AsyncResult(job_id, app=celery_app)
             if res.state == "SUCCESS":
                 task_result = res.result or {}
+                if isinstance(task_result, dict) and (task_result.get("status") == "failed" or task_result.get("error")):
+                    return ExtractStatusResponse(
+                        job_id=job_id,
+                        status="failed",
+                        stage=task_result.get("stage", "failed"),
+                        progress_percent=100,
+                        data=None,
+                        error=task_result.get("error", "Extraction failed.")
+                    )
                 return ExtractStatusResponse(
                     job_id=job_id,
                     status="completed",
