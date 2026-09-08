@@ -240,12 +240,22 @@ async def get_extraction_status(
                 )
             elif res.state == "PROGRESS":
                 info = res.info or {}
+                status_val = info.get("status", "processing")
+                if status_val == "failed" or info.get("error"):
+                    return ExtractStatusResponse(
+                        job_id=job_id,
+                        status="failed",
+                        stage=info.get("stage", "failed"),
+                        progress_percent=100,
+                        data=None,
+                        error=info.get("error", "Extraction failed.")
+                    )
                 return ExtractStatusResponse(
                     job_id=job_id,
-                    status="processing",
+                    status=status_val,
                     stage=info.get("stage", "processing"),
                     progress_percent=info.get("progress_percent", 50),
-                    data=None,
+                    data=info.get("data"),
                     error=None
                 )
             elif res.state == "FAILURE":

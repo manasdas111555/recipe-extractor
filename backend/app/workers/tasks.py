@@ -219,10 +219,11 @@ def extract_video_task(
 
     def on_progress(stage: str, percent: int, error: Optional[str] = None, data: Optional[dict] = None):
         self.update_state(
-            state="PROGRESS" if percent < 100 else ("FAILURE" if error else "SUCCESS"),
+            state="PROGRESS",
             meta={
                 "job_id": job_id,
                 "stage": stage,
+                "status": "failed" if error else ("completed" if percent == 100 else "processing"),
                 "progress_percent": percent,
                 "error": error,
                 "data": data
