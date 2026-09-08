@@ -4,7 +4,7 @@ import re
 import time
 import urllib.parse
 from pathlib import Path
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Any, Optional
 
 
 # Configure Windows console to UTF-8 to prevent 'charmap' codec errors with ₹ and emojis
