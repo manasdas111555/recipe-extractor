@@ -205,7 +205,7 @@ export default function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalPr
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
           {[
             'Unlimited Daily Reel & Short Extractions',
-            'Sub-3s Gemini 3.8 Flash Multimodal Synthesis',
+            'Sub-3s Real-Time Multimodal Neural Synthesis',
             'Creator Tag Vault (Keep 100% of your Amazon & EarnKaro affiliate earnings)',
             'Dynamic 1-12 Portion Serving Adjuster & 1-Click Quick Commerce (Zepto/Blinkit)',
             'Unlimited Personal Vault Storage & Markdown/JSON Exports',

@@ -97,6 +97,8 @@ function UniversalDashboard() {
   const [selectedDomain, setSelectedDomain] = useState<string>('auto');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingPhase, setLoadingPhase] = useState<string>('Ready');
+  const [loadingProgress, setLoadingProgress] = useState<number>(0);
+  const [loadingSubtext, setLoadingSubtext] = useState<string>('');
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
@@ -220,6 +222,47 @@ function UniversalDashboard() {
     }
   }, [searchParams]);
 
+  // Dynamic progress bar progression timer & technical stage updater
+  useEffect(() => {
+    if (!isLoading) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setLoadingProgress((prev) => {
+        if (prev < 25) return prev + 3.2;
+        if (prev < 50) return prev + 2.0;
+        if (prev < 75) return prev + 1.2;
+        if (prev < 90) return prev + 0.6;
+        if (prev < 96) return prev + 0.15;
+        return prev;
+      });
+    }, 150);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // Synchronize high-tech stage narrative with progress milestones
+  useEffect(() => {
+    if (!isLoading) return;
+    if (loadingProgress < 25) {
+      setLoadingPhase('Ingesting Video Stream & Resolving Media Buffers...');
+      setLoadingSubtext('Demuxing container stream and validating media headers');
+    } else if (loadingProgress < 50) {
+      setLoadingPhase('Sampling Visual Frames & Computing Audio Spectrogram...');
+      setLoadingSubtext('Acoustic waveform analysis and frame extraction at 30fps');
+    } else if (loadingProgress < 75) {
+      setLoadingPhase('Executing Neural Multimodal Vision & Audio Reasoning...');
+      setLoadingSubtext('Cross-referencing audio narration with visual action sequences');
+    } else if (loadingProgress < 92) {
+      setLoadingPhase('Synthesizing Structured Entities & Action Steps...');
+      setLoadingSubtext('Structuring chronological steps, ingredient vectors, and equipment');
+    } else if (loadingProgress < 99) {
+      setLoadingPhase('Validating Output Schema & Shoppable Links...');
+      setLoadingSubtext('Resolving verified quick-commerce product tags and parameters');
+    }
+  }, [isLoading, Math.floor(loadingProgress / 10)]);
+
   // Polling helper for background jobs (HTTP 202)
   const pollExtractionStatus = async (pollUrl: string, maxAttempts = 60) => {
     for (let i = 0; i < maxAttempts; i++) {
@@ -229,7 +272,22 @@ function UniversalDashboard() {
         if (statusRes.ok) {
           const statusData = await statusRes.json();
           if (statusData.stage) {
-            setLoadingPhase(statusData.stage);
+            if (statusData.stage === 'downloading_media') {
+              setLoadingPhase('Ingesting Video Stream & Resolving Media Buffers...');
+              setLoadingSubtext('Demuxing container stream and validating media headers');
+              setLoadingProgress((prev) => Math.max(prev, 25));
+            } else if (statusData.stage === 'multimodal_ai_inference') {
+              setLoadingPhase('Executing Neural Multimodal Vision & Audio Reasoning...');
+              setLoadingSubtext('Cross-referencing audio narration with visual action sequences');
+              setLoadingProgress((prev) => Math.max(prev, 60));
+            } else if (statusData.stage === 'completed') {
+              setLoadingPhase('Extraction Finalized Successfully');
+              setLoadingSubtext('Rendering structured intelligence output');
+              setLoadingProgress(100);
+            }
+          }
+          if (statusData.progress_percent) {
+            setLoadingProgress((prev) => Math.max(prev, statusData.progress_percent));
           }
           if (statusData.status === 'completed' && statusData.data) {
             return statusData.data;
@@ -255,12 +313,11 @@ function UniversalDashboard() {
 
     setError(null);
     setIsLoading(true);
-    setLoadingPhase('Verifying Cloud Ingestion Cache...');
+    setLoadingProgress(8);
+    setLoadingPhase('Ingesting Video Stream & Resolving Media Buffers...');
+    setLoadingSubtext('Demuxing container stream and validating media headers');
 
     try {
-      setTimeout(() => setLoadingPhase('Analyzing Multimodal Audio & Frames...'), 800);
-      setTimeout(() => setLoadingPhase('Gemini 3.8 Flash Synthesizing Intelligence...'), 1800);
-
       const response = await fetch('/api/v1/extract', {
         method: 'POST',
         headers: {
@@ -288,11 +345,15 @@ function UniversalDashboard() {
 
       // Handle async polling if job was enqueued (HTTP 202)
       if (initialData.poll_url && initialData.status === 'queued') {
-        setLoadingPhase('Worker Processing Multimodal Stream...');
         finalData = await pollExtractionStatus(initialData.poll_url);
       } else {
         finalData = initialData.data || initialData;
       }
+
+      setLoadingProgress(100);
+      setLoadingPhase('Extraction Finalized Successfully');
+      setLoadingSubtext('Structured intelligence ready');
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       setResult(finalData);
       setQuotaRemaining((prev) => Math.max(0, prev - 1));
@@ -301,7 +362,9 @@ function UniversalDashboard() {
       setError(err.message || 'Unable to complete intelligence extraction.');
     } finally {
       setIsLoading(false);
+      setLoadingProgress(0);
       setLoadingPhase('Ready');
+      setLoadingSubtext('');
     }
   };
 
@@ -702,25 +765,101 @@ function UniversalDashboard() {
           </div>
         </div>
 
-        {/* Live Loading Phase Deck */}
+        {/* Dynamic Technical Progress Bar & Intelligence Deck */}
         {isLoading && (
           <div
             className="glass-panel"
             style={{
               maxWidth: '820px',
               margin: '0 auto 2rem',
-              padding: '1.25rem',
-              textAlign: 'center',
+              padding: '1.35rem 1.5rem',
               border: '1px solid var(--border-active)',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.65rem' }}>
-              <Zap size={20} color="var(--accent-emerald)" className="animate-pulse-subtle" />
-              <span style={{ fontWeight: 600, color: 'var(--accent-emerald)' }}>{loadingPhase}</span>
+            {/* Header: Status Icon, Technical Phase, and Percentage */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Zap size={18} color="var(--accent-emerald)" className="animate-pulse-subtle" />
+                <span
+                  style={{
+                    fontWeight: 600,
+                    fontSize: '0.92rem',
+                    color: 'var(--accent-emerald)',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {loadingPhase}
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {Math.round(loadingProgress)}%
+              </span>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
-              Powered by Google Gemini 3.8 Flash • Sub-3s SLA with instant fallback
-            </p>
+
+            {/* Glowing Dynamic Progress Track */}
+            <div
+              style={{
+                width: '100%',
+                height: '6px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                borderRadius: '9999px',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${Math.min(100, Math.max(0, loadingProgress))}%`,
+                  background: 'linear-gradient(90deg, #10B981 0%, #06B6D4 50%, #3B82F6 100%)',
+                  borderRadius: '9999px',
+                  transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 0 14px rgba(16, 185, 129, 0.5)',
+                }}
+              />
+            </div>
+
+            {/* Technical Subtext (Without Model Names or Specifics) */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: '0.65rem',
+              }}
+            >
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                {loadingSubtext || 'Real-Time Multimodal Intelligence Pipeline Active'}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  color: 'var(--accent-emerald)',
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                PIPELINE_STATUS: ACTIVE
+              </span>
+            </div>
           </div>
         )}
 
@@ -1032,9 +1171,9 @@ function UniversalDashboard() {
 
                   <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
                     <ShieldCheck size={16} color="#06B6D4" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>AI Model</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Reasoning Engine</div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#06B6D4' }}>
-                      Gemini 3.8
+                      Multimodal Neural
                     </div>
                   </div>
                 </div>
