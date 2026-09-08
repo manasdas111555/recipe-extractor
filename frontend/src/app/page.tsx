@@ -26,6 +26,7 @@ import {
   Cpu,
   Bookmark,
   Check,
+  Copy,
 } from 'lucide-react';
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
@@ -68,6 +69,8 @@ interface ExtractionResult {
   products?: ProductItem[];
   resources?: ResourceItem[];
   details?: string;
+  source_url?: string;
+  full_text?: string;
   media_url?: string;
   thumbnail_url?: string;
   cached?: boolean;
@@ -97,6 +100,7 @@ function UniversalDashboard() {
   const [isCreatorVaultOpen, setIsCreatorVaultOpen] = useState<boolean>(false);
   const [quotaRemaining, setQuotaRemaining] = useState<number>(10);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [copiedNotes, setCopiedNotes] = useState<boolean>(false);
 
   // Detect platform from URL
   const detectPlatform = (inputUrl: string) => {
@@ -110,6 +114,91 @@ function UniversalDashboard() {
   };
 
   const platformInfo = detectPlatform(url);
+
+  // Resolve media preview: Direct video, Instagram Reel iframe embed, or YouTube Short iframe embed
+  const resolveMediaPreview = () => {
+    const target = result?.source_url || (result as any)?.media_url || url;
+    if (!target) return null;
+
+    // 1. Direct video link (mp4, webm, etc.)
+    if (result?.media_url && (result.media_url.endsWith('.mp4') || result.media_url.endsWith('.webm') || result.media_url.includes('/video/'))) {
+      return {
+        type: 'video' as const,
+        src: result.media_url,
+      };
+    }
+
+    // 2. Instagram Reel or Post: /reel/{id} or /p/{id}
+    const igMatch = target.match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/i);
+    if (igMatch && igMatch[1]) {
+      return {
+        type: 'instagram' as const,
+        src: `https://www.instagram.com/reel/${igMatch[1]}/embed/`,
+        externalUrl: `https://www.instagram.com/reel/${igMatch[1]}/`,
+        id: igMatch[1],
+      };
+    }
+
+    // 3. YouTube Shorts or standard YouTube video
+    const ytMatch = target.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
+    if (ytMatch && ytMatch[1]) {
+      return {
+        type: 'youtube' as const,
+        src: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=0&rel=0&modestbranding=1`,
+        externalUrl: `https://www.youtube.com/shorts/${ytMatch[1]}`,
+        id: ytMatch[1],
+      };
+    }
+
+    // 4. TikTok Video
+    const ttMatch = target.match(/tiktok\.com\/(?:@[^/]+\/video\/|v\/)(\d+)/i);
+    if (ttMatch && ttMatch[1]) {
+      return {
+        type: 'tiktok' as const,
+        src: `https://www.tiktok.com/embed/v2/${ttMatch[1]}`,
+        externalUrl: target,
+        id: ttMatch[1],
+      };
+    }
+
+    return null;
+  };
+
+  // Helper to extract clean details if not explicitly present in cached payload
+  const getResolvedDetails = (): string => {
+    if (result?.details && result.details.trim()) {
+      return result.details.trim();
+    }
+    if ((result as any)?.full_text) {
+      const match = (result as any).full_text.match(/(?:Detailed Steps & Notes:|\[DETAILS\]:)\s*={0,50}\s*([\s\S]+)/i);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    return '';
+  };
+
+  const getSectionTitle = (cat?: string) => {
+    const c = (cat || '').toUpperCase();
+    if (c.includes('FITNESS') || c.includes('WORKOUT')) return 'Workout Routine & Form Steps';
+    if (c.includes('TUTORIAL') || c.includes('TECH') || c.includes('CODE')) return 'Step-by-Step Tutorial Guide & Commands';
+    if (c.includes('PRODUCT') || c.includes('UNBOXING') || c.includes('GADGET') || c.includes('KITCHEN_FIND')) return 'Key Features, Specifications & Review Notes';
+    if (c.includes('RECIPE') || c.includes('COOK')) return 'Cooking Method & Instructions';
+    if (c.includes('EDUCATIONAL') || c.includes('EXPLAINER')) return 'Core Concepts & Key Takeaways';
+    if (c.includes('FINANCE') || c.includes('BUSINESS')) return 'Strategy, Metrics & Action Steps';
+    if (c.includes('BEAUTY') || c.includes('FASHION')) return 'Styling Routine & Application Steps';
+    if (c.includes('LIFE_HACK') || c.includes('HACK')) return 'Productivity Hacks & Actionable Tips';
+    return 'Detailed Steps & Intelligence Notes';
+  };
+
+  const handleCopyNotes = (notes: string) => {
+    navigator.clipboard.writeText(notes);
+    setCopiedNotes(true);
+    setTimeout(() => setCopiedNotes(false), 2000);
+  };
+
+  const mediaPreview = resolveMediaPreview();
+  const detailsText = getResolvedDetails();
 
   // Support autostart from Web Share Target
   useEffect(() => {
@@ -703,9 +792,79 @@ function UniversalDashboard() {
                 </div>
 
                 {/* Video / Media Display */}
-                {result.media_url ? (
+                {mediaPreview?.type === 'instagram' ? (
+                  <div style={{ position: 'relative', width: '100%', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                    <iframe
+                      src={mediaPreview.src}
+                      title="Instagram Reel Preview"
+                      style={{
+                        width: '100%',
+                        height: '460px',
+                        border: 'none',
+                        background: '#05070D',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                    <div style={{ marginTop: '0.45rem', display: 'flex', justifyContent: 'center' }}>
+                      <a
+                        href={mediaPreview.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '0.78rem',
+                          color: '#E1306C',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>▶ Open Reel in Instagram App</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+                ) : mediaPreview?.type === 'youtube' ? (
+                  <div style={{ position: 'relative', width: '100%', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+                    <iframe
+                      src={mediaPreview.src}
+                      title="YouTube Short Preview"
+                      style={{
+                        width: '100%',
+                        height: '460px',
+                        border: 'none',
+                        background: '#05070D',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                    <div style={{ marginTop: '0.45rem', display: 'flex', justifyContent: 'center' }}>
+                      <a
+                        href={mediaPreview.externalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: '0.78rem',
+                          color: '#FF0000',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>▶ Watch on YouTube Shorts</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+                ) : mediaPreview?.type === 'video' ? (
                   <video
-                    src={result.media_url}
+                    src={mediaPreview.src}
                     controls
                     autoPlay
                     playsInline
@@ -728,12 +887,37 @@ function UniversalDashboard() {
                       justifyContent: 'center',
                       border: '1px dashed var(--border-subtle)',
                       gap: '0.5rem',
+                      padding: '1rem',
+                      textAlign: 'center',
                     }}
                   >
                     <Play size={40} color="var(--accent-emerald)" opacity={0.6} />
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                       Source Stream Ingested
                     </span>
+                    {(result.source_url || url) && (
+                      <a
+                        href={result.source_url || url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          marginTop: '0.4rem',
+                          fontSize: '0.78rem',
+                          color: 'var(--accent-emerald)',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: 'rgba(16, 185, 129, 0.1)',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(16, 185, 129, 0.25)',
+                        }}
+                      >
+                        <span>View Source Reel</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    )}
                   </div>
                 )}
 
@@ -850,27 +1034,51 @@ function UniversalDashboard() {
                   </div>
                 )}
 
-                {/* Step-by-Step Instructions / Workout Routines / Procedures */}
+                {/* Step-by-Step Instructions / Workout Routines / Features & Specs */}
                 <div style={{ marginTop: '1.25rem' }}>
-                  <h3
+                  <div
                     style={{
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      marginBottom: '0.75rem',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.75rem',
                     }}
                   >
-                    <CheckCircle2 size={18} color="var(--accent-emerald)" />
-                    <span>
-                      {result.category?.includes('FITNESS')
-                        ? 'Workout Routine & Form Steps'
-                        : result.category?.includes('TUTORIAL')
-                        ? 'Step-by-Step Tutorial Guide'
-                        : 'Method & Procedure'}
-                    </span>
-                  </h3>
+                    <h3
+                      style={{
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        margin: 0,
+                      }}
+                    >
+                      <CheckCircle2 size={18} color="var(--accent-emerald)" />
+                      <span>{getSectionTitle(result.category)}</span>
+                    </h3>
+
+                    {detailsText && (
+                      <button
+                        onClick={() => handleCopyNotes(detailsText)}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: '6px',
+                          color: 'var(--text-secondary)',
+                          padding: '4px 9px',
+                          fontSize: '0.74rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {copiedNotes ? <Check size={12} color="#34D399" /> : <Copy size={12} />}
+                        <span>{copiedNotes ? 'Copied Notes!' : 'Copy Notes'}</span>
+                      </button>
+                    )}
+                  </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                     {result.instructions && result.instructions.length > 0 ? (
@@ -903,24 +1111,99 @@ function UniversalDashboard() {
                           >
                             {idx + 1}
                           </span>
-                          <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)' }}>
+                          <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)', margin: 0 }}>
                             {step}
                           </p>
                         </div>
                       ))
-                    ) : result.details ? (
+                    ) : detailsText ? (
                       <div
                         style={{
-                          padding: '0.85rem',
-                          background: 'rgba(255, 255, 255, 0.02)',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-subtle)',
-                          fontSize: '0.85rem',
-                          whiteSpace: 'pre-wrap',
-                          lineHeight: 1.5,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem',
                         }}
                       >
-                        {result.details}
+                        {detailsText.split('\n').map((line, idx) => {
+                          const trimmed = line.trim();
+                          if (!trimmed) return null;
+
+                          if (trimmed.startsWith('**') && (trimmed.endsWith('**') || trimmed.endsWith(':**') || trimmed.endsWith('**:') || trimmed.endsWith(':'))) {
+                            const cleanHeader = trimmed.replace(/\*\*/g, '').replace(/:$/, '');
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  fontSize: '0.88rem',
+                                  fontWeight: 700,
+                                  color: 'var(--accent-emerald)',
+                                  marginTop: idx > 0 ? '0.5rem' : 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                }}
+                              >
+                                <span>⚡</span>
+                                <span>{cleanHeader}</span>
+                              </div>
+                            );
+                          }
+
+                          if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
+                            const withoutBullet = trimmed.replace(/^[-*•]\s*/, '');
+                            const boldMatch = withoutBullet.match(/^\*\*([^*]+)\*\*:\s*(.+)$/);
+                            if (boldMatch) {
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '0.6rem',
+                                    padding: '0.55rem 0.75rem',
+                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(255, 255, 255, 0.04)',
+                                    fontSize: '0.88rem',
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  <span style={{ color: 'var(--accent-emerald)', fontWeight: 700, minWidth: '6px' }}>•</span>
+                                  <div>
+                                    <strong style={{ color: '#38BDF8', fontWeight: 600 }}>{boldMatch[1]}: </strong>
+                                    <span style={{ color: 'var(--text-primary)' }}>{boldMatch[2]}</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'flex-start',
+                                  gap: '0.6rem',
+                                  padding: '0.55rem 0.75rem',
+                                  background: 'rgba(255, 255, 255, 0.02)',
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(255, 255, 255, 0.04)',
+                                  fontSize: '0.88rem',
+                                  lineHeight: 1.5,
+                                  color: 'var(--text-primary)',
+                                }}
+                              >
+                                <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>•</span>
+                                <span>{withoutBullet}</span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <p key={idx} style={{ fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0.2rem 0', lineHeight: 1.5 }}>
+                              {trimmed}
+                            </p>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

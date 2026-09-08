@@ -143,17 +143,34 @@ def execute_extraction_pipeline(
         meta["products"] = enriched_products
         meta["resources"] = enriched_resources
 
+        details_text = meta.get("details", "") or ""
+        parsed_instructions = []
+        if details_text:
+            for line in details_text.splitlines():
+                line_clean = line.strip()
+                if not line_clean or line_clean.startswith(('#', '=')):
+                    continue
+                if line_clean.startswith(("- ", "* ", "• ")) or re.match(r'^\d+\.\s+', line_clean):
+                    clean_item = re.sub(r'^[-*•\d\.]+\s*', '', line_clean).strip()
+                    if clean_item:
+                        parsed_instructions.append(clean_item)
+                elif line_clean.startswith("**") and ":" in line_clean:
+                    parsed_instructions.append(line_clean)
+
         content_payload = {
             "title": meta.get("title", "Extracted Content"),
             "category": meta.get("category", "RECIPE"),
             "category_name": meta.get("category_name", "Content"),
             "summary": meta.get("summary", ""),
+            "details": details_text,
+            "instructions": parsed_instructions if parsed_instructions else meta.get("instructions", []),
             "full_text": recipe_text,
             "txt_filepath": txt_filepath,
             "products": enriched_products,
             "resources": enriched_resources,
             "timings": meta.get("timings", {}),
             "source_url": video_url,
+            "media_url": video_url,
             "url_hash": url_hash
         }
 

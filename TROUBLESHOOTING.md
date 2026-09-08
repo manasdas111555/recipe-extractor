@@ -30,6 +30,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-018** | 2026-09-08 | Frontend / AI | Next.js PWA reverted to recipe-only copy instead of multi-genre Universal AI | ✅ Resolved |
 | **ISSUE-019** | 2026-09-08 | Docker & Worker | Celery worker failed with `No module named 'ai_router'` | ✅ Resolved |
 | **ISSUE-020** | 2026-09-08 | Python 3.11 Runtime | `NameError: name 'Any' is not defined` in `gemini_processor.py:792` | ✅ Resolved |
+| **ISSUE-021** | 2026-09-08 | Frontend / AI | Instagram Reel preview static fallback & missing structured details/notes in PWA UI | ✅ Resolved |
 
 ---
 
@@ -593,6 +594,74 @@ Submitted the exact same Instagram Reel (`https://www.instagram.com/reel/DcrYHLV
 - Gemini 3.8 Flash analyzed the video frames and audio cleanly.
 - Extracted: *"Three Essential Desk Setup Upgrades"* (Product Unboxing & Finds category) with 3 full product profiles (BenQ ScreenBar, Anker Nano, KUXIU Stand), monetized Amazon (`tag=manasdas11155-21`) & Flipkart affiliate tags, and 10-minute quick commerce links.
 - Verified progress transitioned to `completed` (100%) and saved in Supabase.
+
+---
+
+### 🚨 ISSUE-021: Instagram Reel Preview Static Fallback & Missing Structured Details/Notes in PWA UI
+- **Date**: 2026-09-08
+- **Affected Files**: `backend/app/workers/tasks.py`, `frontend/src/app/page.tsx`
+
+#### 1. What Happened (Symptom):
+When users extracted an Instagram Reel or YouTube Short on the Next.js PWA (`universal-pro-ai.vercel.app`):
+1. **Video Preview Failed**: The Single-Docked Media Player displayed an empty black box with a play icon and "Source Stream Ingested", with no active video or embed playing.
+2. **Notes Generation Blank / Generic Fallback**: The intelligence section for gadgets and reviews showed a generic placeholder: *"Method & Procedure: Follow the video clip for exact step-by-step guidance"* instead of the rich, multi-point technical specifications and review notes extracted by Gemini (e.g. 4K 144Hz / 1080p 288Hz dual mode, color accuracy, brightness, ergonomic stand, pricing).
+
+#### 2. Root Cause:
+1. **Media Player URL Gaps**:
+   - `backend/app/workers/tasks.py` unlinks media files from disk upon completion to satisfy `AGENTS.md` Rule 4 (zero disk leaks). Consequently, it did not set `media_url` in `content_payload`.
+   - `frontend/src/app/page.tsx` strictly required `result.media_url` and did not support native social iframe embeds for Instagram Reels (`/reel/{id}/embed/`) or YouTube Shorts (`/embed/{id}`).
+2. **Missing `details` in Worker Payload & Strict Recipe Fallback**:
+   - `gemini_processor.py` returned `meta["details"]` containing the complete structured specifications, but `tasks.py` omitted `"details"` from `content_payload`.
+   - `frontend/src/app/page.tsx` only checked `result.instructions` and `result.details`. When both were empty, it fell back to "Method & Procedure: Follow the video clip for exact step-by-step guidance."
+
+#### 3. Resolution (Code Changes):
+1. **Added `details`, `instructions`, and `media_url` to `tasks.py`**:
+   ```python
+   details_text = meta.get("details", "") or ""
+   parsed_instructions = []
+   if details_text:
+       for line in details_text.splitlines():
+           line_clean = line.strip()
+           if not line_clean or line_clean.startswith(('#', '=')):
+               continue
+           if line_clean.startswith(("- ", "* ", "• ")) or re.match(r'^\d+\.\s+', line_clean):
+               clean_item = re.sub(r'^[-*•\d\.]+\s*', '', line_clean).strip()
+               if clean_item:
+                   parsed_instructions.append(clean_item)
+           elif line_clean.startswith("**") and ":" in line_clean:
+               parsed_instructions.append(line_clean)
+
+   content_payload = {
+       "title": meta.get("title", "Extracted Content"),
+       "category": meta.get("category", "RECIPE"),
+       "category_name": meta.get("category_name", "Content"),
+       "summary": meta.get("summary", ""),
+       "details": details_text,
+       "instructions": parsed_instructions if parsed_instructions else meta.get("instructions", []),
+       "full_text": recipe_text,
+       "txt_filepath": txt_filepath,
+       "products": enriched_products,
+       "resources": enriched_resources,
+       "timings": meta.get("timings", {}),
+       "source_url": video_url,
+       "media_url": video_url,
+       "url_hash": url_hash
+   }
+   ```
+2. **Added Multi-Platform Media Resolver in `frontend/src/app/page.tsx`**:
+   - Supports native Instagram Reel embeds (`https://www.instagram.com/reel/{id}/embed/`).
+   - Supports YouTube Shorts embed (`https://www.youtube-nocookie.com/embed/{id}`).
+   - Supports direct HTML5 `<video>` for raw files.
+   - Adds 1-click external link: *"▶ Open Reel in Instagram App ↗"*.
+3. **Upgraded Right Column to Rich Specifications & Notes**:
+   - Dynamically titles the section by domain (e.g. *"Key Features, Specifications & Review Notes"* for products/gadgets, *"Workout Routine & Form Steps"* for fitness, *"Step-by-Step Tutorial Guide"* for tech).
+   - Added regex fallback `getResolvedDetails()` to retrieve notes from `full_text` for existing database cache records.
+   - Parses bold labels (`**Display Size & Panel:**`) into cyan-highlighted structured cards.
+   - Added 1-click *"📋 Copy Notes"* action button.
+
+#### 4. Testing & Verification:
+- Built frontend production bundle: compiled 100% cleanly in 1054ms.
+- Executed full test suite: 150/150 tests passed with 0 failures.
 
 ---
 
