@@ -8,7 +8,7 @@ UPA-601: Redis-backed Daily Quota Middleware with In-Memory Dual-Mode Fallback.
 import logging
 import datetime
 import threading
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Any
 import redis
 
 from backend.app.core.config import get_settings
