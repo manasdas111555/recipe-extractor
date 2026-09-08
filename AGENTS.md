@@ -6,9 +6,13 @@
 - **Adding New Tests**: As features expand, you are encouraged to add *new* test cases by creating dedicated test files (e.g., `tests/test_sprintX_*.py`) or appending new, non-destructive test methods.
 - **Regression Contract**: Existing tests serve as an immutable specification contract ensuring zero regressions against prior sprint deliverables.
 
-## 2. Sprint Governance & PO Sign-Off Cadence
-- At the end of every sprint, prepare a comprehensive **Product Owner UI/UX Feature Showcase & Feedback Review** document with screenshots, user flows, and a sign-off scorecard.
-- Wait for the PO sign-off and address any P0 acceptance tweaks before officially kicking off the next sprint.
+## 2. Sprint Governance, 3-Layered Architecture & PO Production Gate
+- **Strict 3-Layered Environment Isolation**:
+  1. *Layer 1: Development (`Dev` branch)*: Local sandbox, unit tests (`pytest`), local Next.js builds. Never deploy directly to cloud from Dev.
+  2. *Layer 2: Staging (`staging` branch)*: Vercel Preview deployments and Staging cloud containers. All feature additions, bug fixes, and manual verifications MUST deploy here first for PO review.
+  3. *Layer 3: Production (`main` branch)*: `universal-pro-ai.vercel.app` and Production OCI containers.
+- **Zero Direct-to-Production Rule (Strict Gate)**: Agents must NEVER push, merge, or fast-forward changes directly to `main` or deploy directly to production containers without **explicit, written prior sign-off from the repository owner / Product Owner**. Hotfixes and patches are subject to this exact same constraint.
+- **Sign-Off Cadence**: At the end of every sprint or major feature milestone, prepare a comprehensive **Product Owner UI/UX Feature Showcase & Feedback Review** document. Wait for explicit PO approval before promoting from `staging` to `main`.
 
 ## 3. Monetization Invariants & Affiliate Parameter Protection (Revenue Shield)
 - **Immutable Affiliate Identifiers**: The default monetization parameters (`tag=manasdas11155-21` for Amazon India and `r=5608766` for EarnKaro) are **immutable constants**. Under no circumstances should these be deleted, mocked, or altered in production paths.
