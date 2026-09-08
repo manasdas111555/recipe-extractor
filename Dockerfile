@@ -4,6 +4,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
     DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies (ffmpeg is required for audio/video processing)

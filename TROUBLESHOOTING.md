@@ -28,6 +28,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-016** | 2026-09-08 | Remote Operations | SSH connection reset silently drops to local PowerShell during `.env` creation | ✅ Resolved |
 | **ISSUE-017** | 2026-09-08 | Docker Runtime | `NameError: name 'Any' is not defined` in `quota_service.py` on Python 3.11 | ✅ Resolved |
 | **ISSUE-018** | 2026-09-08 | Frontend / AI | Next.js PWA reverted to recipe-only copy instead of multi-genre Universal AI | ✅ Resolved |
+| **ISSUE-019** | 2026-09-08 | Docker & Worker | Celery worker failed with `No module named 'ai_router'` | ✅ Resolved |
 
 ---
 
@@ -512,6 +513,41 @@ During initial Next.js scaffolding in Sprint 6, static placeholder copy and labe
 - Ran complete test suite (149 tests): 100% passed in 40s with zero regressions.
 - Next.js production build (`npm run build`): compiled cleanly in 1.3s with zero TypeScript/lint errors.
 - Pushed commits to `Dev`, `staging`, and `main` branches. Vercel automatically redeployed the updated multi-genre PWA.
+
+---
+
+### 🚨 ISSUE-019: Celery Background Worker Failed with `No module named 'ai_router'`
+- **Date**: 2026-09-08
+- **Affected Files**: `backend/app/workers/tasks.py`, `backend/app/workers/celery_app.py`, `Dockerfile`, `docker-compose.yml`
+
+#### 1. What Happened (Symptom):
+When submitting an Instagram Reel link on the live Vercel frontend (`https://universal-pro-ai.vercel.app`), the extraction failed during background processing and surfaced an error banner:
+```text
+No module named 'ai_router'
+```
+
+#### 2. Root Cause:
+The Celery background worker process (`universalpro-worker`) and BackgroundTasks execution environment run inside the Docker container `/app`. When `tasks.py` imported `from ai_router import route_video_intelligence`, Python looked in the worker subpackage directories rather than the project root directory. `PYTHONPATH=/app` was missing from the Docker container environment, and `tasks.py` / `celery_app.py` did not explicitly prepend the repository root directory to Python's `sys.path`.
+
+#### 3. Resolution (Code Changes):
+1. **Explicit Root Directory Prepending (`sys.path`)**:
+   Added repository root resolution to `backend/app/workers/tasks.py` and `backend/app/workers/celery_app.py`:
+   ```python
+   import sys
+   from pathlib import Path
+
+   ROOT_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
+   if ROOT_DIR not in sys.path:
+       sys.path.insert(0, ROOT_DIR)
+   ```
+2. **Container `PYTHONPATH` Guarantee**:
+   - Added `ENV PYTHONPATH=/app` to `Dockerfile`.
+   - Added `PYTHONPATH=/app` to the `environment:` section of both `api` and `worker` services in `docker-compose.yml`.
+
+#### 4. Testing & Verification:
+- Executed full test suite (149 tests): 100% passed in 38.7s with zero regressions.
+- Pulled latest commit on the Oracle Cloud production server and restarted the worker container.
+- Ran live extraction verification.
 
 ---
 

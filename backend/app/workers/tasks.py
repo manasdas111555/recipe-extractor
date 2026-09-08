@@ -11,9 +11,16 @@ Features:
 """
 
 import os
+import sys
 import time
 import logging
+from pathlib import Path
 from typing import Optional, Dict, Any
+
+# Ensure repository root is on sys.path for ai_router, config, downloader, etc.
+ROOT_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 from backend.app.workers.celery_app import celery_app
 from backend.app.workers.media_downloader import managed_worker_download

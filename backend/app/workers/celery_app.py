@@ -6,9 +6,17 @@ Configures JSON serialization, task tracking, and hard 180s execution limits.
 Includes broker health check utility for dual-mode API gateway dispatching.
 """
 
+import sys
 import logging
+from pathlib import Path
 from typing import Optional
 from celery import Celery
+
+# Ensure repository root is on sys.path
+ROOT_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 from backend.app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
