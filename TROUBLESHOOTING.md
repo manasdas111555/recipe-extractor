@@ -27,6 +27,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-015** | 2026-09-08 | Security & SSH | Windows OpenSSH private key rejected: "bad permissions / key is too open" | ✅ Resolved |
 | **ISSUE-016** | 2026-09-08 | Remote Operations | SSH connection reset silently drops to local PowerShell during `.env` creation | ✅ Resolved |
 | **ISSUE-017** | 2026-09-08 | Docker Runtime | `NameError: name 'Any' is not defined` in `quota_service.py` on Python 3.11 | ✅ Resolved |
+| **ISSUE-018** | 2026-09-08 | Frontend / AI | Next.js PWA reverted to recipe-only copy instead of multi-genre Universal AI | ✅ Resolved |
 
 ---
 
@@ -483,6 +484,34 @@ Health check confirmed HTTP 200 with all integrations verified:
 ```json
 {"status":"healthy","service":"Universal Pro AI - API Gateway","version":"1.0.0","integrations":{"supabase":true,"gemini":true,"groq":true,"mistral":true}}
 ```
+
+---
+
+### 🚨 ISSUE-018: Next.js PWA Reverted to Recipe-Only Copy instead of Multi-Genre Universal Extractor
+- **Date**: 2026-09-08
+- **Affected Files**: `frontend/src/app/page.tsx`, `backend/app/api/v1/extract.py`
+
+#### 1. What Happened (Symptom):
+After successfully deploying the Next.js 15 PWA frontend on Vercel, the user noticed that the interface had reverted to recipe-specific branding (*"Turn Any Cooking Video into a Structured Recipe & Pantry Cart"*, *"Extract Recipe"*, *"Recipe Vault"*, and recipe-only sample chips), whereas the Streamlit application had already evolved into the full **Universal Reel & Shorts AI Extractor** (handling recipes, workout routines, tech tutorials, unboxings, and product finds).
+
+#### 2. Root Cause:
+During initial Next.js scaffolding in Sprint 6, static placeholder copy and labels were copied from early Sprint 1 recipe mockups. Meanwhile, the backend AI models (`gemini_processor.py`, `ai_router.py`, `app.py`) already supported full multi-domain auto-detection and prompt routing (`Auto-Detect (Universal AI)`, `🍳 Cooking`, `🏋️ Fitness`, `💻 Tech Tutorials`, `🛍️ Kitchen & Home Gadgets`, `📦 Product Unboxing`, `💡 Life Hacks`). The Next.js frontend UI had not yet been updated to expose the Content Domain selector and multi-category layout. Furthermore, the FastAPI backend endpoint `ExtractRequest` strictly expected `video_url`, while frontend payloads sometimes sent `url`.
+
+#### 3. Resolution (Code Changes):
+1. **Frontend Multi-Genre Upgrade (`frontend/src/app/page.tsx`)**:
+   - Replaced hero title with **Universal Reel & Shorts AI Extractor** and multi-genre subtitle.
+   - Added interactive **🎯 Content Domain selector** above the input bar with 7 options (`Auto-Detect`, `Cooking & Recipes`, `Fitness & Workouts`, `Tech Tutorials & Coding`, `Kitchen Finds & Gadgets`, `Product Unboxing`, `Life Hacks`).
+   - Added multi-genre sample buttons (`🍳 Butter Chicken Reel`, `🏋️ 6 Core Exercises Workout`, `💻 Quick Python Tips`, `🛍️ Viral Kitchen Slicer Find`).
+   - Renamed buttons to **"Extract Intelligence ➔"** and **"Intelligence Vault"**.
+   - Added **Platform Superpowers showcase** (Universal Stream Parsing, Multimodal Neural Vision, Shoppable Product Links, Instant WhatsApp Dispatch) and bottom telemetry badges.
+   - Enhanced dynamic result rendering to support Workout Routines, Step-by-Step Tutorials, Code Procedures, and Shoppable Products with 1-click Amazon/Flipkart buy tags.
+2. **Backend Payload Resiliency (`backend/app/api/v1/extract.py`)**:
+   - Added Pydantic `@model_validator(mode="before")` on `ExtractRequest` to transparently map `url` to `video_url`.
+
+#### 4. Testing & Verification:
+- Ran complete test suite (149 tests): 100% passed in 40s with zero regressions.
+- Next.js production build (`npm run build`): compiled cleanly in 1.3s with zero TypeScript/lint errors.
+- Pushed commits to `Dev`, `staging`, and `main` branches. Vercel automatically redeployed the updated multi-genre PWA.
 
 ---
 
