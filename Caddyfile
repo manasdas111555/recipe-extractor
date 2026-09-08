@@ -1,0 +1,20 @@
+# Automatic HTTPS with Caddy for Oracle Cloud VM
+# Replaces $DOMAIN with your permanent IP wildcard or custom domain
+{
+    email admin@universalpro.ai
+}
+
+:80 {
+    # Health check on plain HTTP
+    handle /health {
+        reverse_proxy api:8000
+    }
+
+    # Reverse proxy everything to FastAPI backend
+    reverse_proxy api:8000
+}
+
+# When ready for HTTPS, configure your permanent domain:
+# api.140.245.214.28.nip.io {
+#     reverse_proxy api:8000
+# }

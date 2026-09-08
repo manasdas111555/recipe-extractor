@@ -1,0 +1,14 @@
+.git
+.github
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env.local
+node_modules
+.next
+downloads/*
+!downloads/.gitkeep
+scratch/*
+tests/*

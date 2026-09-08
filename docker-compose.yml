@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # 1. Redis Cache & Celery Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: universalpro-redis
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 2. FastAPI Web API Gateway
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: universalpro-api
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+
+  # 3. Celery Background Ingestion & Extraction Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: universalpro-worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["celery", "-A", "backend.app.workers.celery_app", "worker", "--loglevel=info", "--pool=threads", "--concurrency=4"]
+
+  # 4. Caddy Auto-SSL Reverse Proxy (Port 80 / 443)
+  caddy:
+    image: caddy:2-alpine
+    container_name: universalpro-caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  redis_data:
+  caddy_data:
+  caddy_config:
