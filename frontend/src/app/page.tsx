@@ -17,16 +17,47 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Globe,
+  Layers,
+  Dumbbell,
+  Code2,
+  ShoppingBag,
+  MessageSquare,
+  Cpu,
+  Bookmark,
+  Check,
 } from 'lucide-react';
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
 import CreatorTagVault from '../components/CreatorTagVault';
 
+interface ProductItem {
+  name: string;
+  price?: string;
+  search_query?: string;
+  links?: {
+    amazon?: string;
+    flipkart?: string;
+    blinkit?: string;
+    zepto?: string;
+  };
+}
+
+interface ResourceItem {
+  name: string;
+  platform?: string;
+  search_query?: string;
+}
+
 interface ExtractionResult {
-  recipe_title?: string;
+  category?: string;
   title?: string;
+  recipe_title?: string;
+  summary?: string;
   dish_type?: string;
+  workout_split?: string;
+  difficulty?: string;
   prep_time?: string;
   cooking_time?: string;
   servings?: number;
@@ -34,14 +65,28 @@ interface ExtractionResult {
   instructions?: string[];
   equipment_needed?: string[];
   chef_tips?: string[];
+  products?: ProductItem[];
+  resources?: ResourceItem[];
+  details?: string;
   media_url?: string;
   thumbnail_url?: string;
   cached?: boolean;
 }
 
-function RecipeDashboard() {
+const DOMAIN_OPTIONS = [
+  { id: 'auto', label: 'Auto-Detect (Universal AI)', icon: '⚡' },
+  { id: 'recipe', label: '🍳 Cooking Recipe & Food', icon: '🍳' },
+  { id: 'kitchen_product', label: '🛍️ Kitchen Finds & Home Gadgets', icon: '🛍️' },
+  { id: 'fitness_workout', label: '🏋️ Fitness & Workout Routine', icon: '🏋️' },
+  { id: 'tech_diy', label: '💻 Tech Tutorial & Code Guide', icon: '💻' },
+  { id: 'unboxing', label: '📦 Product Unboxing & Amazon Finds', icon: '📦' },
+  { id: 'diy', label: '💡 Life Hacks & Productivity', icon: '💡' },
+];
+
+function UniversalDashboard() {
   const searchParams = useSearchParams();
   const [url, setUrl] = useState<string>('');
+  const [selectedDomain, setSelectedDomain] = useState<string>('auto');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingPhase, setLoadingPhase] = useState<string>('Ready');
   const [result, setResult] = useState<ExtractionResult | null>(null);
@@ -51,6 +96,7 @@ function RecipeDashboard() {
   const [upgradeReason, setUpgradeReason] = useState<string>('');
   const [isCreatorVaultOpen, setIsCreatorVaultOpen] = useState<boolean>(false);
   const [quotaRemaining, setQuotaRemaining] = useState<number>(10);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   // Detect platform from URL
   const detectPlatform = (inputUrl: string) => {
@@ -60,7 +106,7 @@ function RecipeDashboard() {
     if (inputUrl.includes('youtube.com') || inputUrl.includes('youtu.be'))
       return { name: 'YouTube Short', color: '#FF0000' };
     if (inputUrl.includes('facebook.com')) return { name: 'Facebook Reel', color: '#1877F2' };
-    return { name: 'Social Video', color: '#10B981' };
+    return { name: 'Social Stream', color: '#10B981' };
   };
 
   const platformInfo = detectPlatform(url);
@@ -77,6 +123,33 @@ function RecipeDashboard() {
     }
   }, [searchParams]);
 
+  // Polling helper for background jobs (HTTP 202)
+  const pollExtractionStatus = async (pollUrl: string, maxAttempts = 60) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        const statusRes = await fetch(pollUrl);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.stage) {
+            setLoadingPhase(statusData.stage);
+          }
+          if (statusData.status === 'completed' && statusData.data) {
+            return statusData.data;
+          }
+          if (statusData.status === 'failed') {
+            throw new Error(statusData.error || 'Extraction processing failed.');
+          }
+        }
+      } catch (pollErr: any) {
+        if (pollErr.message && !pollErr.message.includes('fetch')) {
+          throw pollErr;
+        }
+      }
+    }
+    throw new Error('Extraction timed out. The server is still processing; check the Vault shortly.');
+  };
+
   const handleExtract = async (targetUrl = url) => {
     if (!targetUrl.trim()) {
       setError('Please paste a valid video URL from Instagram, TikTok, or YouTube.');
@@ -88,16 +161,19 @@ function RecipeDashboard() {
     setLoadingPhase('Verifying Cloud Ingestion Cache...');
 
     try {
-      // Simulate quick phase telemetry for user feedback
       setTimeout(() => setLoadingPhase('Analyzing Multimodal Audio & Frames...'), 800);
-      setTimeout(() => setLoadingPhase('Gemini 3.8 Flash Synthesizing Recipe...'), 1800);
+      setTimeout(() => setLoadingPhase('Gemini 3.8 Flash Synthesizing Intelligence...'), 1800);
 
       const response = await fetch('/api/v1/extract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: targetUrl }),
+        body: JSON.stringify({
+          video_url: targetUrl,
+          url: targetUrl,
+          domain_hint: selectedDomain,
+        }),
       });
 
       if (!response.ok) {
@@ -110,12 +186,22 @@ function RecipeDashboard() {
         throw new Error(errData.detail || 'Extraction failed. Please check the URL.');
       }
 
-      const data = await response.json();
-      setResult(data);
+      const initialData = await response.json();
+      let finalData: any = null;
+
+      // Handle async polling if job was enqueued (HTTP 202)
+      if (initialData.poll_url && initialData.status === 'queued') {
+        setLoadingPhase('Worker Processing Multimodal Stream...');
+        finalData = await pollExtractionStatus(initialData.poll_url);
+      } else {
+        finalData = initialData.data || initialData;
+      }
+
+      setResult(finalData);
       setQuotaRemaining((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Unable to complete recipe extraction.');
+      setError(err.message || 'Unable to complete intelligence extraction.');
     } finally {
       setIsLoading(false);
       setLoadingPhase('Ready');
@@ -123,10 +209,25 @@ function RecipeDashboard() {
   };
 
   const sampleUrls = [
-    { label: 'Butter Chicken Reel', url: 'https://www.instagram.com/reel/C8ButterChickenSample/' },
-    { label: 'Crispy Smashed Potatoes', url: 'https://www.tiktok.com/@chef/video/738291040182' },
-    { label: '10-Min Garlic Noodles', url: 'https://youtube.com/shorts/GarlicNoodlesSample' },
+    { label: '🍳 Butter Chicken Reel', url: 'https://www.instagram.com/reel/C8ButterChickenSample/', domain: 'recipe' },
+    { label: '🏋️ 6 Core Bodyweight Workout', url: 'https://www.youtube.com/shorts/65QnIrbBBWs', domain: 'fitness_workout' },
+    { label: '💻 Quick Python Tips Short', url: 'https://www.youtube.com/shorts/KrFDs2M_FSE', domain: 'tech_diy' },
+    { label: '🛍️ Viral Kitchen Slicer Find', url: 'https://www.instagram.com/reel/C7KitchenSlicerSample/', domain: 'kitchen_product' },
   ];
+
+  const handleShareWhatsApp = () => {
+    if (!result) return;
+    const title = result.title || result.recipe_title || 'Universal AI Extraction';
+    const summary = result.summary || '';
+    const shareText = `⚡ *${title}* via Universal Pro AI\n\n${summary}\n\nExtracted with https://universal-pro-ai.vercel.app`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -149,6 +250,8 @@ function RecipeDashboard() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -164,7 +267,7 @@ function RecipeDashboard() {
                 boxShadow: '0 0 15px rgba(16, 185, 129, 0.4)',
               }}
             >
-              <ChefHat size={20} color="#FFFFFF" />
+              <Zap size={20} color="#FFFFFF" />
             </div>
             <div>
               <span style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
@@ -179,7 +282,7 @@ function RecipeDashboard() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             {/* Tiered Quota Badge */}
             <div
               style={{
@@ -209,14 +312,14 @@ function RecipeDashboard() {
               <span>Creator Tags</span>
             </button>
 
-            {/* Vault Library Button */}
+            {/* Intelligence Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
               className="btn-ghost"
               style={{ padding: '0.45rem 0.85rem' }}
             >
               <BookOpen size={16} color="var(--accent-emerald)" />
-              <span>Recipe Vault</span>
+              <span>Intelligence Vault</span>
             </button>
 
             {/* Upgrade to Pro Button */}
@@ -237,7 +340,7 @@ function RecipeDashboard() {
                 fontSize: '0.8rem',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)'
+                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)',
               }}
             >
               <Sparkles size={14} />
@@ -264,7 +367,7 @@ function RecipeDashboard() {
           >
             <Sparkles size={14} color="var(--accent-emerald)" />
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#34D399' }}>
-              Sub-3s Social Extraction • Native Web Share PWA
+              Sub-3s Universal AI • Multi-Genre Multimodal Engine
             </span>
           </div>
 
@@ -277,25 +380,71 @@ function RecipeDashboard() {
               letterSpacing: '-0.03em',
             }}
           >
-            Turn Any Cooking Video into a <br />
-            <span className="gradient-text">Structured Recipe & Pantry Cart</span>
+            Universal Reel & Shorts <br />
+            <span className="gradient-text">AI Intelligence Extractor</span>
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto' }}>
-            Paste any Instagram Reel, TikTok, or YouTube Short. Universal Pro AI extracts verified
-            ingredients, scales serving yields, and links direct checkout in seconds.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '680px', margin: '0 auto' }}>
+            Turn any Instagram Reel or YouTube Short into structured step-by-step recipes, workout
+            routines, code tutorials, and monetized shoppable product links — in under 3 seconds.
           </p>
         </div>
 
-        {/* Input Bar Card */}
+        {/* Input Bar Card with Domain Selector */}
         <div
           className="glass-panel"
           style={{
-            maxWidth: '780px',
+            maxWidth: '820px',
             margin: '0 auto 1.5rem',
-            padding: '0.75rem',
+            padding: '1rem',
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
           }}
         >
+          {/* Domain Selector Bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.75rem',
+              paddingBottom: '0.65rem',
+              borderBottom: '1px solid var(--border-subtle)',
+              flexWrap: 'wrap',
+              gap: '0.5rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                🎯 Content Domain:
+              </span>
+              <select
+                value={selectedDomain}
+                onChange={(e) => setSelectedDomain(e.target.value)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {DOMAIN_OPTIONS.map((d) => (
+                  <option key={d.id} value={d.id} style={{ background: '#0F172A', color: '#F8FAFC' }}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: '#6EE7B7' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 6px #10B981' }}></span>
+              <span>Gemini 3.8 Flash Active</span>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {platformInfo && (
               <span
@@ -314,7 +463,7 @@ function RecipeDashboard() {
             )}
             <input
               type="text"
-              placeholder="Paste Instagram Reel, TikTok, or YouTube Short link..."
+              placeholder="Paste Instagram Reel, TikTok, or YouTube Short link (e.g. https://...)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleExtract()}
@@ -340,14 +489,14 @@ function RecipeDashboard() {
                 </>
               ) : (
                 <>
-                  <span>Extract Recipe</span>
+                  <span>Extract Intelligence</span>
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
           </div>
 
-          {/* Quick Sample Chips */}
+          {/* Quick Sample Chips across multiple domains */}
           <div
             style={{
               display: 'flex',
@@ -365,6 +514,7 @@ function RecipeDashboard() {
                 key={idx}
                 onClick={() => {
                   setUrl(s.url);
+                  setSelectedDomain(s.domain);
                   handleExtract(s.url);
                 }}
                 className="btn-ghost"
@@ -381,7 +531,7 @@ function RecipeDashboard() {
           <div
             className="glass-panel"
             style={{
-              maxWidth: '780px',
+              maxWidth: '820px',
               margin: '0 auto 2rem',
               padding: '1.25rem',
               textAlign: 'center',
@@ -393,7 +543,7 @@ function RecipeDashboard() {
               <span style={{ fontWeight: 600, color: 'var(--accent-emerald)' }}>{loadingPhase}</span>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
-              Powered by Google Gemini 3.8 Flash • Sub-3s turnaround SLA
+              Powered by Google Gemini 3.8 Flash • Sub-3s SLA with instant fallback
             </p>
           </div>
         )}
@@ -403,7 +553,7 @@ function RecipeDashboard() {
           <div
             className="glass-panel"
             style={{
-              maxWidth: '780px',
+              maxWidth: '820px',
               margin: '0 auto 2rem',
               padding: '1rem 1.25rem',
               border: '1px solid rgba(255, 65, 108, 0.4)',
@@ -418,7 +568,104 @@ function RecipeDashboard() {
           </div>
         )}
 
-        {/* Extraction Results: Dual Column Media & Structured Recipe View */}
+        {/* Platform Superpowers Showcase (Displayed when no active extraction) */}
+        {!result && !isLoading && (
+          <div style={{ maxWidth: '980px', margin: '2.5rem auto 0' }}>
+            <h2
+              style={{
+                fontSize: '1rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: 'var(--text-secondary)',
+                textAlign: 'center',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <Sparkles size={16} color="var(--accent-emerald)" />
+              <span>Platform Superpowers</span>
+            </h2>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '1rem',
+              }}
+            >
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                  <Globe size={20} color="#38BDF8" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Universal Stream Parsing</h3>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  Seamless ingestion of Instagram Reels, YouTube Shorts, and TikTok with high-res auto-resolution.
+                </p>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                  <Cpu size={20} color="#A78BFA" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Multimodal Neural Vision</h3>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  Simultaneously analyzes video frames, on-screen text, audio transcripts & voiceovers.
+                </p>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                  <ShoppingBag size={20} color="#F472B6" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Shoppable Product Links</h3>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  Identifies cookware, fitness gear, gadgets & ingredients with instant 1-click buy tags.
+                </p>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                  <MessageSquare size={20} color="#34D399" />
+                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Instant WhatsApp Sync</h3>
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                  Direct delivery of clean, formatted intelligence notes straight to your phone.
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Telemetry Badges */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '1rem',
+                marginTop: '1.75rem',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                ⚡ ~2.4s AI Turnaround
+              </span>
+              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                💎 Gemini 3.8 Flash & Groq Fallback
+              </span>
+              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                🛒 Amazon & Flipkart Monetized Tags
+              </span>
+              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+                📲 1-Click WhatsApp Share
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Extraction Results: Multi-Genre Responsive View */}
         {result && (
           <div
             style={{
@@ -428,26 +675,32 @@ function RecipeDashboard() {
               marginTop: '1.5rem',
             }}
           >
-            {/* Left Column: Docked Media Player & Meta telemetry */}
+            {/* Left Column: Docked Media Player & Domain Telemetry */}
             <div>
               <div className="glass-panel" style={{ padding: '1rem', overflow: 'hidden' }}>
-                <h3
+                <div
                   style={{
-                    fontSize: '0.85rem',
-                    color: 'var(--text-secondary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '0.75rem',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    marginBottom: '0.75rem',
                   }}
                 >
-                  <span>Single-Docked Media Player</span>
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: 'var(--text-secondary)',
+                    }}
+                  >
+                    Single-Docked Media Player
+                  </span>
                   {result.cached && (
                     <span className="badge-pill badge-emerald">⚡ Instant Cache Hit</span>
                   )}
-                </h3>
+                </div>
 
                 {/* Video / Media Display */}
                 {result.media_url ? (
@@ -466,7 +719,7 @@ function RecipeDashboard() {
                 ) : (
                   <div
                     style={{
-                      height: '340px',
+                      height: '320px',
                       background: 'rgba(0, 0, 0, 0.4)',
                       borderRadius: 'var(--radius-sm)',
                       display: 'flex',
@@ -495,50 +748,110 @@ function RecipeDashboard() {
                 >
                   <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
                     <Clock size={16} color="var(--accent-emerald)" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Cook Time</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Duration</div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                      {result.cooking_time || result.prep_time || '15 mins'}
+                      {result.cooking_time || result.prep_time || 'Short Form'}
                     </div>
                   </div>
 
                   <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
                     <Flame size={16} color="var(--accent-amber)" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Dish Type</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Domain</div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                      {result.dish_type || 'Main Course'}
+                      {result.category || result.dish_type || 'Intelligence'}
                     </div>
                   </div>
 
                   <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
                     <ShieldCheck size={16} color="#06B6D4" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Verified</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>AI Model</div>
                     <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#06B6D4' }}>
                       Gemini 3.8
                     </div>
                   </div>
                 </div>
+
+                {/* Quick Action Share Buttons */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button
+                    onClick={handleShareWhatsApp}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      background: '#25D366',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <MessageSquare size={14} />
+                    <span>WhatsApp</span>
+                  </button>
+
+                  <button
+                    onClick={handleCopyLink}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {copiedLink ? <Check size={14} color="#34D399" /> : <Share2 size={14} />}
+                    <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Right Column: Recipe Details & Serving Scaler */}
+            {/* Right Column: Structured Intelligence Guide & Products */}
             <div>
               <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-                  {result.recipe_title || result.title || 'Extracted Social Recipe'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span className="badge-pill badge-emerald" style={{ fontSize: '0.7rem' }}>
+                    {result.category || 'UNIVERSAL INTELLIGENCE'}
+                  </span>
+                </div>
+
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                  {result.title || result.recipe_title || 'Extracted Social Intelligence'}
                 </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                  Adjust serving yield to dynamically scale ingredients and cart links.
-                </p>
 
-                {/* Serving Scaler Component */}
-                <ServingAdjuster
-                  initialServings={result.servings || 2}
-                  ingredients={result.ingredients || []}
-                  recipeTitle={result.recipe_title || result.title || 'Recipe'}
-                />
+                {result.summary && (
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                    {result.summary}
+                  </p>
+                )}
 
-                {/* Step-by-Step Instructions */}
-                <div style={{ marginTop: '1.5rem' }}>
+                {/* Recipe-Specific: Serving Scaler if Ingredients exist */}
+                {result.ingredients && result.ingredients.length > 0 && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <ServingAdjuster
+                      initialServings={result.servings || 2}
+                      ingredients={result.ingredients}
+                      recipeTitle={result.title || result.recipe_title || 'Recipe'}
+                    />
+                  </div>
+                )}
+
+                {/* Step-by-Step Instructions / Workout Routines / Procedures */}
+                <div style={{ marginTop: '1.25rem' }}>
                   <h3
                     style={{
                       fontSize: '1rem',
@@ -550,7 +863,13 @@ function RecipeDashboard() {
                     }}
                   >
                     <CheckCircle2 size={18} color="var(--accent-emerald)" />
-                    <span>Preparation Method</span>
+                    <span>
+                      {result.category?.includes('FITNESS')
+                        ? 'Workout Routine & Form Steps'
+                        : result.category?.includes('TUTORIAL')
+                        ? 'Step-by-Step Tutorial Guide'
+                        : 'Method & Procedure'}
+                    </span>
                   </h3>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
@@ -584,20 +903,191 @@ function RecipeDashboard() {
                           >
                             {idx + 1}
                           </span>
-                          <p style={{ fontSize: '0.9rem', lineHeight: 1.4, color: 'var(--text-primary)' }}>
+                          <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)' }}>
                             {step}
                           </p>
                         </div>
                       ))
+                    ) : result.details ? (
+                      <div
+                        style={{
+                          padding: '0.85rem',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: '0.85rem',
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {result.details}
+                      </div>
                     ) : (
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Follow the video clip for exact cooking steps.
+                        Follow the video clip for exact step-by-step guidance.
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* Chef Tips if present */}
+                {/* Shoppable Products & Gadgets Section */}
+                {result.products && result.products.length > 0 && (
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <h3
+                      style={{
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        marginBottom: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <ShoppingCart size={18} color="#F472B6" />
+                      <span>Featured Products & 1-Click Buy Links</span>
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                      {result.products.map((p, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '0.75rem',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-subtle)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {p.name}
+                            </span>
+                            {p.price && (
+                              <div style={{ fontSize: '0.75rem', color: '#34D399', marginTop: '0.2rem' }}>
+                                {p.price}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.65rem' }}>
+                            <a
+                              href={
+                                p.links?.amazon ||
+                                `https://www.amazon.in/s?k=${encodeURIComponent(p.search_query || p.name)}&tag=manasdas11155-21`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                flex: 1,
+                                textAlign: 'center',
+                                padding: '0.3rem 0.5rem',
+                                background: 'rgba(255, 153, 0, 0.15)',
+                                color: '#FF9900',
+                                border: '1px solid rgba(255, 153, 0, 0.3)',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                              }}
+                            >
+                              Amazon
+                            </a>
+                            <a
+                              href={
+                                p.links?.flipkart ||
+                                `https://www.flipkart.com/search?q=${encodeURIComponent(p.search_query || p.name)}`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                flex: 1,
+                                textAlign: 'center',
+                                padding: '0.3rem 0.5rem',
+                                background: 'rgba(40, 116, 240, 0.15)',
+                                color: '#60A5FA',
+                                border: '1px solid rgba(40, 116, 240, 0.3)',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                              }}
+                            >
+                              Flipkart
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Educational / Tutorial Resources if present */}
+                {result.resources && result.resources.length > 0 && (
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <h3
+                      style={{
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        marginBottom: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <BookOpen size={18} color="#38BDF8" />
+                      <span>Recommended Learning Resources</span>
+                    </h3>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {result.resources.map((resItem, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '0.65rem 0.85rem',
+                            background: 'rgba(56, 189, 248, 0.05)',
+                            border: '1px solid rgba(56, 189, 248, 0.2)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                              {resItem.name}
+                            </span>
+                            {resItem.platform && (
+                              <span style={{ fontSize: '0.72rem', color: '#38BDF8', marginLeft: '0.5rem' }}>
+                                ({resItem.platform})
+                              </span>
+                            )}
+                          </div>
+                          <a
+                            href={`https://www.youtube.com/results?search_query=${encodeURIComponent(resItem.search_query || resItem.name)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '0.25rem 0.55rem',
+                              background: 'rgba(255, 0, 0, 0.15)',
+                              color: '#FF6B6B',
+                              border: '1px solid rgba(255, 0, 0, 0.3)',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                            }}
+                          >
+                            Watch
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Secret Tip / Expert Advice */}
                 {result.chef_tips && result.chef_tips.length > 0 && (
                   <div
                     style={{
@@ -609,7 +1099,7 @@ function RecipeDashboard() {
                     }}
                   >
                     <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#FCD34D' }}>
-                      💡 Chef Secret Tip:
+                      💡 Expert Secret Tip:
                     </span>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: '0.25rem' }}>
                       {result.chef_tips[0]}
@@ -622,7 +1112,7 @@ function RecipeDashboard() {
         )}
       </main>
 
-      {/* Slide-out Vault Library Drawer */}
+      {/* Slide-out Intelligence Vault Library Drawer */}
       <VaultLibrary
         isOpen={isVaultOpen}
         onClose={() => setIsVaultOpen(false)}
@@ -665,7 +1155,7 @@ export default function HomePage() {
         </div>
       }
     >
-      <RecipeDashboard />
+      <UniversalDashboard />
     </Suspense>
   );
 }

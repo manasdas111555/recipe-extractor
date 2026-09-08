@@ -11,7 +11,7 @@ import logging
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.app.services.quota_service import get_quota_manager
 from backend.app.core.security import get_current_user, check_anonymous_rate_limit
@@ -28,6 +28,14 @@ class ExtractRequest(BaseModel):
     video_url: str = Field(..., description="Public video URL from Instagram, YouTube Shorts, or TikTok")
     preferred_language: Optional[str] = Field("en", description="Target output language code (e.g., 'en', 'hi', 'es')")
     domain_hint: Optional[str] = Field("auto", description="Domain classification hint: 'auto', 'recipe', 'kitchen_product', 'tech_diy', 'fitness_workout'")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_url_payload(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "url" in data and ("video_url" not in data or not data.get("video_url")):
+                data["video_url"] = data["url"]
+        return data
 
     @field_validator("video_url")
     @classmethod
