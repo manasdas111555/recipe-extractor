@@ -523,36 +523,7 @@ function UniversalDashboard() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {/* Tiered Quota Badge */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid var(--border-subtle)',
-                padding: '0.35rem 0.75rem',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.75rem',
-              }}
-            >
-              <Zap size={13} color="var(--accent-emerald)" />
-              <span style={{ color: 'var(--text-secondary)' }}>Daily Quota:</span>
-              <strong style={{ color: 'var(--accent-emerald)' }}>{quotaRemaining} left</strong>
-            </div>
-
-            {/* Creator Vault Button */}
-            <button
-              onClick={() => setIsCreatorVaultOpen(true)}
-              className="btn-ghost"
-              style={{ padding: '0.45rem 0.85rem' }}
-              title="Configure Personal Amazon & EarnKaro Affiliate Tags"
-            >
-              <Share2 size={15} color="var(--accent-emerald)" />
-              <span>Creator Tags</span>
-            </button>
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             {/* Intelligence Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
@@ -561,31 +532,6 @@ function UniversalDashboard() {
             >
               <BookOpen size={16} color="var(--accent-emerald)" />
               <span>Intelligence Vault</span>
-            </button>
-
-            {/* Upgrade to Pro Button */}
-            <button
-              onClick={() => {
-                setUpgradeReason('');
-                setIsUpgradeModalOpen(true);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                backgroundColor: '#10B981',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: 'var(--radius-full)',
-                padding: '0.45rem 0.95rem',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 2px 10px rgba(16, 185, 129, 0.35)',
-              }}
-            >
-              <Sparkles size={14} />
-              <span>Upgrade Pro</span>
             </button>
           </div>
         </div>
