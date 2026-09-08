@@ -51,11 +51,13 @@ This document details:
 
 | Component | Platform / Host | Access URL / Identifier | Purpose |
 | :--- | :--- | :--- | :--- |
-| **Production UI** | Streamlit Community Cloud | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | Customer-facing extraction web app |
+| **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
+| **Production UI (Fallback)** | Streamlit Community Cloud | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | Customer-facing extraction web app |
 | **Staging UI** | Streamlit Community Cloud | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Pre-production testing sandbox |
 | **FastAPI Backend** | Local / Docker Daemon | `http://localhost:8000` (`/docs`, `/health`, `/api/v1/auth/me`) | Decoupled API Gateway for bots and PWAs |
 | **Database** | Supabase (AWS Mumbai) | `https://scrqvbgjybnrvcpxbygf.supabase.co` | Multi-tenant PostgreSQL database with RLS |
-| **CI/CD Quality Gate**| GitHub Actions | Repository Actions Workflow (`ci.yml`) | Automated Python 3.10/3.11 test runner (45 tests) |
+| **Keep-Alive Engine** | GitHub Actions Workflow | `.github/workflows/keep_alive.yml` | 6-hour cron ping preventing container hibernation |
+| **CI/CD Quality Gate**| GitHub Actions | Repository Actions Workflow (`ci.yml`) | Automated Python 3.10/3.11 test runner (150 tests) |
 
 ---
 
@@ -221,6 +223,53 @@ Update the key in your local `.env` file.
    - Click **Settings** $\rightarrow$ **Secrets**.
    - Update the key and click **Save**.
    - Streamlit Cloud hot-reloads the new key instantly without downtime.
+
+---
+
+### 📘 Runbook 6: Oracle Cloud Compute Node Failure & Reprovisioning
+**Symptom**: The primary production server (`140.245.214.28`) becomes unresponsive via SSH or HTTP.
+
+#### Step 1: Check Instance State in OCI Console
+1. Log into [cloud.oracle.com](https://cloud.oracle.com/).
+2. Navigate to **Compute** $\rightarrow$ **Instances** $\rightarrow$ select `universal-pro-ai-instance`.
+3. If instance is stopped: click **Start**.
+4. If instance is frozen: click **More actions** $\rightarrow$ **Reboot**.
+
+#### Step 2: Container Recovery (1 Minute)
+If server OS is healthy but web API is down:
+```bash
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28
+cd recipe-extractor
+docker compose restart
+docker compose ps
+```
+
+#### Step 3: Complete Node Reprovisioning (Under 5 Minutes)
+If the virtual machine was completely corrupted or terminated:
+1. Follow [`ORACLE_CLOUD_DEPLOYMENT.md`](ORACLE_CLOUD_DEPLOYMENT.md) to launch a new `Canonical Ubuntu 24.04` instance in `universalpro-ai-vcn`.
+2. Connect to the new IP and run the one-time server bootstrap:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   curl -fsSL https://get.docker.com | sudo sh
+   sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+   git clone https://github.com/manasdas111555/recipe-extractor.git
+   cd recipe-extractor && nano .env && docker compose up -d --build
+   ```
+3. Update DNS / frontend backend proxy to the new IP. (RTO: $\le 5$ minutes).
+
+---
+
+### 📘 Runbook 7: Streamlit Cloud Sleep / Hibernation Failover
+**Symptom**: Streamlit app displays `"Zzzz This app has gone to sleep due to inactivity"`.
+
+#### Step 1: Immediate Manual Wakeup
+1. Click the button on screen: **"Yes, get this app back up"**.
+2. Or trigger the keep-alive workflow manually from GitHub:
+   - Go to `https://github.com/manasdas111555/recipe-extractor/actions/workflows/keep_alive.yml`.
+   - Click **Run workflow** $\rightarrow$ select branch `main` $\rightarrow$ click **Run workflow**.
+
+#### Step 2: Permanent Fix
+Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http://140.245.214.28`), which has zero hibernation timeouts.
 
 ---
 

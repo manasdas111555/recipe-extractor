@@ -18,6 +18,13 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-006** | 2026-09-05 | Streamlit UI | HTML buttons rendered as raw code block text `<pre><code>` | ✅ Resolved |
 | **ISSUE-007** | 2026-09-05 | Cloud Deployment | `ImportError: cannot import name 'get_video_from_url'` on Streamlit Cloud | ✅ Resolved |
 | **ISSUE-008** | 2026-09-05 | Cloud Deployment | Custom subdomain error: "can't include the term 'staging'" on Streamlit Cloud | ✅ Resolved |
+| **ISSUE-009** | 2026-09-07 | Cloud Uptime | Streamlit Cloud sleep timeout ("Zzzz This app has gone to sleep due to inactivity") | ✅ Resolved |
+| **ISSUE-010** | 2026-09-08 | DNS & Domain | Hostinger domain `mpdtech.in` suspended due to NIXI registry KYC audit | ✅ Resolved |
+| **ISSUE-011** | 2026-09-08 | Cloud Provisioning| Oracle Cloud image architecture incompatibility warning (`aarch64` vs `x86`) | ✅ Resolved |
+| **ISSUE-012** | 2026-09-08 | Cloud Networking | Oracle Cloud public IPv4 toggle locked in VM wizard due to unattached Internet Gateway | ✅ Resolved |
+| **ISSUE-013** | 2026-09-08 | Cloud Compute | Oracle Cloud Ampere A1 ARM host out-of-capacity error in availability domain AD-1 | ✅ Resolved |
+| **ISSUE-014** | 2026-09-08 | Cloud Console | Oracle API rate limit ("Too many requests for the user") during instance creation | ✅ Resolved |
+| **ISSUE-015** | 2026-09-08 | Security & SSH | Windows OpenSSH private key rejected: "bad permissions / key is too open" | ✅ Resolved |
 
 ---
 
@@ -264,10 +271,150 @@ Entering `universalpro-stage` or `universalpro-beta` satisfies Streamlit's subdo
 
 ---
 
+### 🚨 ISSUE-009: Streamlit Community Cloud Sleep Timeout / Hibernation
+- **Date**: 2026-09-07
+- **Affected Environments**: `manas-recipe-extractor.streamlit.app`, `universalpro-stage.streamlit.app`
+
+#### 1. What Happened (Symptom):
+When accessing the live or staging web application after periods of zero traffic, visitors were greeted with an asleep screen:
+```text
+Zzzz This app has gone to sleep due to inactivity.
+```
+Clicking "Yes, get this app back up" took 45 to 90 seconds to reboot the container.
+
+#### 2. Root Cause:
+Streamlit Community Cloud is designed as a free tier that automatically hibernates inactive apps after prolonged periods of zero HTTP requests to conserve platform container resources.
+
+#### 3. Resolution (Code Changes):
+1. **Automated Health Pinger (`scripts/keep_alive.py`)**: Built an automated Python probe that issues periodic HTTP HEAD/GET requests with custom browser user-agent headers and exponential backoff.
+2. **GitHub Actions Scheduled Keep-Alive Workflow (`.github/workflows/keep_alive.yml`)**: Configured a GitHub Actions cron trigger running every 6 hours (`0 */6 * * *`) that executes `keep_alive.py`, ensuring containers never enter dormancy.
+
+---
+
+### 🚨 ISSUE-010: Hostinger Domain `mpdtech.in` Suspended Due to NIXI KYC Audit
+- **Date**: 2026-09-08
+- **Affected Services**: Custom domain resolution on Hostinger
+
+#### 1. What Happened (Symptom):
+The domain `mpdtech.in` displayed a red `Suspended` badge with a lock icon in the Hostinger control panel despite active registration paid through February 2027.
+
+#### 2. Root Cause:
+The National Internet Exchange of India (NIXI), which governs the `.IN` top-level domain registry, initiated a mandatory registrant contact KYC compliance verification. Domains not verified via government ID within the regulatory window are placed in `ClientHold / Suspended` status.
+
+#### 3. Resolution:
+Decoupled SaaS production deployment from the suspended domain. Chose to route traffic directly through Oracle Cloud's permanent static public IP (`140.245.214.28`) and Vercel's global CDN (`*.vercel.app`), enabling instant production deployment without waiting days for NIXI ticket clearance.
+
+---
+
+### 🚨 ISSUE-011: Oracle Cloud OS Image Architecture Incompatibility (`aarch64` vs `x86`)
+- **Date**: 2026-09-08
+- **Affected Component**: Oracle Cloud Infrastructure Instance Creation Wizard
+
+#### 1. What Happened (Symptom):
+When selecting the Ubuntu OS image, Oracle displayed an amber warning banner:
+```text
+Warning: This image has no compatible image builds for the current shape. If you select this image, a compatible shape and image build will be selected.
+```
+
+#### 2. Root Cause:
+The user selected `Canonical Ubuntu 24.04 Minimal aarch64`, which compiles specifically for 64-bit ARM processors, whereas the instance wizard had defaulted to an x86 AMD compute shape.
+
+#### 3. Resolution:
+Selected standard `Canonical Ubuntu 24.04` (x86_64 compatible), immediately clearing the architecture conflict.
+
+---
+
+### 🚨 ISSUE-012: Oracle Cloud Public IPv4 Toggle Locked in VM Wizard
+- **Date**: 2026-09-08
+- **Affected Component**: Oracle Virtual Cloud Network (VCN) Subnet Configuration
+
+#### 1. What Happened (Symptom):
+In the Compute Instance creation wizard, the toggle for *"Automatically assign public IPv4 address"* was disabled with warning:
+```text
+Warning: You must select a public subnet to assign a public IPv4 address.
+```
+
+#### 2. Root Cause:
+Creating a VCN inline within the VM Instance creation screen fails to attach an Internet Gateway and route table entry (`0.0.0.0/0` $\rightarrow$ `IGW`) before the subnet is saved, causing Oracle to treat the new subnet as private.
+
+#### 3. Resolution:
+1. Opened **Networking** $\rightarrow$ **Virtual Cloud Networks** in a separate browser tab.
+2. Executed **Start VCN Wizard** $\rightarrow$ **Create VCN with Internet Connectivity** (`universalpro-ai-vcn`).
+3. Returned to the VM creation tab and selected `universalpro-ai-vcn` and its public subnet. The warning cleared instantly and the public IP toggle enabled automatically.
+
+---
+
+### 🚨 ISSUE-013: Oracle Cloud Ampere A1 Host Capacity Shortage (AD-1)
+- **Date**: 2026-09-08
+- **Affected Component**: Oracle Cloud Compute Shape Provisioning
+
+#### 1. What Happened (Symptom):
+Clicking Create Instance for shape `VM.Standard.A1.Flex` (4 core OCPU, 24 GB RAM) failed with:
+```text
+API Error: Out of capacity for shape VM.Standard.A1.Flex in availability domain AD-1. Create the instance in a different availability domain or try again later.
+```
+
+#### 2. Root Cause:
+Physical 4-core Ampere ARM hardware hosts were fully allocated in the `ap-hyderabad-1` data center due to high regional demand for Always Free tier ARM compute.
+
+#### 3. Resolution:
+1. Switched shape to the high-availability AMD Always Free tier: **`VM.Standard.E2.1.Micro`** (1 OCPU, 1 GB RAM).
+2. Provisioned a **2 GB Linux Virtual Swap File** (`/swapfile`) on the Ubuntu filesystem, expanding effective memory to 3 GB to comfortably run FastAPI, Celery workers, and Redis without memory exhaustion.
+
+---
+
+### 🚨 ISSUE-014: Oracle Console API Rate Limiter
+- **Date**: 2026-09-08
+- **Affected Component**: Oracle Cloud Web Console / OCI API
+
+#### 1. What Happened (Symptom):
+Clicking the Create button in rapid succession returned:
+```text
+API Error: Too many requests for the user
+```
+
+#### 2. Root Cause:
+OCI enforces an anti-spam rate limit on instance creation API endpoints when requests fail repeatedly within a short time frame.
+
+#### 3. Resolution:
+Enforced a 60-second cooldown period before retrying. Once the rate limit window reset, the request succeeded immediately.
+
+---
+
+### 🚨 ISSUE-015: Windows OpenSSH Key File Rejected ("Key is Too Open")
+- **Date**: 2026-09-08
+- **Affected Component**: Windows PowerShell OpenSSH Client
+
+#### 1. What Happened (Symptom):
+Attempting to connect to the cloud server via `ssh -i ssh-key-2026-09-08.key ubuntu@140.245.214.28` failed with:
+```text
+WARNING: UNPROTECTED PRIVATE KEY FILE!
+Permissions for 'ssh-key-2026-09-08.key' are too open.
+It is required that your private key files are NOT accessible by others.
+Load key "ssh-key-2026-09-08.key": bad permissions
+ubuntu@140.245.214.28: Permission denied (publickey).
+```
+
+#### 2. Root Cause:
+Windows NTFS file inheritance granted read permissions to user groups (`NT AUTHORITY\Authenticated Users`, `BUILTIN\Users`, `BUILTIN\Administrators`). OpenSSH strictly mandates that private keys be readable exclusively by the owner.
+
+#### 3. Resolution:
+Used the Windows `icacls` command-line utility to break inheritance and revoke all access except for the active user:
+```powershell
+icacls "ssh-key-2026-09-08.key" /inheritance:r
+icacls "ssh-key-2026-09-08.key" /grant:r "$($env:USERNAME):(R)"
+icacls "ssh-key-2026-09-08.key" /remove "NT AUTHORITY\Authenticated Users"
+icacls "ssh-key-2026-09-08.key" /remove "BUILTIN\Users"
+icacls "ssh-key-2026-09-08.key" /remove "BUILTIN\Administrators"
+```
+Re-running `ssh` authenticated and logged into the server immediately.
+
+---
+
 ## 📌 Standard Protocol for Logging Future Issues
 
 Whenever a new bug or unexpected behavior occurs:
-1. **Add an entry to the Table of Issues** with an incremented ID (`ISSUE-008`, `ISSUE-009`, etc.).
+1. **Add an entry to the Table of Issues** with an incremented ID (`ISSUE-016`, etc.).
 2. **Document the 4 Core Sections**:
    - **What Happened (Symptom)**
    - **Root Cause**
