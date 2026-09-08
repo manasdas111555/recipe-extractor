@@ -145,6 +145,16 @@ During the cloud deployment process, several real-world cloud engineering challe
   ```
   SSH connection succeeded immediately on the next attempt.
 
+### Issue 7: SSH Connection Reset Silently Drops to Local PowerShell
+- **Symptom**: During interactive bash `.env` creation on the server, the SSH socket reset (`client_loop: send disconnect: Connection reset`), dropping the prompt back to local Windows PowerShell (`PS D:\...`). Pasting bash multi-line commands into PowerShell produced redirection syntax errors.
+- **Root Cause**: Transient socket timeout between client and cloud VM, combined with syntax differences between POSIX bash and Windows PowerShell.
+- **Resolution**: Used automated `scp` with the private key to transfer `.env` directly from the local workspace to `~/recipe-extractor/.env` on the server in 2 seconds, eliminating interactive typing hazards.
+
+### Issue 8: Python 3.11 Runtime `NameError: name 'Any' is not defined`
+- **Symptom**: `universalpro-api` crashed repeatedly on container boot with `NameError: name 'Any' is not defined` in `backend/app/services/quota_service.py:135`.
+- **Root Cause**: Missing `Any` from `typing` module imports (`from typing import Tuple, Dict, Optional`). Evaluated eagerly during class loading in Python 3.11 inside Docker.
+- **Resolution**: Added `Any` to `backend/app/services/quota_service.py`, committed to git, ran `git pull origin main` on the server, and rebuilt the API and worker containers via `docker compose up -d --build api worker`.
+
 ---
 
 ## 💻 Server Bootstrap & Docker Deployment

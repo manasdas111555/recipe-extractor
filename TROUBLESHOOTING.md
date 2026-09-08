@@ -25,6 +25,8 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-013** | 2026-09-08 | Cloud Compute | Oracle Cloud Ampere A1 ARM host out-of-capacity error in availability domain AD-1 | ✅ Resolved |
 | **ISSUE-014** | 2026-09-08 | Cloud Console | Oracle API rate limit ("Too many requests for the user") during instance creation | ✅ Resolved |
 | **ISSUE-015** | 2026-09-08 | Security & SSH | Windows OpenSSH private key rejected: "bad permissions / key is too open" | ✅ Resolved |
+| **ISSUE-016** | 2026-09-08 | Remote Operations | SSH connection reset silently drops to local PowerShell during `.env` creation | ✅ Resolved |
+| **ISSUE-017** | 2026-09-08 | Docker Runtime | `NameError: name 'Any' is not defined` in `quota_service.py` on Python 3.11 | ✅ Resolved |
 
 ---
 
@@ -411,10 +413,83 @@ Re-running `ssh` authenticated and logged into the server immediately.
 
 ---
 
+### 🚨 ISSUE-016: SSH Session Timeout / Disconnect Silently Resets Terminal to Local PowerShell
+- **Date**: 2026-09-08
+- **Affected Environment**: Windows Terminal / PowerShell SSH Session
+
+#### 1. What Happened (Symptom):
+While creating the server `.env` file, the SSH connection closed unexpectedly with:
+```text
+client_loop: send disconnect: Connection reset
+PS D:\Personal Projects\New folder>
+```
+When the user pasted a multi-line bash command (`cat << 'EOF' > .env`), Windows PowerShell executed the text locally and threw syntax errors:
+```powershell
+Missing file specification after redirection operator.
+The '<' operator is reserved for future use.
+GEMINI_API_KEY=... : The term 'GEMINI_API_KEY=...' is not recognized as the name of a cmdlet...
+```
+
+#### 2. Root Cause:
+The remote SSH socket experienced an idle timeout or connection reset from the network router. Because the terminal prompt changed from `ubuntu@universal-pro-ai-vnic:~$` back to `PS D:\...>`, the user unknowingly executed bash-specific commands inside native Windows PowerShell.
+
+#### 3. Resolution:
+1. Instead of manually pasting sensitive secrets in an interactive terminal session that might disconnect, we used **`scp`** directly from the local machine:
+   ```powershell
+   scp -i "D:\Personal Projects\New folder\ssh-key-2026-09-08.key" -o StrictHostKeyChecking=no "D:\Personal Projects\recipe-extractor\.env" ubuntu@140.245.214.28:~/recipe-extractor/.env
+   ```
+2. This transferred `.env` with atomic reliability in 2 seconds, with zero terminal copy-paste errors or clipboard leak.
+
+---
+
+### 🚨 ISSUE-017: Python 3.11 Runtime `NameError: name 'Any' is not defined` inside Docker
+- **Date**: 2026-09-08
+- **Affected Files**: `backend/app/services/quota_service.py`
+- **Affected Components**: Docker Container (`universalpro-api`, `universalpro-worker`)
+
+#### 1. What Happened (Symptom):
+When launching the Docker container stack via `docker compose up -d --build`, `universalpro-api` crashed repeatedly on startup. Inspecting container logs (`docker compose logs api`) revealed:
+```text
+File "/app/backend/app/services/quota_service.py", line 135, in QuotaManager
+    ) -> Dict[str, Any]:
+NameError: name 'Any' is not defined
+```
+
+#### 2. Root Cause:
+In `backend/app/services/quota_service.py`, the import statement was:
+```python
+from typing import Tuple, Dict, Optional
+```
+`Any` was missing from the import list. Under modern development environments (like Python 3.14 on Windows), deferred evaluation of type hints may mask this error at import time. However, in the production Docker image running Python 3.11, class definition methods evaluate type annotations at import time, triggering an immediate fatal `NameError`.
+
+#### 3. Resolution (Code Changes):
+Added `Any` to the typing imports in `backend/app/services/quota_service.py`:
+```python
+# Before
+from typing import Tuple, Dict, Optional
+
+# After
+from typing import Tuple, Dict, Optional, Any
+```
+
+#### 4. Testing & Verification:
+Rebuilt and restarted the containers on the Oracle Cloud server:
+```bash
+git pull origin main
+docker compose up -d --build api worker
+```
+Both `universalpro-api` and `universalpro-worker` started cleanly. 
+Health check confirmed HTTP 200 with all integrations verified:
+```json
+{"status":"healthy","service":"Universal Pro AI - API Gateway","version":"1.0.0","integrations":{"supabase":true,"gemini":true,"groq":true,"mistral":true}}
+```
+
+---
+
 ## 📌 Standard Protocol for Logging Future Issues
 
 Whenever a new bug or unexpected behavior occurs:
-1. **Add an entry to the Table of Issues** with an incremented ID (`ISSUE-016`, etc.).
+1. **Add an entry to the Table of Issues** with an incremented ID (`ISSUE-018`, etc.).
 2. **Document the 4 Core Sections**:
    - **What Happened (Symptom)**
    - **Root Cause**
