@@ -514,12 +514,6 @@ function UniversalDashboard() {
               <span style={{ fontSize: '1.15rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
                 UNIVERSAL <span className="gradient-text">PRO AI</span>
               </span>
-              <span
-                className="badge-pill badge-emerald"
-                style={{ marginLeft: '0.5rem', fontSize: '0.65rem' }}
-              >
-                v1.4 Flagship
-              </span>
             </div>
           </div>
 
