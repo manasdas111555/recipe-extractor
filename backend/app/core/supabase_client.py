@@ -92,6 +92,14 @@ class SupabaseRestClient:
             logger.error(f"Error incrementing quota for user {user_id}: {e}")
             return False
 
+    def save_extraction(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Alias for insert_extraction."""
+        return self.insert_extraction(payload)
+
+    def increment_daily_quota(self, user_id: str) -> bool:
+        """Alias for increment_user_quota."""
+        return self.increment_user_quota(user_id)
+
     def log_affiliate_click(self, click_data: Dict[str, Any]) -> bool:
         """Logs an affiliate click event into public.affiliate_clicks."""
         if not self.is_configured():
