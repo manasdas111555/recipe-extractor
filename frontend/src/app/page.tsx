@@ -27,6 +27,11 @@ import {
   Bookmark,
   Check,
   Copy,
+  Download,
+  FileText,
+  Video,
+  Send,
+  Smartphone,
 } from 'lucide-react';
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
@@ -101,6 +106,9 @@ function UniversalDashboard() {
   const [quotaRemaining, setQuotaRemaining] = useState<number>(10);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [copiedNotes, setCopiedNotes] = useState<boolean>(false);
+  const [downloadedTxt, setDownloadedTxt] = useState<boolean>(false);
+  const [waCountryCode, setWaCountryCode] = useState<string>('+91');
+  const [waPhoneNumber, setWaPhoneNumber] = useState<string>('');
 
   // Detect platform from URL
   const detectPlatform = (inputUrl: string) => {
@@ -304,12 +312,156 @@ function UniversalDashboard() {
     { label: '🛍️ Viral Kitchen Slicer Find', url: 'https://www.instagram.com/reel/C7KitchenSlicerSample/', domain: 'kitchen_product' },
   ];
 
-  const handleShareWhatsApp = () => {
+  const generateStructuredText = (meta: any, isWhatsApp = false): string => {
+    if (!meta) return '';
+    const title = meta.title || meta.recipe_title || 'Universal AI Extraction';
+    const category = (meta.category || meta.category_name || 'INTELLIGENCE').toUpperCase();
+
+    // Category emoji
+    let emoji = '⚡';
+    if (category.includes('RECIPE') || category.includes('COOK')) emoji = '🍳';
+    else if (category.includes('PRODUCT') || category.includes('UNBOX') || category.includes('GADGET')) emoji = '🛍️';
+    else if (category.includes('TUTORIAL') || category.includes('TECH') || category.includes('CODE')) emoji = '💻';
+    else if (category.includes('FITNESS') || category.includes('WORKOUT')) emoji = '🏋️';
+    else if (category.includes('BEAUTY') || category.includes('SKINCARE')) emoji = '✨';
+    else if (category.includes('TRAVEL')) emoji = '✈️';
+
+    const lines: string[] = [];
+
+    if (isWhatsApp) {
+      lines.push(`${emoji} *${title}*`);
+      lines.push(`_${meta.category || 'Universal AI'}_ • Extracted via Universal Pro AI\n`);
+    } else {
+      lines.push('==================================================');
+      lines.push(`${emoji} ${title} (${meta.category || 'Universal Intelligence'})`);
+      lines.push('==================================================\n');
+    }
+
+    // Summary
+    if (meta.summary) {
+      lines.push(isWhatsApp ? `📋 *Summary:*\n${meta.summary}\n` : `📋 Summary:\n${meta.summary}\n`);
+    }
+
+    // Ingredients (if available)
+    if (meta.ingredients && meta.ingredients.length > 0) {
+      lines.push(isWhatsApp ? `🥗 *Ingredients:*` : `==================================================\n🥗 Ingredients:\n==================================================`);
+      meta.ingredients.forEach((ing: any) => {
+        const qty = ing.quantity ? ` - ${ing.quantity}` : '';
+        const unit = ing.unit ? ` ${ing.unit}` : '';
+        lines.push(`• ${ing.name}${qty}${unit}`);
+      });
+      lines.push('');
+    }
+
+    // Instructions / Steps / Specifications
+    const secTitle = getSectionTitle(meta.category);
+    if (meta.instructions && meta.instructions.length > 0) {
+      lines.push(isWhatsApp ? `📝 *${secTitle}:*` : `==================================================\n📝 ${secTitle}:\n==================================================`);
+      meta.instructions.forEach((step: string, idx: number) => {
+        const cleanStep = isWhatsApp ? step.replace(/\*\*/g, '*') : step.replace(/\*\*/g, '');
+        lines.push(`${idx + 1}. ${cleanStep}`);
+      });
+      lines.push('');
+    } else if (meta.details || detailsText) {
+      const d = meta.details || detailsText;
+      lines.push(isWhatsApp ? `📝 *${secTitle}:*\n${d}\n` : `==================================================\n📝 ${secTitle}:\n==================================================\n\n${d}\n`);
+    }
+
+    // Products & E-Commerce / Quick Commerce Links
+    if (meta.products && meta.products.length > 0) {
+      const isRecipe = category.includes('RECIPE') || category.includes('COOK');
+      const prodHeader = isRecipe ? '🛒 Ingredients & 1-Click Buy Links:' : '🛍️ Featured Products & 1-Click Buy Links:';
+      lines.push(isWhatsApp ? `*${prodHeader}*` : `==================================================\n${prodHeader}\n==================================================`);
+      meta.products.forEach((p: any, idx: number) => {
+        const priceStr = p.price ? ` (${p.price})` : '';
+        lines.push(`${idx + 1}. ${p.name}${priceStr}`);
+        if (p.blinkit_url) lines.push(`   🟡 Blinkit (10-Min): ${p.blinkit_url}`);
+        if (p.zepto_url) lines.push(`   ⚡ Zepto (10-Min): ${p.zepto_url}`);
+        if (p.instamart_url) lines.push(`   🛵 Swiggy Instamart: ${p.instamart_url}`);
+        if (p.amazon_url) lines.push(`   🛒 Amazon: ${p.amazon_url}`);
+        if (p.flipkart_url) lines.push(`   ⚡ Flipkart: ${p.flipkart_url}`);
+      });
+      lines.push('');
+    }
+
+    // Tutorial Resources
+    if (meta.resources && meta.resources.length > 0) {
+      lines.push(isWhatsApp ? `🎓 *Tutorial & Learning Links:*` : `==================================================\n🎓 Tutorial & Learning Links:\n==================================================`);
+      meta.resources.forEach((r: any, idx: number) => {
+        lines.push(`${idx + 1}. ${r.name}`);
+        if (r.youtube_url) lines.push(`   ▶️ YouTube: ${r.youtube_url}`);
+        if (r.github_url) lines.push(`   🐙 GitHub: ${r.github_url}`);
+      });
+      lines.push('');
+    }
+
+    if (isWhatsApp) {
+      lines.push(`💡 _Full notes & file downloads at: https://universal-pro-ai.vercel.app_`);
+    } else {
+      lines.push('==================================================');
+      lines.push('Extracted via Universal Pro AI — Sub-3s Multimodal Video Intelligence');
+      lines.push('https://universal-pro-ai.vercel.app');
+      lines.push('==================================================');
+    }
+
+    return lines.join('\n');
+  };
+
+  const handleShareWhatsApp = (customPhone?: string) => {
     if (!result) return;
-    const title = result.title || result.recipe_title || 'Universal AI Extraction';
-    const summary = result.summary || '';
-    const shareText = `⚡ *${title}* via Universal Pro AI\n\n${summary}\n\nExtracted with https://universal-pro-ai.vercel.app`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+    const fullText = generateStructuredText(result, true);
+
+    let phoneParam = '';
+    const phoneToUse = customPhone !== undefined ? customPhone : waPhoneNumber;
+    if (phoneToUse && phoneToUse.trim()) {
+      const cleanDigits = phoneToUse.replace(/[^\d]/g, '');
+      const ccDigits = waCountryCode.replace(/[^\d]/g, '') || '91';
+      const fullDigits = cleanDigits.startsWith(ccDigits) ? cleanDigits : `${ccDigits}${cleanDigits}`;
+      phoneParam = `phone=${fullDigits}&`;
+    }
+
+    let encodedText = encodeURIComponent(fullText);
+    // WhatsApp URL length guardrail (~3800 chars)
+    if (encodedText.length > 3800) {
+      const compactText = generateStructuredText(result, true).slice(0, 2600) + '\n\n... (Full notes & buy links in downloaded .txt)\n\n🔗 https://universal-pro-ai.vercel.app';
+      encodedText = encodeURIComponent(compactText);
+    }
+
+    window.open(`https://api.whatsapp.com/send?${phoneParam}text=${encodedText}`, '_blank');
+  };
+
+  const handleDownloadTxt = () => {
+    if (!result) return;
+    const txtContent = generateStructuredText(result, false);
+    const title = result.title || result.recipe_title || 'Universal_Intelligence';
+    const cleanFileName = `${title.replace(/[^a-zA-Z0-9_\-]/g, '_').slice(0, 45)}_Notes.txt`;
+
+    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = cleanFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  };
+
+  const handleDownloadVideo = () => {
+    if (!result) return;
+    const videoSrc = (result as any).media_url || (result as any).video_source || url;
+    if (videoSrc) {
+      if (videoSrc.endsWith('.mp4')) {
+        const link = document.createElement('a');
+        link.href = videoSrc;
+        link.download = `${(result.title || 'video').replace(/[^a-zA-Z0-9_\-]/g, '_')}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        window.open(videoSrc, '_blank');
+      }
+    }
   };
 
   const handleCopyLink = () => {
@@ -955,51 +1107,181 @@ function UniversalDashboard() {
                   </div>
                 </div>
 
-                {/* Quick Action Share Buttons */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                  <button
-                    onClick={handleShareWhatsApp}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      background: '#25D366',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '0.5rem',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <MessageSquare size={14} />
-                    <span>WhatsApp</span>
-                  </button>
+                {/* Forward, Export & Download Hub */}
+                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {/* Row 1: WhatsApp Full Intelligence & Download .txt */}
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => handleShareWhatsApp()}
+                      style={{
+                        flex: 1.15,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.55rem 0.65rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: '0 3px 12px rgba(37, 211, 102, 0.35)',
+                      }}
+                      title="Share complete recipe and buy links via WhatsApp"
+                    >
+                      <MessageSquare size={14} />
+                      <span>WhatsApp Notes</span>
+                    </button>
 
-                  <button
-                    onClick={handleCopyLink}
+                    <button
+                      onClick={() => {
+                        handleDownloadTxt();
+                        setDownloadedTxt(true);
+                        setTimeout(() => setDownloadedTxt(false), 2500);
+                      }}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.45rem',
+                        background: 'linear-gradient(135deg, #0284C7, #0369A1)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.55rem 0.65rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: '0 3px 12px rgba(2, 132, 199, 0.35)',
+                      }}
+                      title="Download complete structured intelligence as a clean .txt file"
+                    >
+                      {downloadedTxt ? <Check size={14} color="#34D399" /> : <Download size={14} />}
+                      <span>{downloadedTxt ? 'Downloaded!' : 'Download .txt'}</span>
+                    </button>
+                  </div>
+
+                  {/* Row 2: Source Video / Download & Copy Link */}
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={handleDownloadVideo}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '8px',
+                        padding: '0.48rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                      title="Open source stream or download video"
+                    >
+                      <Video size={13} color="#38BDF8" />
+                      <span>Video Stream</span>
+                    </button>
+
+                    <button
+                      onClick={handleCopyLink}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-subtle)',
+                        borderRadius: '8px',
+                        padding: '0.48rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {copiedLink ? <Check size={13} color="#34D399" /> : <Share2 size={13} />}
+                      <span>{copiedLink ? 'Link Copied!' : 'Copy Link'}</span>
+                    </button>
+                  </div>
+
+                  {/* Direct WhatsApp Forward Drawer */}
+                  <div
                     style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(255,255,255,0.06)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-subtle)',
+                      marginTop: '0.25rem',
+                      padding: '0.55rem 0.65rem',
+                      background: 'rgba(15, 23, 42, 0.65)',
+                      border: '1px solid rgba(56, 189, 248, 0.22)',
                       borderRadius: '8px',
-                      padding: '0.5rem',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
                     }}
                   >
-                    {copiedLink ? <Check size={14} color="#34D399" /> : <Share2 size={14} />}
-                    <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
-                  </button>
+                    <div style={{ marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Smartphone size={11} />
+                        <span>Send directly to WhatsApp Number:</span>
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.35rem' }}>
+                      <input
+                        type="text"
+                        value={waCountryCode}
+                        onChange={(e) => setWaCountryCode(e.target.value)}
+                        placeholder="+91"
+                        style={{
+                          width: '46px',
+                          padding: '0.32rem 0.4rem',
+                          background: 'rgba(0,0,0,0.3)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: '6px',
+                          color: '#FFFFFF',
+                          fontSize: '0.72rem',
+                          textAlign: 'center',
+                        }}
+                      />
+                      <input
+                        type="tel"
+                        value={waPhoneNumber}
+                        onChange={(e) => setWaPhoneNumber(e.target.value)}
+                        placeholder="Mobile (e.g. 9876543210)"
+                        style={{
+                          flex: 1,
+                          padding: '0.32rem 0.5rem',
+                          background: 'rgba(0,0,0,0.3)',
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: '6px',
+                          color: '#FFFFFF',
+                          fontSize: '0.72rem',
+                        }}
+                      />
+                      <button
+                        onClick={() => handleShareWhatsApp(waPhoneNumber)}
+                        style={{
+                          background: '#10B981',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '0.32rem 0.65rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        <Send size={11} />
+                        <span>Send</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1058,26 +1340,74 @@ function UniversalDashboard() {
                       <span>{getSectionTitle(result.category)}</span>
                     </h3>
 
-                    {detailsText && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <button
-                        onClick={() => handleCopyNotes(detailsText)}
+                        onClick={() => {
+                          handleDownloadTxt();
+                          setDownloadedTxt(true);
+                          setTimeout(() => setDownloadedTxt(false), 2500);
+                        }}
                         style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid var(--border-subtle)',
+                          background: 'rgba(2, 132, 199, 0.15)',
+                          border: '1px solid rgba(56, 189, 248, 0.3)',
                           borderRadius: '6px',
-                          color: 'var(--text-secondary)',
+                          color: '#38BDF8',
                           padding: '4px 9px',
                           fontSize: '0.74rem',
+                          fontWeight: 600,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '4px',
                         }}
+                        title="Download complete structured intelligence as a .txt file"
                       >
-                        {copiedNotes ? <Check size={12} color="#34D399" /> : <Copy size={12} />}
-                        <span>{copiedNotes ? 'Copied Notes!' : 'Copy Notes'}</span>
+                        {downloadedTxt ? <Check size={12} color="#34D399" /> : <Download size={12} />}
+                        <span>{downloadedTxt ? 'Downloaded!' : '.txt Notes'}</span>
                       </button>
-                    )}
+
+                      <button
+                        onClick={() => handleShareWhatsApp()}
+                        style={{
+                          background: 'rgba(37, 211, 102, 0.15)',
+                          border: '1px solid rgba(37, 211, 102, 0.3)',
+                          borderRadius: '6px',
+                          color: '#25D366',
+                          padding: '4px 9px',
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                        title="Share complete recipe and notes via WhatsApp"
+                      >
+                        <MessageSquare size={12} />
+                        <span>WhatsApp</span>
+                      </button>
+
+                      {detailsText && (
+                        <button
+                          onClick={() => handleCopyNotes(detailsText)}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid var(--border-subtle)',
+                            borderRadius: '6px',
+                            color: 'var(--text-secondary)',
+                            padding: '4px 9px',
+                            fontSize: '0.74rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          {copiedNotes ? <Check size={12} color="#34D399" /> : <Copy size={12} />}
+                          <span>{copiedNotes ? 'Copied!' : 'Copy Notes'}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
