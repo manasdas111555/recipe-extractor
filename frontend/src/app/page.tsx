@@ -625,11 +625,6 @@ function UniversalDashboard() {
                 ))}
               </select>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: '#6EE7B7' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 6px #10B981' }}></span>
-              <span>Gemini 3.8 Flash Active</span>
-            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -840,10 +835,7 @@ function UniversalDashboard() {
                 ⚡ ~2.4s AI Turnaround
               </span>
               <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                💎 Gemini 3.8 Flash & Groq Fallback
-              </span>
-              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
-                🛒 Amazon & Flipkart Monetized Tags
+                🛒 Amazon and Flipkart link
               </span>
               <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                 📲 1-Click WhatsApp Share
