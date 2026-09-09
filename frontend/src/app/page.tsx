@@ -306,13 +306,16 @@ function UniversalDashboard() {
     throw new Error('Extraction timed out. The server is still processing; check the Vault shortly.');
   };
 
-  const handleExtract = async (targetUrl = url) => {
-    if (targetUrl) setUrl(targetUrl);
-    if (!targetUrl.trim()) {
+  const handleExtract = async (targetUrl?: any) => {
+    const rawUrl = typeof targetUrl === 'string' ? targetUrl : url;
+    const finalUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+
+    if (!finalUrl) {
       setError('Please paste a valid video URL from Instagram, TikTok, or YouTube.');
       return;
     }
 
+    setUrl(finalUrl);
     setError(null);
     setIsLoading(true);
     setLoadingProgress(8);
@@ -326,8 +329,8 @@ function UniversalDashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          video_url: targetUrl,
-          url: targetUrl,
+          video_url: finalUrl,
+          url: finalUrl,
           domain_hint: selectedDomain,
         }),
       });
