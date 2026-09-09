@@ -586,16 +586,6 @@ function UniversalDashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            {/* Creator Affiliate Tag Vault Button */}
-            <button
-              onClick={() => setIsCreatorVaultOpen(true)}
-              className="btn-ghost"
-              style={{ padding: '0.45rem 0.85rem' }}
-            >
-              <Bookmark size={16} color="#A855F7" />
-              <span>Creator Tags</span>
-            </button>
-
             {/* Intelligence Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
@@ -604,19 +594,6 @@ function UniversalDashboard() {
             >
               <BookOpen size={16} color="var(--accent-emerald)" />
               <span>Intelligence Vault</span>
-            </button>
-
-            {/* Upgrade Pro Subscription Button */}
-            <button
-              onClick={() => {
-                setUpgradeReason('Upgrade to Pro for unlimited daily extractions and priority fast-lane inference.');
-                setIsUpgradeModalOpen(true);
-              }}
-              className="btn-emerald"
-              style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
-            >
-              <Zap size={15} />
-              <span>Upgrade Pro</span>
             </button>
           </div>
         </div>

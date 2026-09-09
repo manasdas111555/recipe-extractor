@@ -300,6 +300,7 @@ flowchart TD
    - Redis key format: `quota:{identifier}:{YYYY-MM-DD}` (24h TTL) with thread-safe in-memory fallback.
 2. **Client-Side Upgrade Interception (`UpgradeModal.tsx`)**:
    - When HTTP 429 quota exhaustion is triggered, the app presents the luxury obsidian Upgrade Modal instead of a dead-end error.
+   - *PO Launch Directive*: Standalone header upgrade button is hidden during early promotional launch for frictionless user onboarding.
    - Offers seamless dual-rail payment selection:
      - 🇮🇳 **India (₹299/mo)**: Razorpay UPI AutoPay (Google Pay, PhonePe, Paytm).
      - 🌐 **Global ($4.99/mo)**: Stripe Checkout Session & Customer Portal.
@@ -318,10 +319,9 @@ flowchart TD
    - Public extractions generate dynamic Next.js SSR pages with embedded **Schema.org `Recipe` JSON-LD** (`@context: "https://schema.org"`).
    - Injects structured prep time, cook time, ingredients array, and `HowToStep` instructions.
    - Auto-indexes new recipes via dynamic `sitemap.xml` generation.
-2. **Creator Custom Affiliate Tag Vault (`CreatorTagVault.tsx`)**:
-   - Creators save their Amazon Tag (`tag=...`) and EarnKaro ID (`r=...`) in profile settings.
-   - When a creator shares their extraction URL, all outbound buy buttons embed their custom parameters for 100% commission pass-through.
-   - Platform invariants (`tag=manasdas11155-21` and `r=5608766`) strictly act as default fallbacks when creator tags are absent.
+2. **Platform Monetization Shield & Creator Tag Governance**:
+   - *PO Launch Directive*: Creator tag vault header UI is intentionally hidden during launch campaigns to guarantee 100% platform affiliate revenue conversion.
+   - Platform invariants (`tag=manasdas11155-21` and `r=5608766`) strictly govern all outbound commercial links across Amazon, Flipkart, Blinkit, and Zepto.
 3. **5-Stage Conversion Funnel Telemetry (`/api/v1/telemetry/funnel`)**:
    - Monitors organic visitor conversion across key milestones:
      $$\text{Video Shared} \longrightarrow \text{Extraction Rendered} \longrightarrow \text{Affiliate Clicked} \longrightarrow \text{Paywall Hit} \longrightarrow \text{Subscription Converted}$$
