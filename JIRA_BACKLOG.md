@@ -16,7 +16,17 @@
 | **Sprint 2** | **Async Worker Pipeline & Scraper Resilience** (Celery + Redis + Proxies) | 34 pts | 🎉 **COMPLETED (100%)** | Weeks 3–4 |
 | **Sprint 3** | **Zero-Friction Chat Ingestion Bot** (Telegram & WhatsApp Cloud API) | 29 pts | 🎉 **COMPLETED (100%)** | Weeks 5–6 |
 | **Sprint 4** | **Next.js 15 PWA & Personal Vault** (Web Share Sheet + UI Dashboard) | 37 pts | 🎉 **COMPLETED (100%)** | Weeks 7–8 |
+| **Sprint 5** | **SaaS Monetization & Quota Engine** (Razorpay + Stripe Dual-Rail Billing) | 28 pts | 🎉 **COMPLETED (100%)** | Weeks 9–10 |
 | **Sprint 6** | **Creator Program & SEO Ingestion Engine** (Custom Tags + SSR Pages) | 21 pts | 🎉 **COMPLETED (100%)** | Weeks 11–12 |
+| **Sprint 7** | **UX Polish, One-Click Activation & Model Resilience** (Title Filter + Sample Chips) | 23 pts | 🎉 **COMPLETED (100%)** | Weeks 13–14 |
+
+---
+
+## 📌 Sprint 7 Kanban Board (Completed)
+
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (23 pts) |
+| :--- | :--- | :--- | :--- |
+| None | None | None | `UPA-801` Title Sanitization Utility (`formatCleanTitle`)<br>`UPA-802` One-Click Sample Reel Activation & Auto-Execution<br>`UPA-803` Omnichannel Telegram Bot Badge (`@UniversalProAIBot`)<br>`UPA-804` Auto-Dismissing Error State Hygiene<br>`UPA-805` Fast AI Socket Timeout & Failover Cascade |
 
 ---
 
@@ -348,6 +358,49 @@
   - [x] Conversion funnel analytics endpoint `GET /api/v1/telemetry/funnel` active.
   - [x] Next.js `UpgradeModal.tsx` intercepts HTTP 429 quota exhaustion with dual-rail currency switch (Razorpay ₹299 vs Stripe $4.99).
 - **Dependencies**: `UPA-601`, `UPA-602`, `UPA-603`.
+
+---
+
+### 🎨 EPIC-9: UX Activation, Title Sanitization & Model Resilience (Sprint 7)
+
+#### `UPA-801`: Title Sanitization Utility (`formatCleanTitle`)
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
+- **User Story**: *As a user, I want extracted recipe and tutorial titles to be formatted cleanly without raw underscores or AI prefix phrases, so that notes look professional and easy to read.*
+- **Acceptance Criteria**:
+  - [x] `formatCleanTitle` utility function added to `frontend/src/app/page.tsx`.
+  - [x] Strips raw AI prefixes (`This_video_is_a_recipe_tutorial_for_`, `Video_of_`) and replaces `_` with spaces.
+  - [x] Renders headings in clean Title Case across result headers, ServingAdjuster, and export notes.
+- **Dependencies**: `UPA-501`.
+
+#### `UPA-802`: One-Click Sample Reel Activation & Auto-Execution
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 5 pts | **Status**: `[x] DONE`
+- **User Story**: *As a first-time visitor without a reel link copied, I want to click a sample chip to instantly test sub-3s extraction without having to click the Extract button again.*
+- **Acceptance Criteria**:
+  - [x] Sample chip click populates input field AND automatically invokes `handleExtract(sampleUrl)`.
+  - [x] Updated sample list with working Instagram Reel link (`https://www.instagram.com/reel/DdGvPs9zhVu/`).
+- **Dependencies**: `UPA-501`.
+
+#### `UPA-803`: Omnichannel Telegram Bot Badge (`@UniversalProAIBot`)
+- **Type**: Story | **Priority**: P1 (High) | **Points**: 3 pts | **Status**: `[x] DONE`
+- **User Story**: *As a mobile user, I want to see a direct link to the Telegram bot on the hero landing page, so that I can extract recipes directly inside mobile messaging apps.*
+- **Acceptance Criteria**:
+  - [x] Hero section displays `@UniversalProAIBot` badge linked to `https://t.me/UniversalProAIBot`.
+- **Dependencies**: `UPA-401`.
+
+#### `UPA-804`: Auto-Dismissing Error State Hygiene
+- **Type**: Story | **Priority**: P1 (High) | **Points**: 3 pts | **Status**: `[x] DONE`
+- **User Story**: *As a user, I want old error alert banners to disappear as soon as I start a new extraction, so that stale errors do not obscure my new results.*
+- **Acceptance Criteria**:
+  - [x] `handleExtract` clears `setError(null)` at the beginning of every extraction.
+- **Dependencies**: `UPA-501`.
+
+#### `UPA-805`: Fast AI Socket Timeout & Failover Cascade
+- **Type**: Story | **Priority**: P0 (Blocker) | **Points**: 7 pts | **Status**: `[x] DONE`
+- **User Story**: *As a platform operator, I want network timeouts on primary AI models to trigger instant failover to backup models, so that total extraction SLA stays under 10 seconds.*
+- **Acceptance Criteria**:
+  - [x] `gemini_processor.py` `is_busy` condition updated to handle `"timeout"` and `"timed out"`.
+  - [x] Socket timeouts on `gemini-3.8-flash` failover instantly to `gemini-3.7-flash`.
+- **Dependencies**: `UPA-204`.
 
 ---
 

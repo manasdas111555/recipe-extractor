@@ -971,11 +971,11 @@ def process_video_and_generate_recipe(
                 except Exception as gen_err:
                     err_str = str(gen_err)
                     safe_print(f"[Gemini] Model {model_name} (attempt {attempt}) error: {err_str}")
-                    is_busy = any(k in err_str.lower() for k in ["503", "unavailable", "high demand", "capacity", "resourceexhausted", "429"])
+                    is_busy = any(k in err_str.lower() for k in ["503", "unavailable", "high demand", "capacity", "resourceexhausted", "429", "timeout", "timed out"])
                     
                     if is_busy and remaining_models > 0:
-                        # Fast failover: don't stall for 9s if another healthy model is in line
-                        notify(f"⚠️ `{model_name}` congested (503/429). Instantly switching to next model...")
+                        # Fast failover: don't stall if another healthy model is in line
+                        notify(f"⚠️ `{model_name}` congested/timed out. Instantly switching to next model...")
                         attempt_log.append(f"{model_name}: {err_str}")
                         break
                     elif is_busy and attempt < max_attempts:

@@ -306,6 +306,21 @@ function UniversalDashboard() {
     throw new Error('Extraction timed out. The server is still processing; check the Vault shortly.');
   };
 
+  const formatCleanTitle = (rawTitle?: string): string => {
+    if (!rawTitle) return '';
+    let clean = rawTitle.trim();
+    clean = clean.replace(/^(this_video_is_a_recipe_tutorial_for_|this_video_shows_|this_video_is_a_|video_of_|video_)/i, '');
+    clean = clean.replace(/_/g, ' ');
+    clean = clean.replace(/\s+/g, ' ').trim();
+    if (clean && (clean === clean.toLowerCase() || clean.includes(' '))) {
+      clean = clean
+        .split(' ')
+        .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : ''))
+        .join(' ');
+    }
+    return clean;
+  };
+
   const handleExtract = async (targetUrl?: any) => {
     const rawUrl = typeof targetUrl === 'string' ? targetUrl : url;
     const finalUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
@@ -374,15 +389,15 @@ function UniversalDashboard() {
   };
 
   const sampleUrls = [
-    { label: '🍳 Butter Chicken Reel', url: 'https://www.instagram.com/reel/C8ButterChickenSample/', domain: 'recipe' },
-    { label: '🏋️ 6 Core Bodyweight Workout', url: 'https://www.youtube.com/shorts/65QnIrbBBWs', domain: 'fitness_workout' },
+    { label: '🍳 Steamed Egg Curry Reel', url: 'https://www.instagram.com/reel/DdGvPs9zhVu/', domain: 'recipe' },
     { label: '💻 Quick Python Tips Short', url: 'https://www.youtube.com/shorts/KrFDs2M_FSE', domain: 'tech_diy' },
-    { label: '🛍️ Viral Kitchen Slicer Find', url: 'https://www.instagram.com/reel/C7KitchenSlicerSample/', domain: 'kitchen_product' },
+    { label: '🛍️ Keyboard & Gadget Short', url: 'https://www.youtube.com/shorts/J---aiyznGQ', domain: 'unboxing' },
+    { label: '⚡ Viral Meme Short', url: 'https://www.youtube.com/shorts/fC7oUOUEEi4', domain: 'auto' },
   ];
 
   const generateStructuredText = (meta: any, isWhatsApp = false): string => {
     if (!meta) return '';
-    const title = meta.title || meta.recipe_title || 'Universal AI Extraction';
+    const title = formatCleanTitle(meta.title || meta.recipe_title) || 'Universal AI Extraction';
     const category = (meta.category || meta.category_name || 'INTELLIGENCE').toUpperCase();
 
     // Category emoji
@@ -767,6 +782,43 @@ function UniversalDashboard() {
                 {s.label}
               </button>
             ))}
+          </div>
+
+          {/* Omnichannel Telegram & WhatsApp Ingestion Callout */}
+          <div
+            style={{
+              marginTop: '0.65rem',
+              paddingTop: '0.5rem',
+              borderTop: '1px dashed var(--border-subtle)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              fontSize: '0.75rem',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span>📱 Prefer Mobile? Extract directly on Telegram:</span>
+            <a
+              href="https://t.me/UniversalProAIBot"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: '#38BDF8',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                background: 'rgba(56, 189, 248, 0.1)',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                border: '1px solid rgba(56, 189, 248, 0.25)',
+              }}
+            >
+              <span>@UniversalProAIBot</span>
+              <ExternalLink size={11} />
+            </a>
           </div>
         </div>
 
@@ -1386,7 +1438,7 @@ function UniversalDashboard() {
                 </div>
 
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                  {result.title || result.recipe_title || 'Extracted Social Intelligence'}
+                  {formatCleanTitle(result.title || result.recipe_title) || 'Extracted Social Intelligence'}
                 </h2>
 
                 {result.summary && (
@@ -1401,7 +1453,7 @@ function UniversalDashboard() {
                     <ServingAdjuster
                       initialServings={result.servings || 2}
                       ingredients={result.ingredients}
-                      recipeTitle={result.title || result.recipe_title || 'Recipe'}
+                      recipeTitle={formatCleanTitle(result.title || result.recipe_title) || 'Recipe'}
                     />
                   </div>
                 )}
