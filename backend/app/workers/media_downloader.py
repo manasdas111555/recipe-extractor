@@ -97,6 +97,11 @@ def download_worker_media(
             'no_warnings': True,
             'max_filesize': max_bytes,
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'ios', 'web'],
+                }
+            },
         }
 
         if effective_proxy:
