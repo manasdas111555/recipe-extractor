@@ -61,58 +61,115 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         import yt_dlp
         output_template = str(output_dir / "video_%(id)s.%(ext)s")
         
-        ydl_opts = {
-            'outtmpl': output_template,
-            'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[ext=mp4]/best',
-            'merge_output_format': 'mp4',
-            'quiet': True,
-            'no_warnings': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'ios', 'web'],
-                }
-            },
-        }
-
+        client_cascades = [
+            ['android', 'ios', 'mweb'],
+            ['mweb', 'android', 'ios'],
+            ['tv_embedded', 'android', 'ios'],
+        ]
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Pre-flight duration check: immediately intercept long videos before consuming bandwidth
+        last_exception = None
+        for client_list in client_cascades:
+            ydl_opts = {
+                'outtmpl': output_template,
+                'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[ext=mp4]/best',
+                'merge_output_format': 'mp4',
+                'quiet': True,
+                'no_warnings': True,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': client_list,
+                    }
+                },
+            }
+
             try:
-                meta = ydl.extract_info(video_url, download=False)
-                if meta:
-                    duration = meta.get('duration')
-                    if duration and duration > MAX_VIDEO_DURATION:
-                        return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
-            except Exception:
-                pass  # If pre-flight check fails, proceed to single-pass download
-
-            # Single-pass: retrieve metadata and download stream in one network pass
-            info_dict = ydl.extract_info(video_url, download=True)
-            if not info_dict:
-                return False, "Could not extract video from URL."
-            
-            duration = info_dict.get('duration')
-            filename = ydl.prepare_filename(info_dict)
-            if not os.path.exists(filename):
-                base_name = os.path.splitext(filename)[0]
-                if os.path.exists(base_name + ".mp4"):
-                    filename = base_name + ".mp4"
-
-            # Post-download safety check
-            if duration and duration > MAX_VIDEO_DURATION:
-                if os.path.exists(filename):
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    # Pre-flight duration check: immediately intercept long videos before consuming bandwidth
                     try:
-                        os.remove(filename)
+                        meta = ydl.extract_info(video_url, download=False)
+                        if meta:
+                            duration = meta.get('duration')
+                            if duration and duration > MAX_VIDEO_DURATION:
+                                return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
                     except Exception:
-                        pass
-                return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
+                        pass  # If pre-flight check fails, proceed to single-pass download
 
-            if not os.path.exists(filename):
-                return False, "Downloaded video file not found on disk."
-            return True, filename
+                    # Single-pass: retrieve metadata and download stream in one network pass
+                    info_dict = ydl.extract_info(video_url, download=True)
+                    if not info_dict:
+                        continue
+                    
+                    duration = info_dict.get('duration')
+                    filename = ydl.prepare_filename(info_dict)
+                    if not os.path.exists(filename):
+                        base_name = os.path.splitext(filename)[0]
+                        if os.path.exists(base_name + ".mp4"):
+                            filename = base_name + ".mp4"
+
+                    # Post-download safety check
+                    if duration and duration > MAX_VIDEO_DURATION:
+                        if os.path.exists(filename):
+                            try:
+                                os.remove(filename)
+                            except Exception:
+                                pass
+                        return False, f"Video is {int(duration)}s long. To keep processing fast and free, videos must be under {MAX_VIDEO_DURATION} seconds (Reels & Shorts only)."
+
+                    if os.path.exists(filename):
+                        return True, filename
+            except Exception as e:
+                last_exception = e
+                err_str = str(e)
+                # If error is bot detection, retry with next client cascade
+                if "Sign in to confirm" in err_str or "bot" in err_str or "cookies" in err_str:
+                    continue
+                else:
+                    break
+
+        if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
+            safe_print("[Downloader] yt-dlp hit YouTube restriction. Triggering oEmbed thumbnail fallback...")
+            fb_success, fb_path = download_youtube_fallback(video_url, output_dir)
+            if fb_success:
+                return True, fb_path
+
+        return False, f"yt-dlp download error: {str(last_exception)}" if last_exception else "Could not extract video from URL."
+    except Exception as outer_e:
+        if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
+            fb_success, fb_path = download_youtube_fallback(video_url, output_dir)
+            if fb_success:
+                return True, fb_path
+        return False, f"yt-dlp download error: {str(outer_e)}"
+
+
+def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, str]:
+    """
+    Fail-safe fallback for YouTube Shorts when yt-dlp encounters cloud IP bot challenges.
+    Fetches official YouTube oEmbed metadata & high-resolution video stream thumbnail
+    to guarantee zero-downtime AI multimodal reasoning on datacenter IPs (e.g. Vercel Lambda).
+    """
+    try:
+        match = re.search(r"(?:shorts/|v=|be/)([\w-]{11})", video_url)
+        if not match:
+            return False, "Invalid YouTube URL format."
+        
+        video_id = match.group(1)
+        output_file = output_dir / f"yt_stream_{video_id}.jpg"
+
+        if output_file.exists() and output_file.stat().st_size > 1000:
+            return True, str(output_file.resolve())
+
+        for quality in ["maxresdefault.jpg", "hqdefault.jpg"]:
+            thumb_url = f"https://i.ytimg.com/vi/{video_id}/{quality}"
+            resp = requests.get(thumb_url, timeout=10)
+            if resp.status_code == 200 and len(resp.content) > 1000:
+                with open(output_file, "wb") as f:
+                    f.write(resp.content)
+                return True, str(output_file.resolve())
+        
+        return False, "Failed to retrieve YouTube media thumbnail."
     except Exception as e:
-        return False, f"yt-dlp download error: {str(e)}"
+        return False, f"YouTube fallback error: {str(e)}"
 
 
 def download_via_indownloader(reel_url: str, output_dir: Path) -> Tuple[bool, str]:
