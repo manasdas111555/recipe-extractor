@@ -148,15 +148,11 @@ def download_worker_media(
                         return True, os.path.abspath(matches[0])
             except Exception as e:
                 last_exception = e
-                err_msg = str(e)
-                logger.warning("Worker download attempt with client %s failed: %s", client_list, err_msg)
-                if "Sign in to confirm" in err_msg or "bot" in err_msg or "cookies" in err_msg:
-                    continue
-                else:
-                    break
+                logger.warning("Worker download attempt with client %s failed: %s", client_list, e)
+                continue
 
         if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
-            logger.info("Worker yt-dlp hit YouTube restriction. Triggering oEmbed thumbnail fallback...")
+            logger.info("Worker yt-dlp failed for YouTube stream. Executing fail-safe oEmbed stream fallback...")
             fb_success, fb_path = download_youtube_fallback(video_url, target_dir)
             if fb_success:
                 return True, fb_path
@@ -164,6 +160,7 @@ def download_worker_media(
         return False, f"Download failed: {str(last_exception)}" if last_exception else "Failed to locate downloaded media stream file."
     except Exception as outer_e:
         if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
+            logger.info("Worker outer yt-dlp exception on YouTube stream. Executing fail-safe oEmbed stream fallback...")
             fb_success, fb_path = download_youtube_fallback(video_url, target_dir)
             if fb_success:
                 return True, fb_path

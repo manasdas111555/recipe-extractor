@@ -120,15 +120,11 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
                         return True, filename
             except Exception as e:
                 last_exception = e
-                err_str = str(e)
-                # If error is bot detection, retry with next client cascade
-                if "Sign in to confirm" in err_str or "bot" in err_str or "cookies" in err_str:
-                    continue
-                else:
-                    break
+                logger.warning("yt-dlp download attempt with client %s failed: %s", client_list, e)
+                continue
 
         if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
-            safe_print("[Downloader] yt-dlp hit YouTube restriction. Triggering oEmbed thumbnail fallback...")
+            safe_print("[Downloader] yt-dlp failed for YouTube stream. Executing fail-safe oEmbed stream fallback...")
             fb_success, fb_path = download_youtube_fallback(video_url, output_dir)
             if fb_success:
                 return True, fb_path
@@ -136,6 +132,7 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         return False, f"yt-dlp download error: {str(last_exception)}" if last_exception else "Could not extract video from URL."
     except Exception as outer_e:
         if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
+            safe_print("[Downloader] Outer yt-dlp exception on YouTube stream. Executing fail-safe oEmbed stream fallback...")
             fb_success, fb_path = download_youtube_fallback(video_url, output_dir)
             if fb_success:
                 return True, fb_path
