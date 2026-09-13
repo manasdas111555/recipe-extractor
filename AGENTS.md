@@ -47,3 +47,10 @@
 - **Catalog Alignment**: Continuously monitor Google Gemini's official model catalog (https://ai.google.dev/gemini-api/docs/models).
 - **Proactive Pruning of Deprecated Endpoints**: As soon as any model endpoint is marked shutdown or deprecated by Google (e.g., `gemini-2.0-flash`, `gemini-2.0-flash-lite`), agents must promptly prune it from `preferred_candidates` across `gemini_processor.py`, `ai_router.py`, and `app.py` to prevent wasted retry cycles and 404/410 latency spikes.
 - **Flagship Alignment**: The primary dispatch model should always point to Google's latest stable production Flash model (currently `gemini-3.8-flash`), followed by high-reliability fallbacks (`gemini-3.7-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`), before external provider failover.
+
+## 9. Mandatory 3-Core Document Governance Contract (Immutable Rule)
+- **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following 3 core living documents without exception:
+  1. **`TROUBLESHOOTING.md`**: Log every encountered error/bug, root cause, exact code resolution diffs, and verification steps.
+  2. **`PRODUCT_OWNER_UX_SHOWCASE.md`** (and sprint showcase `SPRINT_X_PO_SHOWCASE.md`): Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
+  3. **`DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
+- **Verification Rule**: No feature implementation or bug fix is considered complete until all 3 living documents reflect the updated state of the codebase.

@@ -290,6 +290,32 @@ Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http
 
 ---
 
+### 📘 Runbook 9: YouTube Cloud IP Ingestion Failover & oEmbed Fallback
+**Symptom**: Cloud ingestion returns `403 Forbidden` or `GVS PO Token required` when attempting YouTube Shorts downloads on serverless/datacenter IPs.
+
+#### Step 1: Automatic oEmbed Multimodal Fallback
+1. `download_youtube_fallback()` automatically triggers upon `yt-dlp` stream extraction failure.
+2. The worker queries YouTube's official oEmbed endpoint (`https://www.youtube.com/oembed?url=...`).
+3. High-resolution stream thumbnails (`maxresdefault.jpg` ➔ `sddefault.jpg` ➔ `hqdefault.jpg`) are downloaded to `/tmp/recipe_downloads/yt_stream_{video_id}.jpg` and sent directly to Gemini Multimodal Vision API for zero-downtime inference.
+
+#### Step 2: Proxy Rotation Check (Optional)
+1. If oEmbed thumbnail retrieval is ever throttled, verify `USE_PROXIES=true` and `RESIDENTIAL_PROXY_URL` in `.env`.
+2. Residential proxy rotator will round-robin requests through clean ISP IP pools.
+
+---
+
+### 📘 Runbook 10: Vercel Preview Staging Protection Bypass
+**Symptom**: Staging QA testing crawlers or browser agents hit `401 Unauthorized` on client-side JS chunks.
+
+#### Step 1: Execute Bypass Parameter Protocol
+1. Append Option A query parameters to all Vercel Preview URLs:
+   ```text
+   ?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone
+   ```
+2. Vercel Edge issues the `_vercel_jwt` session cookie, unblocking all downstream script, asset, and API fetch requests.
+
+---
+
 ## 🔐 Secrets & Credentials Disaster Reference
 
 > [!CAUTION]
