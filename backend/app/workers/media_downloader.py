@@ -90,10 +90,10 @@ def download_worker_media(
         max_bytes = settings.MAX_MEDIA_DOWNLOAD_MB * 1024 * 1024
 
         client_cascades = [
-            ['web_embedded', 'android', 'ios'],
-            ['tv_embedded', 'web_embedded', 'android'],
-            ['android', 'ios', 'mweb'],
-            ['mweb', 'android', 'ios'],
+            ['android', 'ios'],
+            ['ios', 'android'],
+            ['tv', 'android'],
+            ['web', 'android'],
         ]
 
         last_exception = None
@@ -178,6 +178,7 @@ def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, s
     """
     try:
         import requests
+        output_dir.mkdir(parents=True, exist_ok=True)
         match = re.search(r"(?:shorts/|v=|be/)([\w-]{11})", video_url)
         if not match:
             return False, "Invalid YouTube URL format."

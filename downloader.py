@@ -62,10 +62,10 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         output_template = str(output_dir / "video_%(id)s.%(ext)s")
         
         client_cascades = [
-            ['web_embedded', 'android', 'ios'],
-            ['tv_embedded', 'web_embedded', 'android'],
-            ['android', 'ios', 'mweb'],
-            ['mweb', 'android', 'ios'],
+            ['android', 'ios'],
+            ['ios', 'android'],
+            ['tv', 'android'],
+            ['web', 'android'],
         ]
         
         last_exception = None
@@ -147,6 +147,7 @@ def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, s
     to guarantee zero-downtime AI multimodal reasoning on datacenter IPs (e.g. Vercel Lambda).
     """
     try:
+        output_dir.mkdir(parents=True, exist_ok=True)
         match = re.search(r"(?:shorts/|v=|be/)([\w-]{11})", video_url)
         if not match:
             return False, "Invalid YouTube URL format."
