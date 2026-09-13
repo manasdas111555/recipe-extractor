@@ -2,6 +2,7 @@ import os
 import time
 import tempfile
 from pathlib import Path
+from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
 
 # Load local .env if available
