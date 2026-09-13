@@ -165,7 +165,14 @@ def download_worker_media(
                         return True, os.path.abspath(matches[0])
             except Exception as e:
                 last_exception = e
+                err_str = str(e).lower()
                 logger.warning("Worker download attempt with client %s failed: %s", client_list, e)
+                if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
+                    if any(k in err_str for k in ["bot", "sign in", "po token", "403", "confirm"]):
+                        logger.info("Detected YouTube bot challenge (%s). Triggering instant oEmbed fallback...", e)
+                        fb_success, fb_path = download_youtube_fallback(video_url, target_dir)
+                        if fb_success:
+                            return True, fb_path
                 continue
 
         if "youtube.com" in video_url.lower() or "youtu.be" in video_url.lower():
@@ -195,11 +202,11 @@ def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, s
     try:
         import requests
         output_dir.mkdir(parents=True, exist_ok=True)
-        match = re.search(r"(?:shorts/|v=|be/)([\w-]{11})", video_url)
+        match = re.search(r"(?:shorts/|shorts|v=|be/|watch\?v=)(?:/)?([A-Za-z0-9_-]{6,15})", video_url)
         if not match:
             return False, "Invalid YouTube URL format."
         
-        video_id = match.group(1)
+        video_id = match.group(1).split("?")[0].split("&")[0]
         output_file = output_dir / f"yt_stream_{video_id}.jpg"
 
         if output_file.exists() and output_file.stat().st_size > 1000:
@@ -220,17 +227,20 @@ def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, s
             logger.warning("YouTube oEmbed fetch skipped: %s", oembed_err)
 
         # 2. Quality cascade for thumbnail image retrieval
-        thumb_candidates = ["maxresdefault.jpg", "sddefault.jpg", "hqdefault.jpg"]
-        if oembed_thumb and oembed_thumb not in thumb_candidates:
+        thumb_candidates = ["maxresdefault.jpg", "sddefault.jpg", "hqdefault.jpg", "mqdefault.jpg", "default.jpg"]
+        if oembed_thumb:
             thumb_candidates.insert(0, oembed_thumb)
 
         for candidate in thumb_candidates:
             thumb_url = candidate if candidate.startswith("http") else f"https://i.ytimg.com/vi/{video_id}/{candidate}"
-            resp = requests.get(thumb_url, headers=headers, timeout=10)
-            if resp.status_code == 200 and len(resp.content) > 1000:
-                with open(output_file, "wb") as f:
-                    f.write(resp.content)
-                return True, str(output_file.resolve())
+            try:
+                resp = requests.get(thumb_url, headers=headers, timeout=8)
+                if resp.status_code == 200 and len(resp.content) > 1000:
+                    with open(output_file, "wb") as f:
+                        f.write(resp.content)
+                    return True, str(output_file.resolve())
+            except Exception:
+                continue
         
         return False, "Failed to retrieve YouTube media thumbnail."
     except Exception as e:
