@@ -206,8 +206,26 @@ def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, s
             return True, str(output_file.resolve())
 
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"}
-        for quality in ["maxresdefault.jpg", "hqdefault.jpg"]:
-            thumb_url = f"https://i.ytimg.com/vi/{video_id}/{quality}"
+        
+        # 1. Fetch official YouTube oEmbed metadata first
+        oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+        oembed_thumb = None
+        try:
+            oembed_resp = requests.get(oembed_url, headers=headers, timeout=8)
+            if oembed_resp.status_code == 200:
+                oembed_data = oembed_resp.json()
+                oembed_thumb = oembed_data.get("thumbnail_url")
+                logger.info("Retrieved YouTube oEmbed metadata title: %s", oembed_data.get("title", ""))
+        except Exception as oembed_err:
+            logger.warning("YouTube oEmbed fetch skipped: %s", oembed_err)
+
+        # 2. Quality cascade for thumbnail image retrieval
+        thumb_candidates = ["maxresdefault.jpg", "sddefault.jpg", "hqdefault.jpg"]
+        if oembed_thumb and oembed_thumb not in thumb_candidates:
+            thumb_candidates.insert(0, oembed_thumb)
+
+        for candidate in thumb_candidates:
+            thumb_url = candidate if candidate.startswith("http") else f"https://i.ytimg.com/vi/{video_id}/{candidate}"
             resp = requests.get(thumb_url, headers=headers, timeout=10)
             if resp.status_code == 200 and len(resp.content) > 1000:
                 with open(output_file, "wb") as f:
