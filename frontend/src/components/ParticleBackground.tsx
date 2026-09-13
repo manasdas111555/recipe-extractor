@@ -2,7 +2,11 @@
 
 import React, { useEffect, useRef } from 'react';
 
-export default function ParticleBackground() {
+interface ParticleBackgroundProps {
+  theme?: 'light' | 'dark';
+}
+
+export default function ParticleBackground({ theme = 'light' }: ParticleBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -36,7 +40,9 @@ export default function ParticleBackground() {
       alpha: number;
     }> = [];
 
-    const colors = ['#10B981', '#34D399', '#06B6D4', '#38BDF8', '#8B5CF6'];
+    const colors = theme === 'dark'
+      ? ['#10B981', '#34D399', '#06B6D4', '#38BDF8', '#8B5CF6']
+      : ['#059669', '#10B981', '#0284C7', '#06B6D4', '#7C3AED'];
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -46,7 +52,7 @@ export default function ParticleBackground() {
         vy: (Math.random() - 0.5) * 0.4,
         radius: Math.random() * 1.8 + 0.8,
         color: colors[Math.floor(Math.random() * colors.length)],
-        alpha: Math.random() * 0.5 + 0.2
+        alpha: theme === 'dark' ? Math.random() * 0.5 + 0.2 : Math.random() * 0.35 + 0.15
       });
     }
 
@@ -67,9 +73,15 @@ export default function ParticleBackground() {
 
       // Draw cursor radial glow
       const radialGradient = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 450);
-      radialGradient.addColorStop(0, 'rgba(16, 185, 129, 0.08)');
-      radialGradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.04)');
-      radialGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      if (theme === 'dark') {
+        radialGradient.addColorStop(0, 'rgba(16, 185, 129, 0.08)');
+        radialGradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.04)');
+        radialGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      } else {
+        radialGradient.addColorStop(0, 'rgba(16, 185, 129, 0.06)');
+        radialGradient.addColorStop(0.5, 'rgba(6, 182, 212, 0.03)');
+        radialGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      }
       ctx.fillStyle = radialGradient;
       ctx.fillRect(0, 0, width, height);
 
@@ -89,7 +101,7 @@ export default function ParticleBackground() {
         ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
         ctx.fillStyle = p1.color;
         ctx.globalAlpha = p1.alpha;
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = theme === 'dark' ? 8 : 4;
         ctx.shadowColor = p1.color;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -105,8 +117,10 @@ export default function ParticleBackground() {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
-            const opacity = (1 - dist / 130) * 0.15;
-            ctx.strokeStyle = `rgba(16, 185, 129, ${opacity})`;
+            const opacity = (1 - dist / 130) * (theme === 'dark' ? 0.15 : 0.1);
+            ctx.strokeStyle = theme === 'dark'
+              ? `rgba(16, 185, 129, ${opacity})`
+              : `rgba(15, 23, 42, ${opacity * 0.8})`;
             ctx.lineWidth = 0.8;
             ctx.stroke();
           }
@@ -124,7 +138,7 @@ export default function ParticleBackground() {
       window.removeEventListener('mousemove', handleMouseMove);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [theme]);
 
   return (
     <canvas

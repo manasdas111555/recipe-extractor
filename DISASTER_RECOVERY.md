@@ -339,6 +339,21 @@ If static assets in `frontend/public/` are missing:
 
 ---
 
+### 📘 Runbook 12: Dual-Theme State Recovery & LocalStorage Reset
+**Symptom**: User interface theme is locked or displays inconsistent colors between light/dark mode.
+
+#### Step 1: Clear LocalStorage Theme Cache
+1. Open Browser DevTools (F12) $\rightarrow$ Application $\rightarrow$ Local Storage.
+2. Delete key `theme` or execute in browser console:
+   ```js
+   localStorage.removeItem('theme');
+   document.documentElement.classList.remove('dark');
+   ```
+3. Refresh page. App resets cleanly to default Light Mode (`#F8FAFC`).
+
+---
+
+
 
 ## 🔐 Secrets & Credentials Disaster Reference
 

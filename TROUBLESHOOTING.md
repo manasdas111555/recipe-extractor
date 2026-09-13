@@ -34,8 +34,10 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-022** | 2026-09-13 | Vercel Staging | Vercel Preview Protection `401 Unauthorized` / Client Loading Screen Lock | ✅ Resolved |
 | **ISSUE-023** | 2026-09-13 | Media Ingestion | YouTube Shorts Cloud IP Bot Block (`403 Forbidden` / `GVS PO Token required`) | ✅ Resolved |
 | **ISSUE-024** | 2026-09-13 | UI/UX & Skills | Global Skill Installation & Luxury Next.js Design System Integration | ✅ Resolved |
+| **ISSUE-025** | 2026-09-13 | UI/UX & Theme | Default Light Mode & Interactive Sun/Moon Dark Mode Toggle | ✅ Resolved |
 
 ---
+
 
 
 ## 🔍 Detailed Issue Logs
@@ -754,6 +756,35 @@ Two underlying factors caused the failure:
 - Unit test suite: `150/150 passed` (0 failures).
 
 ---
+
+### 🚨 ISSUE-025: Default Light Mode & Interactive Sun/Moon Dark Mode Toggle
+- **Date**: 2026-09-13
+- **Affected Files**: `frontend/src/app/globals.css`, `frontend/src/app/page.tsx`, `frontend/src/components/ParticleBackground.tsx`, `frontend/src/components/FaqSection.tsx`
+- **Environment**: Client UI & Browser Theme Engine
+
+#### 1. What Happened (Symptom):
+User requested defaulting the website theme to Light Mode while providing a prominent, interactive Sun/Moon button in the sticky top navigation bar to toggle Dark Cyber-Obsidian Mode.
+
+#### 2. Root Cause:
+1. CSS variables in `:root` were hardcoded to dark obsidian colors (`#040711`), offering no light mode styling or variables.
+2. Canvas background (`ParticleBackground.tsx`) used fixed bright cyan/emerald particles that washed out on white background backdrops without theme color scaling.
+
+#### 3. Resolution (Code Changes):
+1. **CSS Dual-Theme Tokens (`globals.css`)**:
+   - `:root`: Light mode base (`#F8FAFC`), white frosted glass (`rgba(255,255,255,0.88)`), slate-900 typography (`#0F172A`).
+   - `html.dark, body.dark`: Obsidian base (`#040711`), dark glass (`rgba(14,20,36,0.75)`), white typography (`#F8FAFC`).
+2. **Interactive Header Toggle (`page.tsx`)**:
+   - Integrated `<Sun />` / `<Moon />` icon button in sticky header bar.
+   - Synchronizes `localStorage.getItem('theme')` (defaulting to `'light'`) and toggles `.dark` class on `document.documentElement`.
+3. **Theme-Aware Canvas (`ParticleBackground.tsx`)**:
+   - Accepts `theme` prop (`'light' | 'dark'`) to switch particle dot hues and line translucency dynamically.
+
+#### 4. Testing & Verification:
+- Next.js production build: compiled 100% cleanly in 1362ms.
+- Full unit test suite: `150/150 passed` (0 failures).
+
+---
+
 
 
 ## 📌 Standard Protocol for Logging Future Issues

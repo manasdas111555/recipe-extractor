@@ -33,6 +33,8 @@ import {
   Send,
   Smartphone,
   HelpCircle,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
@@ -114,6 +116,30 @@ function UniversalDashboard() {
   const [downloadedTxt, setDownloadedTxt] = useState<boolean>(false);
   const [waCountryCode, setWaCountryCode] = useState<string>('+91');
   const [waPhoneNumber, setWaPhoneNumber] = useState<string>('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  // Synchronize initial theme from localStorage (default: light mode)
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const initialTheme = savedTheme || 'light';
+    setTheme(initialTheme);
+    if (initialTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    if (nextTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   // Detect platform from URL
   const detectPlatform = (inputUrl: string) => {
@@ -597,7 +623,7 @@ function UniversalDashboard() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       {/* Interactive Constellation Particle Canvas & Ambient Aura Layers */}
-      <ParticleBackground />
+      <ParticleBackground theme={theme} />
       <div className="bg-hero-texture" />
       <div className="bg-ambient-layer" />
       <div className="bg-glass-artwork" />
@@ -606,7 +632,7 @@ function UniversalDashboard() {
       <header
         style={{
           borderBottom: '1px solid var(--border-subtle)',
-          background: 'rgba(10, 14, 26, 0.85)',
+          background: 'var(--bg-surface)',
           backdropFilter: 'blur(16px)',
           position: 'sticky',
           top: 0,
@@ -648,6 +674,26 @@ function UniversalDashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            {/* Theme Toggle Button (Light / Dark Mode) */}
+            <button
+              onClick={toggleTheme}
+              className="btn-ghost"
+              style={{ padding: '0.45rem 0.85rem' }}
+              title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon size={16} color="#06B6D4" />
+                  <span>Dark Mode</span>
+                </>
+              ) : (
+                <>
+                  <Sun size={16} color="#F59E0B" />
+                  <span>Light Mode</span>
+                </>
+              )}
+            </button>
+
             {/* FAQ & How It Works Guide Button */}
             <button
               onClick={() => {
