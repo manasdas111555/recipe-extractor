@@ -836,6 +836,32 @@ Anthropic skills repo contains 19 production-grade agent skills (`academy-guide`
 
 ---
 
+### 🚨 ISSUE-028: Autonomous Playwright WebApp Visual & Functional E2E Audit (`webapp-testing` Skill)
+- **Date**: 2026-09-13
+- **Affected Target**: Staging Preview (`universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`)
+- **Environment**: Automated Playwright Headless Audit
+
+#### 1. What Happened (Symptom):
+Executed full automated Playwright webapp visual inspection & functional testing using the newly installed `webapp-testing` agent skill.
+
+#### 2. Root Cause & Verification Findings:
+1. **Light & Dark Mode Synchronization**: Theme toggle (`Dark Mode` / `Light Mode` header trigger) accurately mutates `document.documentElement.classList` to toggle `.dark`, persisting state and adjusting CSS surface tokens.
+2. **Interactive Form Input & Domain Hints**: Form inputs successfully receive URLs, render platform badge ("YouTube Short"), and accept domain selection.
+3. **FAQ Accordion & Knowledge Base**: Smooth accordion expansion validated without layout shifts or text overlaps.
+4. **Mobile Responsiveness (375x812 Viewport)**: Verified clean single-column layout stack, sticky header compact spacing, and readable font sizing.
+
+#### 3. Visual Artifact Proof:
+- Initial Light Mode: [`webapp_test_initial_light_mode.png`](file:///C:/Users/admin/.gemini/antigravity-ide/brain/4d9e6a2e-1965-400e-81ff-bdf8142c51fa/webapp_test_initial_light_mode.png)
+- Obsidian Dark Mode: [`webapp_test_dark_mode.png`](file:///C:/Users/admin/.gemini/antigravity-ide/brain/4d9e6a2e-1965-400e-81ff-bdf8142c51fa/webapp_test_dark_mode.png)
+- FAQ Accordion Interaction: [`webapp_test_faq_interaction.png`](file:///C:/Users/admin/.gemini/antigravity-ide/brain/4d9e6a2e-1965-400e-81ff-bdf8142c51fa/webapp_test_faq_interaction.png)
+- Mobile Responsive Viewport: [`webapp_test_mobile_viewport.png`](file:///C:/Users/admin/.gemini/antigravity-ide/brain/4d9e6a2e-1965-400e-81ff-bdf8142c51fa/webapp_test_mobile_viewport.png)
+
+#### 4. Testing & Verification:
+- 0 Console Errors, 0 Uncaught Exceptions.
+- Automated pytest suite: `150/150 passed` (0 failures).
+
+---
+
 
 
 

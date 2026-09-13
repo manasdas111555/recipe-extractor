@@ -404,6 +404,24 @@ print('Skills restored successfully!')
 
 ---
 
+### 📘 Runbook 15: Automated WebApp Playwright Visual & E2E Testing Protocol (`webapp-testing` Skill)
+**Symptom**: Need to perform automated visual regression testing or E2E UI verification across desktop and mobile viewports.
+
+#### Step 1: Run Automated Playwright WebApp Test Script
+Execute in terminal:
+```powershell
+python scratch/test_webapp_playwright.py
+```
+
+#### Step 2: Review Generated Visual Artifacts
+Check the following output screenshot files in the brain artifact directory:
+- `webapp_test_initial_light_mode.png` (Desktop 1440x900 Light Mode)
+- `webapp_test_dark_mode.png` (Desktop 1440x900 Dark Mode)
+- `webapp_test_faq_interaction.png` (Knowledge Base Accordion Interaction)
+- `webapp_test_mobile_viewport.png` (Mobile 375x812 Responsive Layout)
+
+---
+
 
 
 
