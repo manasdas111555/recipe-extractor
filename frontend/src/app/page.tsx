@@ -39,6 +39,7 @@ import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
 import CreatorTagVault from '../components/CreatorTagVault';
 import FaqSection from '../components/FaqSection';
+import ParticleBackground from '../components/ParticleBackground';
 
 interface ProductItem {
   name: string;
@@ -595,9 +596,11 @@ function UniversalDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-      {/* Awwwards Atmospheric Background & Ambient Aura Layers */}
+      {/* Interactive Constellation Particle Canvas & Ambient Aura Layers */}
+      <ParticleBackground />
       <div className="bg-hero-texture" />
       <div className="bg-ambient-layer" />
+      <div className="bg-glass-artwork" />
 
       {/* Top Navigation Bar */}
       <header
@@ -694,7 +697,7 @@ function UniversalDashboard() {
 
           <h1
             style={{
-              fontSize: '2.5rem',
+              fontSize: '2.65rem',
               fontWeight: 800,
               lineHeight: 1.15,
               marginBottom: '0.75rem',
@@ -702,7 +705,7 @@ function UniversalDashboard() {
             }}
           >
             Universal Reel & Shorts <br />
-            <span className="gradient-text">AI Intelligence Extractor</span>
+            <span className="gradient-text-animated">AI Intelligence Extractor</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '680px', margin: '0 auto' }}>
             Turn any Instagram Reel or YouTube Short into structured step-by-step recipes, workout

@@ -417,5 +417,42 @@ noscript .sc-reveal {
   box-shadow: 0 0 30px rgba(16, 185, 129, 0.35), inset 0 0 15px rgba(16, 185, 129, 0.1) !important;
 }
 
+@keyframes textGradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gradient-text-animated {
+  background: linear-gradient(135deg, #10B981 0%, #34D399 25%, #06B6D4 50%, #38BDF8 75%, #10B981 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textGradientFlow 6s linear infinite;
+}
+
+.bg-glass-artwork {
+  position: absolute;
+  top: 100px;
+  right: -200px;
+  width: 700px;
+  height: 500px;
+  background-image: url('/hero_glass_artwork.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.14;
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 0;
+}
+
+
 
 
