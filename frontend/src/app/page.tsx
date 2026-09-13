@@ -260,9 +260,47 @@ function UniversalDashboard() {
       setLoadingSubtext('Structuring chronological steps, ingredient vectors, and equipment');
     } else if (loadingProgress < 99) {
       setLoadingPhase('Validating Output Schema & Shoppable Links...');
-      setLoadingSubtext('Resolving verified quick-commerce product tags and parameters');
     }
   }, [isLoading, Math.floor(loadingProgress / 10)]);
+
+  // ==========================================================================
+  // Cameron Breen's Scroll Animation Principles & Multi-Plane Parallax (UPA-806)
+  // ==========================================================================
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          document.documentElement.style.setProperty('--scroll-y', `${window.scrollY}`);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    // IntersectionObserver for scroll-driven reveals (.sc-reveal -> .sc-visible)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('sc-visible');
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    );
+
+    const revealElements = document.querySelectorAll('.sc-reveal');
+    revealElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      observer.disconnect();
+    };
+  }, []);
 
   // Polling helper for background jobs (HTTP 202)
   const pollExtractionStatus = async (pollUrl: string, maxAttempts = 60) => {
@@ -616,7 +654,7 @@ function UniversalDashboard() {
 
       {/* Hero Ingestion Section */}
       <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '2rem 1.5rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }} className="plane-far sc-reveal sc-visible">
           <div
             style={{
               display: 'inline-flex',
@@ -655,7 +693,7 @@ function UniversalDashboard() {
 
         {/* Input Bar Card with Domain Selector */}
         <div
-          className="glass-panel"
+          className="glass-panel plane-mid sc-reveal sc-visible"
           style={{
             maxWidth: '820px',
             margin: '0 auto 1.5rem',
@@ -969,7 +1007,7 @@ function UniversalDashboard() {
                 gap: '1rem',
               }}
             >
-              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-1" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <Globe size={20} color="#38BDF8" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Universal Stream Parsing</h3>
@@ -979,7 +1017,7 @@ function UniversalDashboard() {
                 </p>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-2" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <Cpu size={20} color="#A78BFA" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Multimodal Neural Vision</h3>
@@ -989,7 +1027,7 @@ function UniversalDashboard() {
                 </p>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-3" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <ShoppingBag size={20} color="#F472B6" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Shoppable Product Links</h3>
@@ -999,7 +1037,7 @@ function UniversalDashboard() {
                 </p>
               </div>
 
-              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-4" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <MessageSquare size={20} color="#34D399" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Instant WhatsApp Sync</h3>
@@ -1012,6 +1050,7 @@ function UniversalDashboard() {
 
             {/* Bottom Telemetry Badges */}
             <div
+              className="sc-reveal sc-stagger-2"
               style={{
                 display: 'flex',
                 alignItems: 'center',
