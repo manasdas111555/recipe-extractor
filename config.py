@@ -14,17 +14,30 @@ MAX_VIDEO_DURATION = 90
 
 def get_download_dir() -> Path:
     """
-    Returns download folder path. Uses C:\\Users\\admin\\Downloads\\Reciepe if on local Windows,
-    otherwise uses temp directory or local ./downloads on Streamlit Cloud.
+    Returns a guaranteed writable download folder path. Uses local Windows path if writable,
+    otherwise safely falls back to system temp directory (/tmp/recipe_downloads) on cloud serverless.
     """
+    candidates = []
     local_target = Path(r"C:\Users\admin\Downloads\Reciepe")
     if os.name == "nt" and local_target.parent.exists():
-        local_target.mkdir(parents=True, exist_ok=True)
-        return local_target
-    else:
-        cloud_target = Path(__file__).parent / "downloads"
-        cloud_target.mkdir(parents=True, exist_ok=True)
-        return cloud_target
+        candidates.append(local_target)
+    
+    candidates.append(Path(__file__).parent / "downloads")
+    candidates.append(Path(tempfile.gettempdir()) / "recipe_downloads")
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            test_file = candidate / f".write_test_{int(time.time())}.tmp"
+            test_file.write_text("test")
+            test_file.unlink(missing_ok=True)
+            return candidate
+        except Exception:
+            continue
+
+    fallback = Path(tempfile.gettempdir()) / "recipe_downloads"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
 
 # Alias for backwards compatibility
 ensure_download_dir = get_download_dir

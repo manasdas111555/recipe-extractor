@@ -62,8 +62,24 @@ def download_worker_media(
     Returns (success, filepath_or_error_message).
     """
     settings = get_settings()
-    target_dir = output_dir or Path(os.getcwd()) / "downloads"
-    target_dir.mkdir(parents=True, exist_ok=True)
+    import tempfile
+    candidates = []
+    if output_dir:
+        candidates.append(output_dir)
+    candidates.append(Path(os.getcwd()) / "downloads")
+    candidates.append(Path(tempfile.gettempdir()) / "recipe_downloads")
+
+    target_dir = Path(tempfile.gettempdir()) / "recipe_downloads"
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            test_file = candidate / f".write_test_{int(time.time())}.tmp"
+            test_file.write_text("test")
+            test_file.unlink(missing_ok=True)
+            target_dir = candidate
+            break
+        except Exception:
+            continue
 
     # Determine proxy configuration
     effective_proxy = proxy_url
