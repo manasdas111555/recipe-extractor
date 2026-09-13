@@ -85,6 +85,13 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
             }
 
             try:
+                cookie_path = get_youtube_cookie_file()
+                if cookie_path and cookie_path.exists():
+                    ydl_opts['cookiefile'] = str(cookie_path.resolve())
+            except Exception:
+                pass
+
+            try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     # Pre-flight duration check: immediately intercept long videos before consuming bandwidth
                     try:

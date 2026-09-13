@@ -42,6 +42,26 @@ def get_download_dir() -> Path:
 # Alias for backwards compatibility
 ensure_download_dir = get_download_dir
 
+def get_youtube_cookie_file() -> Optional[Path]:
+    """
+    Decodes base64-encoded Netscape cookies file from YOUTUBE_COOKIES_BASE64 env var
+    and writes it to a temporary file for yt-dlp authentication on cloud serverless functions.
+    """
+    try:
+        import base64
+        cookies_b64 = get_env_var("YOUTUBE_COOKIES_BASE64", "")
+        if cookies_b64:
+            cookie_content = base64.b64decode(cookies_b64).decode("utf-8", errors="ignore")
+            if "# Netscape" in cookie_content or "youtube" in cookie_content.lower():
+                target_dir = get_download_dir()
+                cookie_file = target_dir / "youtube_cookies.txt"
+                cookie_file.write_text(cookie_content, encoding="utf-8")
+                return cookie_file
+    except Exception:
+        pass
+    return None
+
+
 def cleanup_old_downloads(max_age_minutes: int = 60):
     """
     Deletes temporary video and media files older than max_age_minutes
