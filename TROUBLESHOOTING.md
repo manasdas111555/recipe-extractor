@@ -814,6 +814,28 @@ Initial Light Mode implementation was perceived as basic, lacking depth, card co
 
 ---
 
+### 🚨 ISSUE-027: Anthropic Global Agent Skills Repository Synchronization (`github.com/anthropics/skills`)
+- **Date**: 2026-09-13
+- **Affected Location**: `C:\Users\admin\.gemini\config\skills\`
+- **Environment**: Global Agent System & Multi-Project Capabilities
+
+#### 1. What Happened (Symptom):
+User requested the installation of all official Anthropic agent skills from `https://github.com/anthropics/skills` at the global level for cross-project utility.
+
+#### 2. Root Cause:
+Anthropic skills repo contains 19 production-grade agent skills (`academy-guide`, `algorithmic-art`, `brand-guidelines`, `canvas-design`, `claude-api`, `discernment-nudge`, `doc-coauthoring`, `docx`, `frontend-design`, `internal-comms`, `mcp-builder`, `pdf`, `pptx`, `skill-creator`, `slack-gif-creator`, `theme-factory`, `web-artifacts-builder`, `webapp-testing`, `xlsx`) requiring global registration in `C:\Users\admin\.gemini\config\skills\`.
+
+#### 3. Resolution (Code & File Changes):
+1. **Cloned Repository**: Cloned `https://github.com/anthropics/skills.git` to temporary workspace scratch folder (`scratch/anthropics_skills`).
+2. **Global Sync Script**: Executed `install_anthropics_skills.py` to copy all 19 skills with their complete subfolder hierarchies (references, scripts, templates, assets) into `C:\Users\admin\.gemini\config\skills\<skill_name>\`.
+3. **Verification**: Total global skills count reached 45 verified, active agent skills.
+
+#### 4. Testing & Verification:
+- Full automated test suite: `150/150 passed` (0 failures).
+- All 19 skills verified present with valid `SKILL.md` entries.
+
+---
+
 
 
 

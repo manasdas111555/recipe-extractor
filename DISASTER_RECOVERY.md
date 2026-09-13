@@ -376,6 +376,34 @@ Run `npm run build` inside `frontend/` to generate optimized Tailwind & global C
 
 ---
 
+### 📘 Runbook 14: Global Agent Skills Directory Restoration & Synchronization (`github.com/anthropics/skills`)
+**Symptom**: Agent skills in `C:\Users\admin\.gemini\config\skills\` are corrupted, missing, or require synchronization with upstream repositories.
+
+#### Step 1: Re-clone Anthropic Skills Repository
+Execute in terminal:
+```powershell
+git clone https://github.com/anthropics/skills.git scratch/anthropics_skills
+```
+
+#### Step 2: Re-run Global Sync Automation
+Run the python sync script to restore all 19 Anthropic skills (`academy-guide`, `algorithmic-art`, `brand-guidelines`, `canvas-design`, `claude-api`, `discernment-nudge`, `doc-coauthoring`, `docx`, `frontend-design`, `internal-comms`, `mcp-builder`, `pdf`, `pptx`, `skill-creator`, `slack-gif-creator`, `theme-factory`, `web-artifacts-builder`, `webapp-testing`, `xlsx`):
+```powershell
+python -c "
+import os, shutil
+src = r'scratch\anthropics_skills\skills'
+dst = r'C:\Users\admin\.gemini\config\skills'
+for s in os.listdir(src):
+    s_path = os.path.join(src, s)
+    if os.path.isdir(s_path):
+        d_path = os.path.join(dst, s)
+        if os.path.exists(d_path): shutil.rmtree(d_path)
+        shutil.copytree(s_path, d_path)
+print('Skills restored successfully!')
+"
+```
+
+---
+
 
 
 
