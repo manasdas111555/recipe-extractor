@@ -24,6 +24,14 @@
   --font-mono: 'Space Grotesk', 'JetBrains Mono', monospace;
 }
 
+.font-heading {
+  font-family: var(--font-heading) !important;
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

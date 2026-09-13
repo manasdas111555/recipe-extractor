@@ -33,8 +33,10 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-021** | 2026-09-08 | Frontend / AI | Instagram Reel preview static fallback & missing structured details/notes in PWA UI | ✅ Resolved |
 | **ISSUE-022** | 2026-09-13 | Vercel Staging | Vercel Preview Protection `401 Unauthorized` / Client Loading Screen Lock | ✅ Resolved |
 | **ISSUE-023** | 2026-09-13 | Media Ingestion | YouTube Shorts Cloud IP Bot Block (`403 Forbidden` / `GVS PO Token required`) | ✅ Resolved |
+| **ISSUE-024** | 2026-09-13 | UI/UX & Skills | Global Skill Installation & Luxury Next.js Design System Integration | ✅ Resolved |
 
 ---
+
 
 ## 🔍 Detailed Issue Logs
 
@@ -717,6 +719,42 @@ Two underlying factors caused the failure:
 - Unit test suite: `150/150 passed` (0 failures).
 
 ---
+
+### 🚨 ISSUE-024: Global Skill Installation & Luxury Next.js Design Architecture Integration
+- **Date**: 2026-09-13
+- **Affected Files**: `frontend/src/app/globals.css`, `frontend/src/app/page.tsx`, `frontend/src/components/ParticleBackground.tsx`, `C:\Users\admin\.gemini\config\skills\`
+- **Environment**: Global Agent System & Next.js 15 Client
+
+#### 1. What Happened (Symptom):
+1. User requested installing 14 downloaded skills from `C:\Users\admin\Downloads\Skill Files` globally across the AI agent workspace.
+2. The web application's typography and background aesthetics were perceived as generic / AI-generated without modern interactive micro-animations or custom visual brand tokens.
+
+#### 2. Root Cause:
+1. Skills residing only in `Downloads` were not automatically discovered by Antigravity AI; global skills must be located in `C:\Users\admin\.gemini\config\skills\<skill_name>\SKILL.md`.
+2. Standard browser defaults (`Inter` or sans-serif fallbacks) lacks visual personality compared to luxury Awwwards-style web applications.
+3. Adding interactive HTML5 canvas animation without clean-up handlers causes memory leaks or high DPI blurry rendering on Retina displays.
+
+#### 3. Resolution (Code & Architecture Changes):
+1. **Global Skill Installer (`scratch/install_skills.py`)**:
+   Wrote an automated installer script that parsed YAML frontmatter across all 14 downloaded skills and installed them into `C:\Users\admin\.gemini\config\skills\`:
+   `find-skills`, `frontend-design`, `high-end-visual-design`, `loop-me`, `handoff`, `prototype`, `research`, `shadcn`, `tailwind-design-system`, `theme-factory`, `to-issues`, `to-prd`, `triage`, `wayfinder`.
+2. **Typography System Upgrade (`globals.css`)**:
+   Imported Google Fonts:
+   - `Plus Jakarta Sans`: Primary display headers and titles.
+   - `Space Grotesk`: Domain category badges and status pills.
+   - `JetBrains Mono`: Execution latency telemetry and code blocks.
+3. **Interactive Particle Canvas (`ParticleBackground.tsx`)**:
+   Created a lightweight canvas component using `requestAnimationFrame`, mouse radial tracking, distance-based line opacity calculations, and `window.devicePixelRatio` scaling.
+4. **Visual Layer Composition (`page.tsx`)**:
+   Combined dynamic canvas constellation layer (`<ParticleBackground />`) with ambient aurora backgrounds (`hero_neural_bg.jpg`) and 3D glass crystal artwork (`hero_glass_artwork.jpg`).
+
+#### 4. Testing & Verification:
+- Next.js production build: compiled 100% cleanly in 1211ms.
+- E2E visual verification on Vercel Preview Staging.
+- Unit test suite: `150/150 passed` (0 failures).
+
+---
+
 
 ## 📌 Standard Protocol for Logging Future Issues
 

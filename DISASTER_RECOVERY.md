@@ -57,8 +57,8 @@ This document details:
 | **Staging UI** | Streamlit Community Cloud | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Pre-production testing sandbox |
 | **FastAPI Backend** | Local / Docker Daemon | `http://localhost:8000` (`/docs`, `/health`, `/api/v1/auth/me`) | Decoupled API Gateway for bots and PWAs |
 | **Database** | Supabase (AWS Mumbai) | `https://scrqvbgjybnrvcpxbygf.supabase.co` | Multi-tenant PostgreSQL database with RLS |
-| **Keep-Alive Engine** | GitHub Actions Workflow | `.github/workflows/keep_alive.yml` | 6-hour cron ping preventing container hibernation |
-| **CI/CD Quality Gate**| GitHub Actions | Repository Actions Workflow (`ci.yml`) | Automated Python 3.10/3.11 test runner (150 tests) |
+| **Global Skills Root** | Local Agent Environment | `C:\Users\admin\.gemini\config\skills\` | 14 global agent skills (`frontend-design`, `theme-factory`, `shadcn`, `high-end-visual-design`, etc.) |
+| **Visual Asset CDN** | Next.js Static Public (`public/`) | `hero_glass_artwork.jpg`, `hero_neural_bg.jpg` | 3D glass crystal artwork and ambient aurora background layers |
 
 ---
 
@@ -315,6 +315,30 @@ Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http
 2. Vercel Edge issues the `_vercel_jwt` session cookie, unblocking all downstream script, asset, and API fetch requests.
 
 ---
+
+### 📘 Runbook 11: Global Skills Directory & Frontend Visual Asset Recovery
+**Symptom**: Agent skills are missing, or Next.js background textures (`hero_glass_artwork.jpg`, `hero_neural_bg.jpg`) fail to load.
+
+#### Step 1: Global Skills Directory Restoration
+If skills are lost or uninstalled:
+1. Re-run global installer:
+   ```powershell
+   python scratch/install_skills.py
+   ```
+2. Or copy skill directories directly into `C:\Users\admin\.gemini\config\skills\<skill_name>\SKILL.md`.
+
+#### Step 2: Static Visual Asset Recovery
+If static assets in `frontend/public/` are missing:
+1. Re-copy images from source scratch files:
+   ```powershell
+   copy "hero_neural_bg.jpg" "frontend\public\"
+   copy "hero_ambient_glow.jpg" "frontend\public\"
+   copy "hero_glass_artwork.jpg" "frontend\public\"
+   ```
+2. Run `npm run build` inside `frontend/` to re-generate the static CDN bundle.
+
+---
+
 
 ## 🔐 Secrets & Credentials Disaster Reference
 
