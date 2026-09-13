@@ -32,11 +32,13 @@ import {
   Video,
   Send,
   Smartphone,
+  HelpCircle,
 } from 'lucide-react';
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
 import CreatorTagVault from '../components/CreatorTagVault';
+import FaqSection from '../components/FaqSection';
 
 interface ProductItem {
   name: string;
@@ -639,6 +641,18 @@ function UniversalDashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            {/* FAQ & How It Works Guide Button */}
+            <button
+              onClick={() => {
+                document.getElementById('faq-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="btn-ghost"
+              style={{ padding: '0.45rem 0.85rem' }}
+            >
+              <HelpCircle size={16} color="#34D399" />
+              <span>FAQ & Guide</span>
+            </button>
+
             {/* Intelligence Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
@@ -1912,6 +1926,9 @@ function UniversalDashboard() {
             </div>
           </div>
         )}
+
+        {/* Interactive FAQ & User Guide Section */}
+        <FaqSection />
       </main>
 
       {/* Slide-out Intelligence Vault Library Drawer */}
