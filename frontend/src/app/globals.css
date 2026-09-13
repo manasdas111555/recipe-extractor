@@ -230,3 +230,91 @@ noscript .sc-reveal {
   transform: none !important;
 }
 
+/* ==========================================================================
+   Step 2: UI/UX Pro Max & Taste Design Micro-Interactions (UPA-807)
+   ========================================================================== */
+
+@keyframes shimmerSweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-block {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSweep 1.8s infinite linear;
+  border-radius: 6px;
+}
+
+.shimmer-card {
+  background: rgba(18, 24, 38, 0.65);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* 1px Highlight Accent Borders */
+.accent-border-t {
+  border-top: 1px solid rgba(16, 185, 129, 0.45) !important;
+}
+
+.accent-border-t-cyan {
+  border-top: 1px solid rgba(56, 189, 248, 0.45) !important;
+}
+
+.accent-border-t-purple {
+  border-top: 1px solid rgba(167, 139, 250, 0.45) !important;
+}
+
+.glass-panel-glow {
+  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Tabular Telemetry & Monospace Typography */
+.tabular-num {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Tactile Micro-Interactions */
+.chip-tactile {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.chip-tactile:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.chip-tactile:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-tactile {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-tactile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -4px rgba(16, 185, 129, 0.35);
+}
+
+.btn-tactile:active {
+  transform: translateY(0) scale(0.98);
+}
+
+

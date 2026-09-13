@@ -152,11 +152,11 @@ export default function ServingAdjuster({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Users size={18} color="var(--accent-emerald)" />
           <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Serving Yield:</span>
-          <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }} className="tabular-num">
             {servings} {servings === 1 ? 'Person' : 'People'}
           </span>
           {servings !== initialServings && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--accent-amber)' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--accent-amber)' }} className="tabular-num">
               ({(scaleFactor * 100).toFixed(0)}% scale)
             </span>
           )}
@@ -166,17 +166,17 @@ export default function ServingAdjuster({
           <button
             onClick={() => adjustServings(-1)}
             disabled={servings <= 1}
-            className="btn-ghost"
+            className="btn-ghost chip-tactile"
             style={{ padding: '0.35rem 0.65rem', borderRadius: '6px' }}
             title="Decrease Servings"
           >
             <Minus size={14} />
           </button>
-          <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }}>{servings}</span>
+          <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: 600 }} className="tabular-num">{servings}</span>
           <button
             onClick={() => adjustServings(1)}
             disabled={servings >= 12}
-            className="btn-ghost"
+            className="btn-ghost chip-tactile"
             style={{ padding: '0.35rem 0.65rem', borderRadius: '6px' }}
             title="Increase Servings"
           >
@@ -185,7 +185,7 @@ export default function ServingAdjuster({
 
           <button
             onClick={handleCopyClipboard}
-            className="btn-ghost"
+            className="btn-ghost chip-tactile"
             style={{ marginLeft: '0.5rem', padding: '0.35rem 0.75rem' }}
             title="Copy scaled recipe"
           >
@@ -214,6 +214,7 @@ export default function ServingAdjuster({
           return (
             <div
               key={idx}
+              className="accent-border-t-cyan"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -237,7 +238,7 @@ export default function ServingAdjuster({
                 />
                 <span>
                   {item.displayQty && (
-                    <strong style={{ color: 'var(--accent-emerald)', marginRight: '0.35rem' }}>
+                    <strong style={{ color: 'var(--accent-emerald)', marginRight: '0.35rem' }} className="tabular-num">
                       {item.displayQty}
                     </strong>
                   )}
@@ -251,6 +252,7 @@ export default function ServingAdjuster({
                   href={amazonUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="chip-tactile"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -274,6 +276,7 @@ export default function ServingAdjuster({
                   href={zeptoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="chip-tactile"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',

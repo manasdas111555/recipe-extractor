@@ -693,7 +693,7 @@ function UniversalDashboard() {
 
         {/* Input Bar Card with Domain Selector */}
         <div
-          className="glass-panel plane-mid sc-reveal sc-visible"
+          className="glass-panel plane-mid sc-reveal sc-visible accent-border-t glass-panel-glow"
           style={{
             maxWidth: '820px',
             margin: '0 auto 1.5rem',
@@ -721,6 +721,7 @@ function UniversalDashboard() {
               <select
                 value={selectedDomain}
                 onChange={(e) => setSelectedDomain(e.target.value)}
+                className="chip-tactile"
                 style={{
                   background: 'rgba(255, 255, 255, 0.06)',
                   border: '1px solid var(--border-subtle)',
@@ -777,7 +778,7 @@ function UniversalDashboard() {
             <button
               onClick={() => handleExtract()}
               disabled={isLoading || !url}
-              className="btn-emerald"
+              className="btn-emerald btn-tactile"
             >
               {isLoading ? (
                 <>
@@ -814,8 +815,8 @@ function UniversalDashboard() {
                   setSelectedDomain(s.domain);
                   handleExtract(s.url);
                 }}
-                className="btn-ghost"
-                style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }}
+                className="btn-ghost chip-tactile"
+                style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
               >
                 {s.label}
               </button>
@@ -841,6 +842,7 @@ function UniversalDashboard() {
               href="https://t.me/UniversalProAIBot"
               target="_blank"
               rel="noopener noreferrer"
+              className="chip-tactile"
               style={{
                 color: '#38BDF8',
                 fontWeight: 700,
@@ -863,12 +865,11 @@ function UniversalDashboard() {
         {/* Dynamic Technical Progress Bar & Intelligence Deck */}
         {isLoading && (
           <div
-            className="glass-panel"
+            className="shimmer-card accent-border-t glass-panel-glow"
             style={{
               maxWidth: '820px',
               margin: '0 auto 2rem',
               padding: '1.35rem 1.5rem',
-              border: '1px solid var(--border-active)',
               position: 'relative',
               overflow: 'hidden',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
@@ -897,8 +898,8 @@ function UniversalDashboard() {
                 </span>
               </div>
               <span
+                className="tabular-num"
                 style={{
-                  fontFamily: 'monospace',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   color: 'var(--text-secondary)',
@@ -932,27 +933,34 @@ function UniversalDashboard() {
               />
             </div>
 
-            {/* Technical Subtext (Without Model Names or Specifics) */}
+            {/* Skeleton Shimmer Sweep Lines */}
+            <div style={{ marginTop: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div className="shimmer-block" style={{ width: '65%', height: '14px' }} />
+              <div className="shimmer-block" style={{ width: '90%', height: '10px' }} />
+              <div className="shimmer-block" style={{ width: '45%', height: '10px' }} />
+            </div>
+
+            {/* Technical Subtext */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginTop: '0.65rem',
+                marginTop: '0.85rem',
               }}
             >
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 {loadingSubtext || 'Real-Time Multimodal Intelligence Pipeline Active'}
               </span>
               <span
+                className="tabular-num"
                 style={{
                   fontSize: '0.68rem',
                   color: 'var(--accent-emerald)',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.05em',
+                  fontWeight: 600,
                 }}
               >
-                PIPELINE_STATUS: ACTIVE
+                ⚡ ~2.4s Benchmark Target
               </span>
             </div>
           </div>
@@ -1007,7 +1015,7 @@ function UniversalDashboard() {
                 gap: '1rem',
               }}
             >
-              <div className="glass-panel sc-reveal sc-stagger-1" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-1 accent-border-t-cyan chip-tactile" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <Globe size={20} color="#38BDF8" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Universal Stream Parsing</h3>
@@ -1017,7 +1025,7 @@ function UniversalDashboard() {
                 </p>
               </div>
 
-              <div className="glass-panel sc-reveal sc-stagger-2" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-2 accent-border-t-purple chip-tactile" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <Cpu size={20} color="#A78BFA" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Multimodal Neural Vision</h3>
@@ -1027,7 +1035,7 @@ function UniversalDashboard() {
                 </p>
               </div>
 
-              <div className="glass-panel sc-reveal sc-stagger-3" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-3 accent-border-t chip-tactile" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <ShoppingBag size={20} color="#F472B6" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Shoppable Product Links</h3>
@@ -1037,7 +1045,7 @@ function UniversalDashboard() {
                 </p>
               </div>
 
-              <div className="glass-panel sc-reveal sc-stagger-4" style={{ padding: '1.25rem' }}>
+              <div className="glass-panel sc-reveal sc-stagger-4 accent-border-t-cyan chip-tactile" style={{ padding: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <MessageSquare size={20} color="#34D399" />
                   <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Instant WhatsApp Sync</h3>
@@ -1060,13 +1068,13 @@ function UniversalDashboard() {
                 flexWrap: 'wrap',
               }}
             >
-              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge-pill chip-tactile tabular-num" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                 ⚡ ~2.4s AI Turnaround
               </span>
-              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge-pill chip-tactile" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                 🛒 Amazon and Flipkart link
               </span>
-              <span className="badge-pill" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge-pill chip-tactile" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
                 📲 1-Click WhatsApp Share
               </span>
             </div>
