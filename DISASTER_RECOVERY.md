@@ -331,6 +331,7 @@ Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http
 | `EARNKARO_ID` | EarnKaro publisher identifier (`5608766`) | [EarnKaro Dashboard](https://earnkaro.com/) |
 | `GROQ_API_KEY` | Powers Whisper audio fallback transcription | [Groq Console](https://console.groq.com/) |
 | `MISTRALAI_API_KEY` | Secondary text structuring fallback | [Mistral AI Console](https://console.mistral.ai/) |
+| `YOUTUBE_COOKIES_BASE64` | Base64-encoded Netscape `cookies.txt` string for YouTube auth | Exported from browser via *Get cookies.txt locally* extension |
 
 ---
 
