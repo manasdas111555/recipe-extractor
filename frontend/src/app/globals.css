@@ -317,4 +317,105 @@ noscript .sc-reveal {
   transform: translateY(0) scale(0.98);
 }
 
+/* ==========================================================================
+   Awwwards Award-Winning Luxury Dark Design & Motion Engine
+   ========================================================================== */
+
+@keyframes floatAurora {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(30px, -20px) scale(1.1);
+    opacity: 0.45;
+  }
+}
+
+@keyframes pulseNeonGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 40px rgba(6, 182, 212, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.45), 0 0 60px rgba(6, 182, 212, 0.25);
+  }
+}
+
+@keyframes livePulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.4;
+  }
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10B981;
+  box-shadow: 0 0 10px #10B981;
+  animation: livePulseDot 1.8s infinite ease-in-out;
+  display: inline-block;
+}
+
+.bg-hero-texture {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url('/hero_neural_bg.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.22;
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+.bg-ambient-layer {
+  position: absolute;
+  top: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1000px;
+  height: 600px;
+  background-image: url('/hero_ambient_glow.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: blur(40px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+  animation: floatAurora 12s infinite ease-in-out;
+}
+
+.awwwards-card {
+  background: rgba(15, 22, 38, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.6);
+}
+
+.awwwards-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 20px 45px -10px rgba(16, 185, 129, 0.2);
+}
+
+.search-input-focus {
+  transition: all 0.3s ease;
+}
+
+.search-input-focus:focus-within {
+  border-color: #10B981 !important;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.35), inset 0 0 15px rgba(16, 185, 129, 0.1) !important;
+}
+
+
 

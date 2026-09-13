@@ -594,7 +594,11 @@ function UniversalDashboard() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+      {/* Awwwards Atmospheric Background & Ambient Aura Layers */}
+      <div className="bg-hero-texture" />
+      <div className="bg-ambient-layer" />
+
       {/* Top Navigation Bar */}
       <header
         style={{
@@ -667,23 +671,24 @@ function UniversalDashboard() {
       </header>
 
       {/* Hero Ingestion Section */}
-      <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '2rem 1.5rem' }}>
+      <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '2rem 1.5rem', position: 'relative', zIndex: 1 }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }} className="plane-far sc-reveal sc-visible">
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              padding: '0.3rem 0.85rem',
-              background: 'rgba(16, 185, 129, 0.1)',
-              border: '1px solid rgba(16, 185, 129, 0.25)',
+              padding: '0.35rem 0.85rem',
+              background: 'rgba(16, 185, 129, 0.12)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
               borderRadius: 'var(--radius-full)',
               marginBottom: '1rem',
+              boxShadow: '0 0 20px rgba(16, 185, 129, 0.15)',
             }}
           >
-            <Sparkles size={14} color="var(--accent-emerald)" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#34D399' }}>
-              Sub-3s Universal AI • Multi-Genre Multimodal Engine
+            <span className="live-dot" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34D399', letterSpacing: '0.03em' }}>
+              SUB-3S UNIVERSAL AI • MULTI-GENRE MULTIMODAL ENGINE
             </span>
           </div>
 
@@ -1029,42 +1034,42 @@ function UniversalDashboard() {
                 gap: '1rem',
               }}
             >
-              <div className="glass-panel sc-reveal sc-stagger-1 accent-border-t-cyan chip-tactile" style={{ padding: '1.25rem' }}>
+              <div className="awwwards-card sc-reveal sc-stagger-1 accent-border-t-cyan" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <Globe size={20} color="#38BDF8" />
-                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Universal Stream Parsing</h3>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Universal Stream Parsing</h3>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                   Seamless ingestion of Instagram Reels, YouTube Shorts, and TikTok with high-res auto-resolution.
                 </p>
               </div>
 
-              <div className="glass-panel sc-reveal sc-stagger-2 accent-border-t-purple chip-tactile" style={{ padding: '1.25rem' }}>
+              <div className="awwwards-card sc-reveal sc-stagger-2 accent-border-t-purple" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <Cpu size={20} color="#A78BFA" />
-                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Multimodal Neural Vision</h3>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Multimodal Neural Vision</h3>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                   Simultaneously analyzes video frames, on-screen text, audio transcripts & voiceovers.
                 </p>
               </div>
 
-              <div className="glass-panel sc-reveal sc-stagger-3 accent-border-t chip-tactile" style={{ padding: '1.25rem' }}>
+              <div className="awwwards-card sc-reveal sc-stagger-3 accent-border-t" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <ShoppingBag size={20} color="#F472B6" />
-                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Shoppable Product Links</h3>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Shoppable Product Links</h3>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                   Identifies cookware, fitness gear, gadgets & ingredients with instant 1-click buy tags.
                 </p>
               </div>
 
-              <div className="glass-panel sc-reveal sc-stagger-4 accent-border-t-cyan chip-tactile" style={{ padding: '1.25rem' }}>
+              <div className="awwwards-card sc-reveal sc-stagger-4 accent-border-t-cyan" style={{ padding: '1.35rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
                   <MessageSquare size={20} color="#34D399" />
-                  <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>Instant WhatsApp Sync</h3>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Instant WhatsApp Sync</h3>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
                   Direct delivery of clean, formatted intelligence notes straight to your phone.
                 </p>
               </div>
