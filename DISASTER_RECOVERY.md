@@ -353,6 +353,30 @@ If static assets in `frontend/public/` are missing:
 
 ---
 
+### 📘 Runbook 13: World-Class Dual-Theme Palette & Ceramic Token Restoration
+**Symptom**: Theme CSS variables or card glassmorphism styles are missing or overridden.
+
+#### Step 1: Ceramic & Obsidian Token Audit
+Verify `frontend/src/app/globals.css` contains the mandatory `:root` and `html.dark` design tokens:
+```css
+:root {
+  --bg-base: #F8FAFC;
+  --bg-surface: rgba(255, 255, 255, 0.82);
+  --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.06);
+}
+html.dark {
+  --bg-base: #040711;
+  --bg-surface: rgba(14, 20, 36, 0.78);
+  --shadow-card: 0 20px 45px -10px rgba(0, 0, 0, 0.6);
+}
+```
+
+#### Step 2: Rebuild Static Asset CSS Bundle
+Run `npm run build` inside `frontend/` to generate optimized Tailwind & global CSS chunks.
+
+---
+
+
 
 
 ## 🔐 Secrets & Credentials Disaster Reference

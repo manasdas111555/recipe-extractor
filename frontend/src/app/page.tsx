@@ -791,7 +791,7 @@ function UniversalDashboard() {
                 onChange={(e) => setSelectedDomain(e.target.value)}
                 className="chip-tactile"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
+                  background: 'var(--bg-surface-elevated)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '8px',
                   color: 'var(--text-primary)',
@@ -803,7 +803,7 @@ function UniversalDashboard() {
                 }}
               >
                 {DOMAIN_OPTIONS.map((d) => (
-                  <option key={d.id} value={d.id} style={{ background: '#0F172A', color: '#F8FAFC' }}>
+                  <option key={d.id} value={d.id} style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
                     {d.label}
                   </option>
                 ))}
@@ -1136,13 +1136,13 @@ function UniversalDashboard() {
                 flexWrap: 'wrap',
               }}
             >
-              <span className="badge-pill chip-tactile tabular-num" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge-pill chip-tactile tabular-num" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
                 ⚡ ~2.4s AI Turnaround
               </span>
-              <span className="badge-pill chip-tactile" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge-pill chip-tactile" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
                 🛒 Amazon and Flipkart link
               </span>
-              <span className="badge-pill chip-tactile" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)' }}>
+              <span className="badge-pill chip-tactile" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
                 📲 1-Click WhatsApp Share
               </span>
             </div>

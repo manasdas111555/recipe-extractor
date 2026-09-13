@@ -35,8 +35,10 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-023** | 2026-09-13 | Media Ingestion | YouTube Shorts Cloud IP Bot Block (`403 Forbidden` / `GVS PO Token required`) | ✅ Resolved |
 | **ISSUE-024** | 2026-09-13 | UI/UX & Skills | Global Skill Installation & Luxury Next.js Design System Integration | ✅ Resolved |
 | **ISSUE-025** | 2026-09-13 | UI/UX & Theme | Default Light Mode & Interactive Sun/Moon Dark Mode Toggle | ✅ Resolved |
+| **ISSUE-026** | 2026-09-13 | UI/UX & Design | World-Class Ceramic Light & Obsidian Dark Dual Theme Architecture | ✅ Resolved |
 
 ---
+
 
 
 
@@ -784,6 +786,34 @@ User requested defaulting the website theme to Light Mode while providing a prom
 - Full unit test suite: `150/150 passed` (0 failures).
 
 ---
+
+### 🚨 ISSUE-026: World-Class Ceramic Light & Obsidian Dark Dual Theme Architecture
+- **Date**: 2026-09-13
+- **Affected Files**: `frontend/src/app/globals.css`, `frontend/src/app/page.tsx`, `frontend/src/components/FaqSection.tsx`, `frontend/src/components/ParticleBackground.tsx`
+- **Environment**: Agency-Grade Visual UI System
+
+#### 1. What Happened (Symptom):
+Initial Light Mode implementation was perceived as basic, lacking depth, card contrast, or world-class design polish across both Light and Dark modes.
+
+#### 2. Root Cause:
+1. Glass card panels (`.awwwards-card`, `.shimmer-card`) hardcoded dark background opacities and static shadows.
+2. Light mode lacked ceramic frosted glass tokens, elevation shadows (`box-shadow`), accent top borders (`.accent-border-t`), or theme-aware texture blend modes (`multiply` vs `screen`).
+
+#### 3. Resolution (Code Changes):
+1. **Ceramic Light & Obsidian Dark System (`globals.css`)**:
+   - Light Mode: Porcelain ceramic background (`#F8FAFC` to `#F1F5F9`), frosted white glass (`rgba(255,255,255,0.82)`), deep slate-900 typography (`#0F172A`), multi-tone gradient titles (`linear-gradient(135deg, #059669 0%, #10B981 50%, #0284C7 100%)`).
+   - Dark Mode: Obsidian cyber-glass (`rgba(14,20,36,0.78)`), snow typography (`#F8FAFC`), neon cyan/emerald badges.
+2. **Texture Blend Modes**:
+   - `html:not(.dark) .bg-hero-texture`, `.bg-glass-artwork`: `mix-blend-mode: multiply`, `opacity: 0.12`.
+3. **Component Adaptability**:
+   - Domain selectors, telemetry badges, sample chips, and FAQ cards consume CSS variables (`var(--bg-surface)`, `var(--shadow-card)`, `var(--text-primary)`).
+
+#### 4. Testing & Verification:
+- Next.js production build: compiled 100% cleanly in 1440ms.
+- Full unit test suite: `150/150 passed` (0 failures).
+
+---
+
 
 
 
