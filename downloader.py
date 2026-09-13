@@ -62,9 +62,10 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         output_template = str(output_dir / "video_%(id)s.%(ext)s")
         
         client_cascades = [
+            ['web_embedded', 'android', 'ios'],
+            ['tv_embedded', 'web_embedded', 'android'],
             ['android', 'ios', 'mweb'],
             ['mweb', 'android', 'ios'],
-            ['tv_embedded', 'android', 'ios'],
         ]
         
         last_exception = None
@@ -156,9 +157,10 @@ def download_youtube_fallback(video_url: str, output_dir: Path) -> Tuple[bool, s
         if output_file.exists() and output_file.stat().st_size > 1000:
             return True, str(output_file.resolve())
 
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"}
         for quality in ["maxresdefault.jpg", "hqdefault.jpg"]:
             thumb_url = f"https://i.ytimg.com/vi/{video_id}/{quality}"
-            resp = requests.get(thumb_url, timeout=10)
+            resp = requests.get(thumb_url, headers=headers, timeout=10)
             if resp.status_code == 200 and len(resp.content) > 1000:
                 with open(output_file, "wb") as f:
                     f.write(resp.content)
