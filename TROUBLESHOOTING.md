@@ -34,6 +34,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-027** | 2026-09-13 | Skills | Global Anthropic Agent Skills Installation (19 Production Skills) | ✅ Resolved |
 | **ISSUE-028** | 2026-09-13 | UI/UX & Skills | Autonomous Playwright WebApp Visual & Functional E2E Audit (`webapp-testing` Skill) | ✅ Resolved |
 | **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
+| **ISSUE-030** | 2026-09-14 | UI/UX & Design | Light Mode WCAG AA Contrast, 3D Feathered Radial Mask, and Streamlined Hero | ✅ Resolved |
 
 ---
 
@@ -882,6 +883,33 @@ Integrated Andrey Karpathy's 3-Stage LLM Council Consensus framework into Univer
 - Added dedicated test suite [`tests/test_sprint8_llm_council.py`](file:///d:/Personal%20Projects/recipe-extractor/tests/test_sprint8_llm_council.py)
 
 #### 4. Testing & Verification:
+- Full automated test suite: `155/155 passed` (0 failures).
+
+---
+
+### 🚨 ISSUE-030: Light Mode Contrast Deficits & Hero Artwork Bounding Edges (P0/P1 PO Review Directive)
+- **Date**: 2026-09-14
+- **Affected Files**: `frontend/src/app/globals.css`, `frontend/src/app/page.tsx`, `frontend/src/components/FaqSection.tsx`, `app.py`
+- **Environment**: Dev & Staging
+
+#### 1. What Happened (Symptom):
+Product Owner visual inspection revealed three P0/P1 visual flaws in Light Mode:
+1. Floating 3D crystal artwork (`hero_glass_artwork.jpg`) rendered with a square dark bounding box breaking hero symmetry.
+2. Light mode headline and subheadings suffered from low WCAG AA contrast ratio (< 3:1).
+3. Hero input card was cluttered by a full-width top domain selector bar pushing the URL input downward.
+
+#### 2. Root Cause & Resolution:
+1. **Feathered Radial Mask for 3D Artwork**: Added CSS `mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%)` and `mix-blend-mode: multiply` in light mode to blend artwork seamlessly.
+2. **Light Mode WCAG AA Contrast**:
+   - Set Light Mode headline color to `#0F172A` Slate-900 with emerald-cyan gradient on `"Intelligence Extractor"`.
+   - Darkened body/description text to `#334155` Slate-700.
+   - Darkened FAQ step numbers `01-04` to high-contrast colors (`#059669`, `#0284C7`, `#D97706`, `#C026D3`).
+   - Filled active category filter pill with solid `#10B981` emerald background and white bold text.
+3. **Hero Input Card Streamlining**:
+   - Merged domain classifier as a compact inline select chip (`⚡ Auto-Detect ▾`) inside the URL input bar.
+   - Repositioned micro-badges (`~2.4s AI SLA`, `Amazon & Flipkart Links`, `1-Click WhatsApp Export`) directly under the hero headline description as a clean trust proof bar.
+
+#### 3. Testing & Verification:
 - Full automated test suite: `155/155 passed` (0 failures).
 
 ---
