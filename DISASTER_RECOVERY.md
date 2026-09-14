@@ -491,6 +491,26 @@ Verify `whatsapp_service.py` formats Blinkit (`https://blinkit.com/s/?q=...`) an
 
 ---
 
+### 📘 Runbook 20: Emergency Telegram Bot Recovery & Long-Polling Failover
+**Symptom**: Telegram bot stops responding or webhook GET/POST returns 401, 405, or timeout error.
+
+#### Step 1: Launch Local / Cloud Long-Polling Daemon (Immediate Failover)
+Execute in terminal / background process:
+```powershell
+python scripts/run_telegram_bot.py
+```
+`run_telegram_bot.py` calls `deleteWebhook`, establishes a direct outbound HTTPS connection to `https://api.telegram.org/bot<TOKEN>/getUpdates`, and handles all incoming `/start`, text, and video extraction updates with zero Vercel/CDN rewrite dependencies.
+
+#### Step 2: Verify Bot Status
+Console output will confirm connection:
+```text
+🤖 Connected as @universalProRecipeBot (Universal Pro AI Bot)
+✅ Cleared any active webhooks. Switching to long-polling mode.
+🚀 Telegram Bot is running! Waiting for reels and videos...
+```
+
+---
+
 
 
 

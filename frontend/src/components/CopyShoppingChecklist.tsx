@@ -26,10 +26,9 @@ export default function CopyShoppingChecklist({
   const handleCopy = async () => {
     const listText = ingredients
       .map((item) => {
-        if (typeof item === "string") return `• ${item}`;
         const qty = item.amount || item.quantity || "";
         const u = item.unit || "";
-        const measure = `${qty} ${u}`.strip ? `${qty} ${u}`.trim() : "";
+        const measure = `${qty} ${u}`.trim();
         const name = item.name || "";
         return `• ${measure ? measure + " " : ""}${name}`.trim();
       })

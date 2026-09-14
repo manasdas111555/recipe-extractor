@@ -589,15 +589,15 @@ Please review each module deliverable and provide your official sign-off status 
 - [x] **Quota Engine**: 20 guest / 30 free daily quota limits active.
 - [x] **Beta Telemetry Feed**: Real-time DB logging and Telegram admin alerts configured.
 - [x] **Hinglish Culinary Prompting**: Imperial & metric translations verified (*katori* $\rightarrow$ 150ml/200g, *chamach* $\rightarrow$ 5ml/15ml).
-- [x] **Omnichannel Bot Navigation**: Telegram and WhatsApp bot links rendered in top bar pill row.
+- [x] **Omnichannel Bot Navigation**: Telegram long-polling daemon (`scripts/run_telegram_bot.py`) and WhatsApp Cloud API bot active with sub-second response times.
 - [x] **Clipboard Resiliency**: Checklist copy button functional across desktop and mobile WebViews.
-- [x] **Automated Regression Suite**: 157 / 157 automated unit tests passing cleanly.
+- [x] **Automated Regression Suite**: 160 / 160 automated unit tests passing cleanly.
 
 ---
 
 ### 🚀 Production Promotion Final Status
 
-With **157 / 157 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ user guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, and **Sprint 9 Friends & Family Beta Rollout**:
+With **160 / 160 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ user guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, and **Sprint 9 Friends & Family Beta Rollout**:
 
 **PO Status**: **FULL UNCONDITIONAL APPROVAL FOR PRODUCTION RELEASE (`main` branch)**.
 

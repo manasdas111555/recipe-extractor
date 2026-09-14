@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8823387947:AAEdHn3PWxo5NzPqeRqD4EB29PJ0z66c7G4';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 const VIDEO_URL_REGEX = /(https?:\/\/(?:www\.)?(?:instagram\.com\/(?:reel|reels|p)\/[a-zA-Z0-9_-]+\/?|youtube\.com\/(?:watch\?v=[a-zA-Z0-9_-]+|shorts\/[a-zA-Z0-9_-]+\/?)|youtu\.be\/[a-zA-Z0-9_-]+\/?|tiktok\.com\/@[a-zA-Z0-9._-]+\/video\/\d+\/?))/i;
+
+export async function GET() {
+  return NextResponse.json({ status: 'ok', bot: 'Universal Pro AI Telegram Bot Webhook Active' });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,13 +66,23 @@ async function sendTelegramMessage(chatId: number | string, text: string, replyM
     body.reply_markup = replyMarkup;
   }
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('[Telegram Outbound Error]', res.status, errText);
+      delete body.parse_mode;
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    }
   } catch (err) {
-    console.error('[Telegram Outbound Error]', err);
+    console.error('[Telegram Outbound Network Error]', err);
   }
 }
 
