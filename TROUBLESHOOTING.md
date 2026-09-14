@@ -35,6 +35,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-028** | 2026-09-13 | UI/UX & Skills | Autonomous Playwright WebApp Visual & Functional E2E Audit (`webapp-testing` Skill) | ✅ Resolved |
 | **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
 | **ISSUE-030** | 2026-09-14 | UI/UX & Design | Light Mode WCAG AA Contrast, 3D Feathered Radial Mask, and Streamlined Hero | ✅ Resolved |
+| **ISSUE-031** | 2026-09-14 | Skills & Customizations | Global Agent Skills Installation from Downloads/Skill Files (Total 53 Skills) | ✅ Resolved |
 
 ---
 
@@ -911,6 +912,33 @@ Product Owner visual inspection revealed three P0/P1 visual flaws in Light Mode:
 
 #### 3. Testing & Verification:
 - Full automated test suite: `155/155 passed` (0 failures).
+
+---
+
+### 🚨 ISSUE-031: Global Agent Skills Audit & Installation from Downloads Folder
+- **Date**: 2026-09-14
+- **Affected Location**: `C:\Users\admin\Downloads\Skill Files` -> `C:\Users\admin\.gemini\config\skills\`
+- **Environment**: Global Agent System & Customizations
+
+#### 1. What Happened (Symptom):
+User downloaded 22 skill `.md` files to `C:\Users\admin\Downloads\Skill Files\` and requested an audit and global installation of all usable missing skills.
+
+#### 2. Root Cause & Verification Findings:
+Audited all 22 downloaded skill files against existing installed skills in `C:\Users\admin\.gemini\config\skills\`. Identified 7 brand new missing skills (`design-taste-frontend`, `figma-generate-design`, `figma-use`, `impeccable`, `minimalist-ui`, `mobile-android-design`, `redesign-existing-projects`).
+
+#### 3. Resolution (Files Installed):
+Created global skill directories and installed `SKILL.md` for all 7 missing skills:
+1. `design-taste-frontend`
+2. `figma-generate-design`
+3. `figma-use`
+4. `impeccable`
+5. `minimalist-ui`
+6. `mobile-android-design`
+7. `redesign-existing-projects`
+
+#### 4. Testing & Verification:
+- Total active global skills count reached **53 verified agent skills**.
+- All 53 skills verified with valid `SKILL.md` frontmatter.
 
 ---
 
