@@ -458,7 +458,7 @@ function UniversalDashboard() {
   const sampleUrls = [
     { label: '🍳 Steamed Egg Curry Reel', url: 'https://www.instagram.com/reel/DdGvPs9zhVu/', domain: 'recipe' },
     { label: '💻 Quick Python Tips Short', url: 'https://www.youtube.com/shorts/KrFDs2M_FSE', domain: 'tech_diy' },
-    { label: '🛍️ Keyboard & Gadget Short', url: 'https://www.youtube.com/shorts/J---aiyznGQ', domain: 'unboxing' },
+    { label: '🛍️ Keyboard & Gadget Short', url: 'https://www.youtube.com/shorts/c2gT6kCnLmc?si=Vo9bLGzNsdIY38rt', domain: 'unboxing' },
     { label: '⚡ Viral Meme Short', url: 'https://www.youtube.com/shorts/fC7oUOUEEi4', domain: 'auto' },
   ];
 
@@ -624,9 +624,15 @@ function UniversalDashboard() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       {/* Interactive Constellation Particle Canvas & Ambient Aura Layers */}
       <ParticleBackground theme={theme} />
-      <div className="bg-hero-texture" />
-      <div className="bg-ambient-layer" />
-      <div className="bg-glass-artwork" />
+      {theme === 'dark' ? (
+        <>
+          <div className="bg-hero-texture" />
+          <div className="bg-ambient-layer" />
+          <div className="bg-glass-artwork" />
+        </>
+      ) : (
+        <div className="bg-light-aura" />
+      )}
 
       {/* Top Navigation Bar */}
       <header
@@ -773,7 +779,6 @@ function UniversalDashboard() {
             maxWidth: '860px',
             margin: '0 auto 1.5rem',
             padding: '0.85rem 1rem',
-            boxShadow: '0 12px 45px rgba(0, 0, 0, 0.35)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap' }}>

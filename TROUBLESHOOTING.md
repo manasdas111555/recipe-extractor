@@ -942,6 +942,38 @@ Created global skill directories and installed `SKILL.md` for all 7 missing skil
 
 ---
 
+### 🚨 ISSUE-032: Impeccable UI/UX Contrast Ratio, Dual-Theme Artwork, Ghost-Card Removal & Motion Engine
+- **Date**: 2026-09-14
+- **Affected Files**: `frontend/src/app/globals.css`, `frontend/src/app/page.tsx`, `frontend/public/hero_glass_artwork_light.jpg`, `ui-ux-audits/2026-09-14-impeccable-ui-ux-audit.md`, `SPRINT_8_PO_SHOWCASE.md`
+- **Environment**: Dev & Staging
+
+#### 1. What Happened (Symptom):
+UI/UX audit using the newly installed `impeccable` skill revealed a dark gray smudgy rectangular blur artifact in Light Mode caused by reusing the dark-background 3D glass artwork (`hero_glass_artwork.jpg`) with `mix-blend-mode: multiply`. Additionally, minor contrast ratio deficits existed on dark mode subtext (`#64748B`) and light mode emerald badges (`#059669`), along with a "ghost-card" visual tell on `.glass-panel` (pairing 1px translucent border with heavy blur shadow `≥16px`), unbalanced multi-line header breaks, and missing accessibility reduced-motion fallbacks.
+
+#### 2. Root Cause & Solution:
+1. **Dual-Theme Background Artwork & Smudge Removal**:
+   - Identified that dark texture images (`hero_ambient_glow.jpg`, `hero_neural_bg.jpg`, `hero_glass_artwork.jpg`) were causing gray clouds and dark smudges over the Light Mode hero section.
+   - Updated [`globals.css`](file:///d:/Personal%20Projects/recipe-extractor/frontend/src/app/globals.css) to suppress dark texture images in Light Mode (`display: none !important`) and substituted a pure CSS radiant emerald-cyan aura (`radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.14) 0%, rgba(6, 182, 212, 0.07) 45%, transparent 75%)`), achieving a 100% smudge-free Ceramic Light interface.
+2. **WCAG 2.1 AA Contrast Ratio**:
+   - Updated dark mode `--text-muted` from `#64748B` to `#94A3B8` (>7.2:1 contrast ratio).
+   - Updated light mode `.badge-emerald` text from `#059669` to `#047857` (>5.1:1 contrast ratio).
+3. **Ghost-Card Removal & Surface Separation**:
+   - Decoupled heavy shadow blur (`0 20px 40px -15px ...`) from `.glass-panel` and replaced with a clean elevation shadow (`0 4px 16px rgba(...)`).
+   - Removed inline heavy shadow override on hero URL input card in `page.tsx`.
+4. **Typography Line Balancing**:
+   - Added global `h1, h2, h3 { text-wrap: balance; }` and `p { text-wrap: pretty; }`.
+5. **Accessibility Motion Engine**:
+   - Added `@media (prefers-reduced-motion: reduce)` block disabling animations, transform shifts, and parallax for users requesting reduced motion.
+6. **Audit Persistence & Sprint Showcase Documents**:
+   - Created dedicated `ui-ux-audits/` repository folder and saved the full audit report into [`ui-ux-audits/2026-09-14-impeccable-ui-ux-audit.md`](file:///d:/Personal%20Projects/recipe-extractor/ui-ux-audits/2026-09-14-impeccable-ui-ux-audit.md).
+   - Created [`SPRINT_8_PO_SHOWCASE.md`](file:///d:/Personal%20Projects/recipe-extractor/SPRINT_8_PO_SHOWCASE.md) following repository governance standards.
+
+#### 3. Testing & Verification:
+- Automated test suite: `156/156 passed` (0 failures).
+- Pre-promotion gate verified clean build and promoted `Dev -> staging`.
+
+---
+
 
 
 

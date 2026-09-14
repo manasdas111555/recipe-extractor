@@ -37,7 +37,7 @@ html.dark, body.dark {
   --border-active: rgba(16, 185, 129, 0.45);
   --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --text-muted: #94A3B8;
   --accent-emerald: #10B981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.25);
   --accent-rose: #FF416C;
@@ -73,7 +73,16 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Glassmorphic Panel Utility */
+/* Typography Line Balancing & Readability Rules */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Glassmorphic Panel Utility - Clean Surface Separation (No Ghost-Card) */
 .glass-panel {
   background: var(--bg-surface);
   backdrop-filter: blur(16px);
@@ -81,7 +90,11 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   transition: all 0.2s ease-in-out;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+}
+
+html.dark .glass-panel, body.dark .glass-panel {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .glass-panel:hover {
@@ -181,7 +194,7 @@ html.dark .btn-ghost:hover, body.dark .btn-ghost:hover {
 
 .badge-emerald {
   background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  color: #047857;
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
@@ -284,6 +297,22 @@ html.dark .badge-amber {
 noscript .sc-reveal {
   opacity: 1 !important;
   transform: none !important;
+}
+
+/* Accessibility Reduced Motion Safeguard */
+@media (prefers-reduced-motion: reduce) {
+  .sc-reveal,
+  .plane-far,
+  .plane-mid,
+  .animate-pulse-subtle,
+  .gradient-text-animated,
+  .shimmer-block,
+  .live-dot {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
 }
 
 /* ==========================================================================
@@ -418,7 +447,14 @@ noscript .sc-reveal {
   display: inline-block;
 }
 
-.bg-hero-texture {
+.bg-hero-texture,
+.bg-ambient-layer,
+.bg-glass-artwork {
+  display: none;
+}
+
+html.dark .bg-hero-texture, body.dark .bg-hero-texture {
+  display: block;
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -430,7 +466,8 @@ noscript .sc-reveal {
   z-index: 0;
 }
 
-.bg-ambient-layer {
+html.dark .bg-ambient-layer, body.dark .bg-ambient-layer {
+  display: block;
   position: absolute;
   top: -150px;
   left: 50%;
@@ -515,7 +552,8 @@ html:not(.dark) .gradient-text-animated {
   -webkit-text-fill-color: transparent;
 }
 
-.bg-glass-artwork {
+html.dark .bg-glass-artwork, body.dark .bg-glass-artwork {
+  display: block;
   position: absolute;
   top: 40px;
   right: -100px;
@@ -534,17 +572,14 @@ html:not(.dark) .gradient-text-animated {
   -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
 }
 
-html:not(.dark) .bg-hero-texture {
-  opacity: 0.10;
-  mix-blend-mode: multiply;
-}
-
-html:not(.dark) .bg-ambient-layer {
-  opacity: 0.15;
-}
-
-html:not(.dark) .bg-glass-artwork {
-  opacity: 0.10;
-  mix-blend-mode: multiply;
-  filter: blur(6px);
+/* Light Mode Background Engine - Pure Emerald Radial Aura */
+.bg-light-aura {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 600px;
+  background: radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.14) 0%, rgba(6, 182, 212, 0.06) 45%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
 }

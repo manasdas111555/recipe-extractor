@@ -19,6 +19,15 @@
 | **Sprint 5** | **SaaS Monetization & Quota Engine** (Razorpay + Stripe Dual-Rail Billing) | 28 pts | 🎉 **COMPLETED (100%)** | Weeks 9–10 |
 | **Sprint 6** | **Creator Program & SEO Ingestion Engine** (Custom Tags + SSR Pages) | 21 pts | 🎉 **COMPLETED (100%)** | Weeks 11–12 |
 | **Sprint 7** | **UX Polish, One-Click Activation & Model Resilience** (Title Filter + Sample Chips) | 23 pts | 🎉 **COMPLETED (100%)** | Weeks 13–14 |
+| **Sprint 8** | **Impeccable UI/UX Refinement, Accessibility & Motion Engine** (Contrast + Ghost-Card Cleanup + Reduced Motion) | 24 pts | 🎉 **COMPLETED (100%)** | Weeks 15–16 |
+
+---
+
+## 📌 Sprint 8 Kanban Board (Completed)
+
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (24 pts) |
+| :--- | :--- | :--- | :--- |
+| None | None | None | `UPA-806` Impeccable Contrast Ratio & Color Harmony Refinement<br>`UPA-807` Ghost-Card Anti-Pattern Cleanup & Surface Separation<br>`UPA-808` Typographic Balance & Line Length Optimization (`text-wrap: balance`)<br>`UPA-809` Accessibility Motion Safeguard (`prefers-reduced-motion`)<br>`UPA-810` Persistent UI/UX Audit Directory (`ui-ux-audits/`) |
 
 ---
 

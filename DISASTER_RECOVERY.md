@@ -438,11 +438,12 @@ If a major AI provider outage occurs:
 **Symptom**: User interface text or step numbers appear washed out or unreadable in Light Mode on mobile viewports or standard displays.
 
 #### Step 1: Verify Theme CSS Color Token Variables
-Check [`frontend/src/app/globals.css`](file:///d:/Personal%20Projects/recipe-extractor/frontend/src/app/globals.css) to ensure Light Mode contrast tokens satisfy WCAG AA standards:
+Check [`frontend/src/app/globals.css`](file:///d:/Personal%20Projects/recipe-extractor/frontend/src/app/globals.css) to ensure Light & Dark Mode contrast tokens satisfy WCAG AA standards:
+- Dark Mode Muted Text: `#94A3B8` (Slate-400, >7.2:1 AA contrast ratio against `#040711`)
+- Light Mode Emerald Badge Text: `#047857` (Emerald-700, >5.1:1 AA contrast ratio)
 - Headline Primary Text: `#0F172A` (Slate-900)
 - Subheading & Body Copy: `#334155` (Slate-700)
 - Active Filter Pills: `#10B981` (Solid Emerald) with `#FFFFFF` text.
-- Step Numbers (`01-04`): `#059669`, `#0284C7`, `#D97706`, `#C026D3`.
 
 #### Step 2: Verify Feathered Radial Mask on Background Textures
 Ensure `.bg-glass-artwork` includes the radial gradient mask image:
@@ -450,6 +451,12 @@ Ensure `.bg-glass-artwork` includes the radial gradient mask image:
 mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
 -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
 ```
+
+#### Step 3: Verify Ghost-Card Surface Separation & Reduced Motion Engine
+Ensure `.glass-panel` uses clean elevation shadows (`0 4px 16px rgba(...)`) without heavy dual border+shadow blur (`≥16px`), and verify `@media (prefers-reduced-motion: reduce)` disables animations and transforms.
+
+#### Step 4: Verify Audit Persistence System
+Ensure past and future UI/UX audit reports are stored in the [`ui-ux-audits/`](file:///d:/Personal%20Projects/recipe-extractor/ui-ux-audits) repository directory.
 
 ---
 
