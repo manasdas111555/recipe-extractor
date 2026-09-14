@@ -41,12 +41,13 @@ def execute_extraction_pipeline(
     preferred_language: str = "en",
     domain_hint: str = "auto",
     custom_affiliate_tags: Optional[Dict[str, str]] = None,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
+    provider: str = "auto"
 ) -> Dict[str, Any]:
     """
     Unified extraction worker pipeline shared between Celery tasks and BackgroundTasks.
     Step 1: Download media stream (360p, max 50MB, proxy rotation, guaranteed disk cleanup)
-    Step 2: Multimodal AI inference via Central Router (Gemini -> Mistral -> Groq/Whisper)
+    Step 2: Multimodal AI inference via Central Router (Gemini -> Mistral -> Groq/Whisper, or LLM Council)
     Step 3: Enrich with multi-store affiliate & 10-minute quick-commerce cart deep links
     Step 4: Persist structured payload to Supabase database & update user daily quota
     """
@@ -94,11 +95,11 @@ def execute_extraction_pipeline(
         mistral_key = config.get_mistral_api_key()
         groq_key = config.get_groq_api_key()
 
-        provider = "gemini" if gemini_key else ("mistral" if mistral_key else "groq")
+        selected_provider = provider if (provider and provider != "auto") else ("gemini" if gemini_key else ("mistral" if mistral_key else "groq"))
 
         ai_res = route_video_intelligence(
             video_path=video_path,
-            provider=provider,
+            provider=selected_provider,
             custom_gemini_key=gemini_key,
             custom_mistral_key=mistral_key,
             custom_groq_key=groq_key,

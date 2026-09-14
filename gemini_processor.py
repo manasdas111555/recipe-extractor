@@ -1044,3 +1044,22 @@ def process_video_and_generate_recipe(
     except Exception as e:
         return False, "", f"Gemini Processing Error: {str(e)}", str(video_path), {}
 
+
+def run_gemini_text_query(prompt: str, api_key: str = None) -> str:
+    """Runs a direct text prompt query against Gemini 3.8 Flash model."""
+    key = api_key or get_api_key()
+    if not key:
+        return ""
+    try:
+        from google import genai
+        client = genai.Client(api_key=key)
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt
+        )
+        return response.text if response and response.text else ""
+    except Exception as e:
+        safe_print(f"[Gemini Text Query] Error: {e}")
+        return ""
+
+

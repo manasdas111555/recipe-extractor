@@ -31,11 +31,9 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-019** | 2026-09-08 | Docker & Worker | Celery worker failed with `No module named 'ai_router'` | ✅ Resolved |
 | **ISSUE-020** | 2026-09-08 | Python 3.11 Runtime | `NameError: name 'Any' is not defined` in `gemini_processor.py:792` | ✅ Resolved |
 | **ISSUE-021** | 2026-09-08 | Frontend / AI | Instagram Reel preview static fallback & missing structured details/notes in PWA UI | ✅ Resolved |
-| **ISSUE-022** | 2026-09-13 | Vercel Staging | Vercel Preview Protection `401 Unauthorized` / Client Loading Screen Lock | ✅ Resolved |
-| **ISSUE-023** | 2026-09-13 | Media Ingestion | YouTube Shorts Cloud IP Bot Block (`403 Forbidden` / `GVS PO Token required`) | ✅ Resolved |
-| **ISSUE-024** | 2026-09-13 | UI/UX & Skills | Global Skill Installation & Luxury Next.js Design System Integration | ✅ Resolved |
-| **ISSUE-025** | 2026-09-13 | UI/UX & Theme | Default Light Mode & Interactive Sun/Moon Dark Mode Toggle | ✅ Resolved |
-| **ISSUE-026** | 2026-09-13 | UI/UX & Design | World-Class Ceramic Light & Obsidian Dark Dual Theme Architecture | ✅ Resolved |
+| **ISSUE-027** | 2026-09-13 | Skills | Global Anthropic Agent Skills Installation (19 Production Skills) | ✅ Resolved |
+| **ISSUE-028** | 2026-09-13 | UI/UX & Skills | Autonomous Playwright WebApp Visual & Functional E2E Audit (`webapp-testing` Skill) | ✅ Resolved |
+| **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
 
 ---
 
@@ -859,6 +857,32 @@ Executed full automated Playwright webapp visual inspection & functional testing
 #### 4. Testing & Verification:
 - 0 Console Errors, 0 Uncaught Exceptions.
 - Automated pytest suite: `150/150 passed` (0 failures).
+
+---
+
+### 🚨 ISSUE-029: Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation)
+- **Date**: 2026-09-14
+- **Affected Subsystem**: `ai_router.py`, `backend/app/services/llm_council.py`, `app.py`
+- **Environment**: Dev & Staging
+
+#### 1. What Happened (Symptom):
+Need for maximum extraction accuracy, peer audit cross-verification, and missing-ingredient detection on complex cooking reels and audio transcripts without sacrificing sub-3s fast execution defaults.
+
+#### 2. Root Cause & Solution:
+Integrated Andrey Karpathy's 3-Stage LLM Council Consensus framework into Universal Pro AI:
+- **Stage 1 (Parallel First Opinions)**: Dispatches video/audio concurrently to Gemini 3.8 Flash, Groq (Whisper + Llama 3.3 70B), and Mistral AI using `ThreadPoolExecutor`.
+- **Stage 2 (Anonymized Peer Audit)**: Masks provider identities into `Model Alpha`, `Model Beta`, `Model Gamma` and runs peer-audit verification to highlight missing ingredients or measurement discrepancies.
+- **Stage 3 (Chairman JSON Synthesis)**: Chairman model consolidates verified findings into a single unified `RecipeSchema` output dictionary.
+
+#### 3. Code Changes:
+- Created [`backend/app/services/llm_council.py`](file:///d:/Personal%20Projects/recipe-extractor/backend/app/services/llm_council.py)
+- Updated [`ai_router.py`](file:///d:/Personal%20Projects/recipe-extractor/ai_router.py)
+- Updated [`backend/app/workers/tasks.py`](file:///d:/Personal%20Projects/recipe-extractor/backend/app/workers/tasks.py)
+- Updated [`app.py`](file:///d:/Personal%20Projects/recipe-extractor/app.py)
+- Added dedicated test suite [`tests/test_sprint8_llm_council.py`](file:///d:/Personal%20Projects/recipe-extractor/tests/test_sprint8_llm_council.py)
+
+#### 4. Testing & Verification:
+- Full automated test suite: `155/155 passed` (0 failures).
 
 ---
 

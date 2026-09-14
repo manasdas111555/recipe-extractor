@@ -929,8 +929,27 @@ mode_choice = st.sidebar.selectbox(
     help="Auto-Detect intelligently determines whether the video is educational, tutorial, kitchen finds, recipe, workout, finance, beauty, or travel."
 )
 
-# Backend defaults for high performance
-provider_choice = "Auto-Universal (Gemini with Multi-Model Fallback)"
+# 3. AI Intelligence Provider
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:0.95rem; color:#F8FAFC; margin-bottom:4px;">
+    🤖 AI Reasoning Engine
+</div>
+""", unsafe_allow_html=True)
+
+provider_choice = st.sidebar.selectbox(
+    "AI Engine",
+    options=[
+        "Auto-Universal (Gemini with Multi-Model Fallback)",
+        "LLM Council (Multi-Provider Consensus & Peer Audit)",
+        "Google Gemini (Native Video AI)",
+        "Mistral AI (Vision + Audio Keyframes)",
+        "Groq (Whisper-v3 + Llama 3.3 70B)"
+    ],
+    index=0,
+    label_visibility="collapsed",
+    help="Select the AI reasoning engine. LLM Council runs 3-stage multi-model consensus and peer auditing for maximum extraction fidelity."
+)
 model_choice = "gemini-3.8-flash"
 
 st.sidebar.markdown("---")
@@ -941,7 +960,7 @@ st.sidebar.markdown("""
         <span style="font-size:0.82rem; font-weight:700; color:#6EE7B7;">Engine: Operational</span>
     </div>
     <div style="font-size:0.74rem; color:#94A3B8; margin-top:5px; line-height:1.4;">
-        Multimodal pipeline powered by Gemini 3.8 Flash with instant multi-model fallback.
+        Multimodal pipeline powered by Gemini 3.8 Flash, Groq, Mistral, and LLM Council Consensus Engine.
     </div>
 </div>
 """, unsafe_allow_html=True)

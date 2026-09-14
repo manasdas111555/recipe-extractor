@@ -417,8 +417,20 @@ python scratch/test_webapp_playwright.py
 Check the following output screenshot files in the brain artifact directory:
 - `webapp_test_initial_light_mode.png` (Desktop 1440x900 Light Mode)
 - `webapp_test_dark_mode.png` (Desktop 1440x900 Dark Mode)
-- `webapp_test_faq_interaction.png` (Knowledge Base Accordion Interaction)
-- `webapp_test_mobile_viewport.png` (Mobile 375x812 Responsive Layout)
+---
+
+### 📘 Runbook 16: Multi-LLM Council Provider Outage & Failover Recovery Protocol
+**Symptom**: One or more council provider APIs (Gemini, Groq, or Mistral) experience a 503 capacity outage or rate limit HTTP 429 during Stage 1 parallel extraction.
+
+#### Step 1: Automatic Single-Provider Graceful Fallback
+- `LLMCouncilEngine` in [`backend/app/services/llm_council.py`](file:///d:/Personal%20Projects/recipe-extractor/backend/app/services/llm_council.py) automatically catches provider-level exceptions during Stage 1 `ThreadPoolExecutor` execution.
+- If at least 1 provider succeeds, extraction proceeds seamlessly without failing the user request.
+- The `parsed_json["council_meta"]` metadata object logs `mode: "single_provider_fallback"`.
+
+#### Step 2: Emergency Router Direct Mode (If all fallback models hang)
+If a major AI provider outage occurs:
+1. Open Streamlit UI sidebar (or update API payload).
+2. Switch **AI Reasoning Engine** from `"LLM Council"` to `"Auto-Universal (Gemini with Multi-Model Fallback)"` or direct `"Groq (Whisper-v3 + Llama 3.3 70B)"`.
 
 ---
 

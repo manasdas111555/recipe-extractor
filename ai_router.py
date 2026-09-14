@@ -18,6 +18,7 @@ AI_PROVIDERS = [
     "Google Gemini (Native Video AI)",
     "Mistral AI (Vision + Audio Keyframes)",
     "Groq (Whisper-v3 + Llama 3.3 70B)",
+    "LLM Council (Multi-Provider Consensus & Peer Audit)",
     "Auto-Universal (Gemini with Multi-Model Fallback)"
 ]
 
@@ -46,6 +47,21 @@ def route_video_intelligence(
                 status_callback(msg)
             except Exception:
                 pass
+
+    # 0. LLM Council Selection
+    if "council" in prov:
+        notify("Routing to 3-Stage LLM Council Consensus Engine...")
+        from backend.app.services.llm_council import run_llm_council_extraction
+        return run_llm_council_extraction(
+            video_path=video_path,
+            custom_gemini_key=custom_gemini_key or get_api_key(),
+            custom_mistral_key=custom_mistral_key or get_mistral_api_key(),
+            custom_groq_key=custom_groq_key or get_groq_api_key(),
+            status_callback=status_callback,
+            gemini_model_preference=gemini_model_preference,
+            extraction_mode=extraction_mode,
+            affiliate_tags=tags
+        )
 
     # 1. Direct Mistral AI Selection
     if "mistral" in prov and "auto" not in prov:
