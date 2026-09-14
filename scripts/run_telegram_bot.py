@@ -29,6 +29,39 @@ logging.basicConfig(
 logger = logging.getLogger("telegram_runner")
 
 
+def get_feedback_keyboard(extraction_id: str, public_url: str = None) -> dict:
+    """
+    UPA-906: Telegram Bot Inline Feedback Keyboard Helper.
+    Generates inline keyboard markup for user accuracy feedback and detail tags.
+    """
+    target_url = public_url or "https://universalpro.ai"
+    keyboard = [
+        [
+            {"text": "📋 Copy Ingredients", "callback_data": f"copy_{extraction_id}"},
+            {"text": "🌐 View in App", "url": target_url},
+        ],
+        [
+            {"text": "👍 Accurate", "callback_data": f"fb_ok_{extraction_id}"},
+            {"text": "👎 Missed Details", "callback_data": f"fb_bad_{extraction_id}"},
+        ],
+    ]
+    return {"inline_keyboard": keyboard}
+
+
+def get_detail_failure_keyboard(extraction_id: str) -> dict:
+    """Generates failure category tags when user clicks 'Missed Details'."""
+    keyboard = [
+        [
+            {"text": "❌ Wrong Quantities", "callback_data": f"fb_tag_qty_{extraction_id}"},
+            {"text": "❌ Missing Steps", "callback_data": f"fb_tag_steps_{extraction_id}"},
+        ],
+        [
+            {"text": "❌ Audio Mismatch", "callback_data": f"fb_tag_audio_{extraction_id}"},
+        ],
+    ]
+    return {"inline_keyboard": keyboard}
+
+
 def run_bot_polling():
     settings = get_settings()
     token = settings.TELEGRAM_BOT_TOKEN

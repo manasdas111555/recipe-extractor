@@ -176,6 +176,27 @@ const FAQ_DATA: FaqItem[] = [
       </div>
     ),
     tags: ['error', 'bot check', 'youtube shorts error', 'instagram reel fail', 'fallback']
+  },
+  {
+    id: 'mobile-chat-bots',
+    category: 'features',
+    question: 'How do I extract recipes directly inside Telegram or WhatsApp?',
+    answer: (
+      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <p>
+          You can use our official mobile chat bots without installing any extra app:
+        </p>
+        <ul style={{ paddingLeft: '1.25rem', lineHeight: '1.6' }}>
+          <li>
+            <strong style={{ color: '#0088CC' }}>Telegram Bot:</strong> Send any reel or short link to <code>@UniversalProRecipeBot</code> (or click the 💬 Telegram Bot button in top nav) to receive structured ingredient cards and one-click feedback buttons instantly.
+          </li>
+          <li>
+            <strong style={{ color: '#25D366' }}>WhatsApp Bot:</strong> Message our WhatsApp Assistant (or click 🟢 WhatsApp Bot in top nav) to forward links or type recipe names. Receive cleanly formatted markdown recipes with 10-minute delivery links for Blinkit & Zepto!
+          </li>
+        </ul>
+      </div>
+    ),
+    tags: ['telegram', 'whatsapp', 'bot', 'chat', 'mobile', 'blinkit', 'zepto']
   }
 ];
 

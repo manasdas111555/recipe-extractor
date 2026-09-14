@@ -28,6 +28,27 @@ def safe_print(msg: str):
 from config import get_api_key, ensure_download_dir, get_affiliate_tags
 
 
+REGIONAL_EXTRACTION_SYSTEM_PROMPT = """
+You are Universal Pro AI, extracting high-fidelity structured recipe & workout data from short-form video audio and visual cues.
+
+INDIAN REGIONAL & CULINARY CONVERSIONS:
+1. Standardize common spoken metrics while retaining native terms in parentheses:
+   - "1 katori" -> "1 cup (~150g)"
+   - "ek chamach" -> "1 tbsp"
+   - "chota chamach" -> "1 tsp"
+   - "chutki bhar" -> "1 pinch"
+   - "swadanusar" -> "to taste"
+
+2. Ingredient Localization:
+   - Always preserve colloquial Indian spice / ingredient names in parentheses:
+     e.g., "Clarified Butter (Ghee)", "Cumin Seeds (Jeera)", "Dried Fenugreek (Kasuri Methi)", "Asafoetida (Hing)".
+
+3. Quick-Commerce Search Keywords:
+   - When generating search keywords for quick-commerce links, prioritize colloquial Indian product names
+     (e.g., use "Kasuri Methi" instead of "Dried Fenugreek Leaves").
+"""
+
+
 CATEGORY_EMOJIS = {
     "RECIPE": "🍳",
     "KITCHEN_FINDS": "🛍️",

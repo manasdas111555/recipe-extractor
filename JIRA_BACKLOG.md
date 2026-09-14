@@ -20,6 +20,15 @@
 | **Sprint 6** | **Creator Program & SEO Ingestion Engine** (Custom Tags + SSR Pages) | 21 pts | 🎉 **COMPLETED (100%)** | Weeks 11–12 |
 | **Sprint 7** | **UX Polish, One-Click Activation & Model Resilience** (Title Filter + Sample Chips) | 23 pts | 🎉 **COMPLETED (100%)** | Weeks 13–14 |
 | **Sprint 8** | **Impeccable UI/UX Refinement, Accessibility & Motion Engine** (Contrast + Ghost-Card Cleanup + Reduced Motion) | 24 pts | 🎉 **COMPLETED (100%)** | Weeks 15–16 |
+| **Sprint 9** | **Friends & Family Beta Rollout, Hinglish Culinary Engine & Observability** (Phase 0 - Phase 5) | 38 pts | 🎉 **COMPLETED (100%)** | Weeks 17–18 |
+
+---
+
+## 📌 Sprint 9 Kanban Board (Completed)
+
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (38 pts) |
+| :--- | :--- | :--- | :--- |
+| None | None | None | `UPA-901` Beta Quota Overrides (`quota_service.py`)<br>`UPA-902` Supabase `beta_telemetry_feed` Table Migration & RLS<br>`UPA-903` Real-Time Telegram Admin Telemetry Alerting (`telemetry_service.py`)<br>`UPA-904` Meta WhatsApp Cloud API Activation & Compact Outbound Formatter<br>`UPA-905` Gemini 3.8 Flash Indian Regional & Hinglish Prompt Tuning<br>`UPA-906` Telegram Bot Inline Feedback Keyboards & Failure Tags<br>`UPA-907` Safari-Resilient Mobile Clipboard Component (`CopyShoppingChecklist.tsx`)<br>`UPA-908` Dual-Bot Ingestion Hero Callouts & FAQ Module 14 (`FaqSection.tsx` & `page.tsx`)<br>`UPA-909` Wave 1 (Break-It) & Wave 2 (Utility) Beta Cohort Rollout & GTM Matrix |
 
 ---
 

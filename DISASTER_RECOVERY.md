@@ -460,6 +460,37 @@ Ensure past and future UI/UX audit reports are stored in the [`ui-ux-audits/`](f
 
 ---
 
+### 📘 Runbook 18: Beta Telemetry Feed & Real-Time Alert Recovery Protocol
+**Symptom**: Beta user telemetry events fail to log to Supabase DB or Telegram admin notification channel is silent.
+
+#### Step 1: Verify Supabase `beta_telemetry_feed` RLS & Table Schema
+1. Connect to Supabase SQL Editor.
+2. Execute table verification query:
+   ```sql
+   SELECT count(*) FROM public.beta_telemetry_feed;
+   ```
+3. If table is missing, re-apply [`database/009_beta_telemetry_feed.sql`](file:///d:/Personal%20Projects/recipe-extractor/database/009_beta_telemetry_feed.sql).
+
+#### Step 2: Test Telemetry Service Exception Grace
+Verify `send_admin_telemetry_alert()` in [`backend/app/services/telemetry_service.py`](file:///d:/Personal%20Projects/recipe-extractor/backend/app/services/telemetry_service.py) catches network timeouts and HTTP errors without interrupting main user extraction workflows.
+
+---
+
+### 📘 Runbook 19: Mobile Bot & Quick-Commerce Affiliate Failover Protocol
+**Symptom**: Telegram or WhatsApp bot webhooks return 500 error or quick-commerce delivery links fail to format.
+
+#### Step 1: Verify Bot Polling & Webhook Processes
+1. Check Celery / Bot script status on production host:
+   ```powershell
+   python scripts/run_telegram_bot.py
+   ```
+2. Verify `TELEGRAM_BOT_TOKEN` and `WHATSAPP_API_TOKEN` in environment settings.
+
+#### Step 2: Quick-Commerce Link Formatting Verification
+Verify `whatsapp_service.py` formats Blinkit (`https://blinkit.com/s/?q=...`) and Zepto (`https://www.zeptonow.com/search?query=...`) search URLs with explicit `urllib.parse.quote_plus` encoding.
+
+---
+
 
 
 

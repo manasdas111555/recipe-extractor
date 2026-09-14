@@ -974,6 +974,30 @@ UI/UX audit using the newly installed `impeccable` skill revealed a dark gray sm
 
 ---
 
+### 🚨 ISSUE-033: Friends & Family Beta Rollout, Hinglish Regional Prompt & Telemetry Engine
+- **Date**: 2026-09-14
+- **Affected Files**: `backend/app/services/quota_service.py`, `database/009_beta_telemetry_feed.sql`, `backend/app/services/telemetry_service.py`, `whatsapp_service.py`, `gemini_processor.py`, `scripts/run_telegram_bot.py`, `frontend/src/components/CopyShoppingChecklist.tsx`, `frontend/src/app/page.tsx`, `tests/test_sprint9_beta_telemetry.py`
+- **Environment**: Dev & Staging
+
+#### 1. What Happened (Symptom):
+Preparing for the 5-phase 48-hour Friends & Family Beta rollout required relaxing extraction limits to prevent HTTP 429 paywalls during co-testing, provisioning a passive telemetry table, setting up real-time Telegram admin alerts for failures or negative feedback, tuning Gemini 3.8 Flash for Indian regional Hinglish metrics (*katori*, *chamach*, *Ghee*, *Kasuri Methi*), adding inline Telegram feedback buttons, and providing a Safari-resilient clipboard component.
+
+#### 2. Root Cause & Resolution:
+1. **Beta Quota Overrides**: Updated `GUEST_DAILY_LIMIT = 20` and `FREE_AUTH_DAILY_LIMIT = 30` in `backend/app/services/quota_service.py`.
+2. **Supabase Telemetry Migration**: Created `database/009_beta_telemetry_feed.sql` defining `beta_telemetry_feed` table, index, and RLS policies.
+3. **Telegram Admin Alerts**: Created `backend/app/services/telemetry_service.py` dispatching instant Markdown alerts to developer private chat on failures (`🚨 FAILURE` / `⚠️ NEGATIVE FEEDBACK`).
+4. **WhatsApp Outbound Formatter**: Implemented `format_whatsapp_recipe` in `whatsapp_service.py` returning compact ingredient lists, top 4 prep steps, and 10-minute Blinkit/Zepto delivery links.
+5. **Hinglish Prompt Tuning**: Embedded `REGIONAL_EXTRACTION_SYSTEM_PROMPT` into `gemini_processor.py` for colloquial metric conversions.
+6. **Telegram Inline Feedback Keyboards**: Added `get_feedback_keyboard` and `get_detail_failure_keyboard` to `scripts/run_telegram_bot.py`.
+7. **Safari & WebView Clipboard Component**: Built `frontend/src/components/CopyShoppingChecklist.tsx` featuring `navigator.clipboard` with an automatic `execCommand('copy')` fallback textarea.
+8. **Dual-Bot Hero Callouts**: Added Telegram and WhatsApp mobile chat pill links below hero sample chips in `frontend/src/app/page.tsx`.
+
+#### 3. Testing & Verification:
+- Created dedicated test suite `tests/test_sprint9_beta_telemetry.py` (157 tests total).
+- All 157 automated unit & integration tests passed with 0 failures.
+
+---
+
 
 
 

@@ -395,6 +395,68 @@ def dispatch_whatsapp(
         resources=resources,
         include_commerce_links=include_commerce_links
     )
-    return True, f"WhatsApp link generated: {deep_link}"
+    return True, deep_link
+
+def format_whatsapp_recipe(structured_data: dict, public_slug: str = None) -> str:
+    """
+    UPA-904: Outbound WhatsApp Message Template Formatter.
+    Formats structured extraction data into a compact hierarchy avoiding massive text walls.
+    """
+    title = structured_data.get("title") or structured_data.get("recipe_title") or "Extracted Recipe"
+    servings = structured_data.get("servings", 2)
+    prep_time = structured_data.get("prep_time", "10m")
+    cook_time = structured_data.get("cook_time", "15m")
+    ingredients = structured_data.get("ingredients", [])
+    steps = structured_data.get("instructions") or structured_data.get("steps") or []
+
+    # 1. Build Ingredients List (Top 10)
+    ing_text_lines = []
+    for item in ingredients[:10]:
+        if isinstance(item, dict):
+            amt = item.get("quantity") or item.get("amount") or ""
+            unit = item.get("unit") or ""
+            name = item.get("name") or item.get("item") or ""
+            measure = f"{amt} {unit}".strip()
+            ing_text_lines.append(f"• {measure} {name}".strip())
+        else:
+            ing_text_lines.append(f"• {str(item)}")
+    
+    ing_text = "\n".join(ing_text_lines)
+    if len(ingredients) > 10:
+        ing_text += f"\n_...and {len(ingredients) - 10} more items in full recipe_"
+
+    # 2. Build Preparation Steps (Top 4)
+    step_text = "\n".join([f"{i+1}. {step}" for i, step in enumerate(steps[:4])])
+    if len(steps) > 4:
+        step_text += f"\n_...and {len(steps) - 4} more steps in full recipe_"
+
+    # 3. Build Direct Quick Commerce Links (Combined query)
+    top_names = []
+    for item in ingredients[:3]:
+        if isinstance(item, dict):
+            top_names.append(item.get("name") or item.get("item") or "")
+        else:
+            top_names.append(str(item))
+    
+    top_items_str = "+".join([urllib.parse.quote_plus(n) for n in top_names if n])
+    blinkit_url = f"https://api.universalpro.ai/api/v1/affiliate/redirect?merchant=blinkit&q={top_items_str}"
+    zepto_url = f"https://api.universalpro.ai/api/v1/affiliate/redirect?merchant=zepto&q={top_items_str}"
+
+    # 4. Assemble Message
+    msg = (
+        f"🥘 *{title}* (Servings: {servings})\n"
+        f"⏱️ Prep: {prep_time} | Cook: {cook_time}\n\n"
+        f"🛒 *INGREDIENTS:*\n{ing_text}\n\n"
+        f"📝 *PREPARATION:*\n{step_text}\n\n"
+        f"⚡ *10-Min Delivery:*\n"
+        f"• Blinkit: {blinkit_url}\n"
+        f"• Zepto: {zepto_url}\n"
+    )
+
+    if public_slug:
+        msg += f"\n🌐 *View Full Recipe & Scale Yield:*\nhttps://universalpro.ai/r/{public_slug}"
+
+    return msg
+
 
 

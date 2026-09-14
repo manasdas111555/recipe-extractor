@@ -899,12 +899,13 @@ function UniversalDashboard() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem',
+              gap: '0.75rem',
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',
+              flexWrap: 'wrap',
             }}
           >
-            <span>📱 Prefer Mobile? Extract directly on Telegram:</span>
+            <span>⚡ Prefer Mobile Chat?</span>
             <a
               href="https://t.me/UniversalProAIBot"
               target="_blank"
@@ -916,14 +917,36 @@ function UniversalDashboard() {
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
                 background: 'rgba(56, 189, 248, 0.1)',
-                padding: '2px 8px',
+                padding: '3px 9px',
                 borderRadius: '6px',
                 border: '1px solid rgba(56, 189, 248, 0.25)',
               }}
             >
-              <span>@UniversalProAIBot</span>
+              <span>Telegram Bot</span>
+              <ExternalLink size={11} />
+            </a>
+            <span>•</span>
+            <a
+              href="https://wa.me/919999999999?text=Hi%20Universal%20Pro%20AI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chip-tactile"
+              style={{
+                color: '#25D366',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: 'rgba(37, 211, 102, 0.1)',
+                padding: '3px 9px',
+                borderRadius: '6px',
+                border: '1px solid rgba(37, 211, 102, 0.25)',
+              }}
+            >
+              <span>WhatsApp Bot</span>
               <ExternalLink size={11} />
             </a>
           </div>

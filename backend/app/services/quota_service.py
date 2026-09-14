@@ -16,6 +16,12 @@ from backend.app.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
+# BETA OVERRIDE: Temporarily raised from 3/10 to 20/30 for Friends & Family testing
+GUEST_DAILY_LIMIT = 20
+FREE_AUTH_DAILY_LIMIT = 30
+PRO_DAILY_LIMIT = 999999
+
+
 class QuotaManager:
     """
     Tracks and enforces daily extraction quotas per user or IP address.
@@ -55,11 +61,11 @@ class QuotaManager:
         """Resolves daily extraction limit for a given user tier string."""
         clean_tier = tier.lower().strip()
         if clean_tier in ["pro", "creator", "business", "enterprise"]:
-            return 999999
+            return PRO_DAILY_LIMIT
         elif clean_tier in ["free", "user", "authenticated"]:
-            return getattr(self.settings, "DAILY_FREE_QUOTA_LIMIT", 10)
+            return getattr(self.settings, "DAILY_FREE_QUOTA_LIMIT", FREE_AUTH_DAILY_LIMIT)
         else:  # guest / anonymous
-            return getattr(self.settings, "DAILY_GUEST_QUOTA_LIMIT", 3)
+            return getattr(self.settings, "DAILY_GUEST_QUOTA_LIMIT", GUEST_DAILY_LIMIT)
 
     def check_and_consume_quota(
         self,
