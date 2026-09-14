@@ -267,7 +267,7 @@ export default function FaqSection() {
                 height: '40px',
                 borderRadius: '10px',
                 background: 'rgba(16, 185, 129, 0.15)',
-                color: '#34D399',
+                color: '#059669',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -277,7 +277,7 @@ export default function FaqSection() {
             >
               01
             </div>
-            <Play size={20} color="#34D399" />
+            <Play size={20} color="#059669" />
           </div>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
@@ -306,8 +306,8 @@ export default function FaqSection() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
+                background: 'rgba(2, 132, 199, 0.15)',
+                color: '#0284C7',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -317,7 +317,7 @@ export default function FaqSection() {
             >
               02
             </div>
-            <Zap size={20} color="#38BDF8" />
+            <Zap size={20} color="#0284C7" />
           </div>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
@@ -346,8 +346,8 @@ export default function FaqSection() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: 'rgba(245, 158, 11, 0.15)',
-                color: '#FCD34D',
+                background: 'rgba(217, 119, 6, 0.15)',
+                color: '#D97706',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -357,7 +357,7 @@ export default function FaqSection() {
             >
               03
             </div>
-            <ShoppingCart size={20} color="#FCD34D" />
+            <ShoppingCart size={20} color="#D97706" />
           </div>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
@@ -386,8 +386,8 @@ export default function FaqSection() {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: 'rgba(236, 72, 153, 0.15)',
-                color: '#F472B6',
+                background: 'rgba(192, 38, 211, 0.15)',
+                color: '#C026D3',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -397,7 +397,7 @@ export default function FaqSection() {
             >
               04
             </div>
-            <Smartphone size={20} color="#F472B6" />
+            <Smartphone size={20} color="#C026D3" />
           </div>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
@@ -438,10 +438,11 @@ export default function FaqSection() {
                 padding: '0.45rem 0.85rem',
                 borderRadius: 'var(--radius-full)',
                 fontSize: '0.825rem',
-                fontWeight: 600,
-                border: activeCategory === cat.id ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid var(--border-subtle)',
-                background: activeCategory === cat.id ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                color: activeCategory === cat.id ? '#34D399' : 'var(--text-secondary)',
+                fontWeight: 700,
+                border: activeCategory === cat.id ? '1px solid #059669' : '1px solid var(--border-subtle)',
+                background: activeCategory === cat.id ? '#10B981' : 'var(--bg-surface-elevated)',
+                color: activeCategory === cat.id ? '#FFFFFF' : 'var(--text-secondary)',
+                boxShadow: activeCategory === cat.id ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}

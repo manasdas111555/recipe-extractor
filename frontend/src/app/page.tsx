@@ -753,73 +753,38 @@ function UniversalDashboard() {
             Universal Reel & Shorts <br />
             <span className="gradient-text-animated">AI Intelligence Extractor</span>
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '680px', margin: '0 auto' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', maxWidth: '680px', margin: '0 auto 1rem', lineHeight: '1.5' }}>
             Turn any Instagram Reel or YouTube Short into structured step-by-step recipes, workout
             routines, code tutorials, and monetized shoppable product links — in under 3 seconds.
           </p>
+
+          {/* Trust Proof Metrics Badges directly under hero subtitle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+            <span className="badge-pill badge-emerald">⚡ ~2.4s AI SLA</span>
+            <span className="badge-pill badge-rose">🛒 Amazon & Flipkart Links</span>
+            <span className="badge-pill badge-amber">📱 1-Click WhatsApp Export</span>
+          </div>
         </div>
 
-        {/* Input Bar Card with Domain Selector */}
+        {/* Input Bar Card - Undisputed Streamlined Focal Point */}
         <div
           className="glass-panel plane-mid sc-reveal sc-visible accent-border-t glass-panel-glow"
           style={{
-            maxWidth: '820px',
+            maxWidth: '860px',
             margin: '0 auto 1.5rem',
-            padding: '1rem',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
+            padding: '0.85rem 1rem',
+            boxShadow: '0 12px 45px rgba(0, 0, 0, 0.35)',
           }}
         >
-          {/* Domain Selector Bar */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '0.75rem',
-              paddingBottom: '0.65rem',
-              borderBottom: '1px solid var(--border-subtle)',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                🎯 Content Domain:
-              </span>
-              <select
-                value={selectedDomain}
-                onChange={(e) => setSelectedDomain(e.target.value)}
-                className="chip-tactile"
-                style={{
-                  background: 'var(--bg-surface-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '8px',
-                  color: 'var(--text-primary)',
-                  padding: '0.35rem 0.75rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  outline: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                {DOMAIN_OPTIONS.map((d) => (
-                  <option key={d.id} value={d.id} style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap' }}>
             {platformInfo && (
               <span
                 style={{
                   fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.35rem 0.65rem',
-                  borderRadius: '6px',
-                  background: 'rgba(255, 255, 255, 0.08)',
+                  fontWeight: 700,
+                  padding: '0.4rem 0.65rem',
+                  borderRadius: '8px',
+                  background: 'rgba(16, 185, 129, 0.14)',
                   color: platformInfo.color,
                   whiteSpace: 'nowrap',
                 }}
@@ -839,14 +804,43 @@ function UniversalDashboard() {
                 border: 'none',
                 color: 'var(--text-primary)',
                 fontSize: '1rem',
+                fontWeight: 500,
                 outline: 'none',
                 padding: '0.5rem 0.5rem',
               }}
             />
+            {/* Inline Compact Domain Selector */}
+            <select
+              value={selectedDomain}
+              onChange={(e) => setSelectedDomain(e.target.value)}
+              className="chip-tactile"
+              title="Content Domain Classifier"
+              style={{
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                padding: '0.45rem 0.65rem',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer',
+                maxWidth: '145px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {DOMAIN_OPTIONS.map((d) => (
+                <option key={d.id} value={d.id} style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+
             <button
               onClick={() => handleExtract()}
               disabled={isLoading || !url}
               className="btn-emerald btn-tactile"
+              style={{ padding: '0.75rem 1.4rem', fontWeight: 700, whiteSpace: 'nowrap' }}
             >
               {isLoading ? (
                 <>

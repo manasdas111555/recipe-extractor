@@ -500,32 +500,51 @@ html.dark .gradient-text-animated {
   -webkit-text-fill-color: transparent;
 }
 
+html:not(.dark) h1 {
+  color: #0F172A !important;
+}
+
+html:not(.dark) p {
+  color: #334155 !important;
+}
+
+html:not(.dark) .gradient-text-animated {
+  background: linear-gradient(135deg, #059669 0%, #0284C7 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .bg-glass-artwork {
   position: absolute;
-  top: 100px;
-  right: -200px;
-  width: 700px;
-  height: 500px;
+  top: 40px;
+  right: -100px;
+  width: 650px;
+  height: 480px;
   background-image: url('/hero_glass_artwork.jpg');
   background-size: cover;
   background-position: center;
   opacity: 0.14;
-  filter: blur(2px);
+  filter: blur(4px);
   mix-blend-mode: screen;
   pointer-events: none;
   z-index: 0;
+  border-radius: 50%;
+  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
 }
 
 html:not(.dark) .bg-hero-texture {
-  opacity: 0.12;
+  opacity: 0.10;
   mix-blend-mode: multiply;
 }
 
 html:not(.dark) .bg-ambient-layer {
-  opacity: 0.2;
+  opacity: 0.15;
 }
 
 html:not(.dark) .bg-glass-artwork {
-  opacity: 0.12;
+  opacity: 0.10;
   mix-blend-mode: multiply;
+  filter: blur(6px);
 }

@@ -978,6 +978,11 @@ st.markdown("""
     <div class="sub-header">
         Turn any Instagram Reel or YouTube Short into structured step-by-step recipes, workout routines, code tutorials, and monetized shoppable ingredient links — in under 3 seconds.
     </div>
+    <div style="display:flex; align-items:center; gap:10px; margin-top:12px; flex-wrap:wrap;">
+        <span style="background:rgba(16,185,129,0.15); color:#34D399; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:9999px; border:1px solid rgba(16,185,129,0.3);">⚡ ~2.4s AI SLA</span>
+        <span style="background:rgba(244,63,94,0.15); color:#FDA4AF; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:9999px; border:1px solid rgba(244,63,94,0.3);">🛒 Amazon & Flipkart Links</span>
+        <span style="background:rgba(245,158,11,0.15); color:#FCD34D; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:9999px; border:1px solid rgba(245,158,11,0.3);">📱 1-Click WhatsApp Export</span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
