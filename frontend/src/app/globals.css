@@ -583,3 +583,40 @@ html.dark .bg-glass-artwork, body.dark .bg-glass-artwork {
   pointer-events: none;
   z-index: 0;
 }
+
+/* Mobile Responsive Adaptive Form & Touch Controls (UPA-1003) */
+@media (max-width: 640px) {
+  .main-search-input-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+  
+  .main-search-input-container input[type="text"] {
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom on focus */
+    width: 100% !important;
+    padding: 0.65rem 0.5rem !important;
+  }
+  
+  .main-search-input-container select {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+
+  .main-search-input-container button {
+    width: 100% !important;
+    min-height: 48px !important;
+    justify-content: center !important;
+  }
+
+  main {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    overflow-x: hidden !important;
+  }
+
+  h1 {
+    font-size: 1.85rem !important;
+  }
+}

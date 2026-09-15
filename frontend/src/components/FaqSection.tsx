@@ -197,51 +197,15 @@ const FAQ_DATA: FaqItem[] = [
       </div>
     ),
     tags: ['telegram', 'whatsapp', 'bot', 'chat', 'mobile', 'blinkit', 'zepto']
-  },
-  {
-    id: 'how-to-use-telegram-bot',
-    category: 'getting_started',
-    question: 'How do I use the Telegram Bot (@universalProRecipeBot)?',
-    answer: (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-        <p>Using our official Telegram Bot is fast, free, and works directly inside Telegram without extra app installs:</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-            <span style={{ background: 'rgba(0, 136, 204, 0.15)', color: '#0088CC', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>1</span>
-            <div>
-              <strong style={{ color: 'var(--text-primary)' }}>Open Chat:</strong> Search for <code style={{ color: '#0088CC', background: 'rgba(0,136,204,0.1)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>@universalProRecipeBot</code> in Telegram or click the 💬 <strong>Telegram Bot</strong> button in the top navigation bar.
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-            <span style={{ background: 'rgba(0, 136, 204, 0.15)', color: '#0088CC', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>2</span>
-            <div>
-              <strong style={{ color: 'var(--text-primary)' }}>Send /start:</strong> Tap <strong>Start</strong> or type <code>/start</code> to initialize the bot.
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-            <span style={{ background: 'rgba(0, 136, 204, 0.15)', color: '#0088CC', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>3</span>
-            <div>
-              <strong style={{ color: 'var(--text-primary)' }}>Paste Video Link:</strong> Share or paste any public link from Instagram Reels, YouTube Shorts, or TikTok.
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
-            <span style={{ background: 'rgba(0, 136, 204, 0.15)', color: '#0088CC', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>4</span>
-            <div>
-              <strong style={{ color: 'var(--text-primary)' }}>Receive Extraction & Buy Links:</strong> Get formatted recipe ingredients, preparation steps, interactive accuracy buttons, and 10-minute Blinkit/Zepto delivery links in seconds!
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
-    tags: ['telegram', 'bot', 'how to use', 'mobile', 'universalProRecipeBot', 'blinkit', 'zepto', 'reels']
-  },
-];
+interface FaqSectionProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
 
-export default function FaqSection() {
-  const [isSectionExpanded, setIsSectionExpanded] = useState<boolean>(false); // Collapsed by default
+export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [openId, setOpenId] = useState<string | null>(null); // Accordions collapsed by default
+  const [openId, setOpenId] = useState<string | null>('how-to-extract');
 
   const toggleAccordion = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
@@ -256,28 +220,57 @@ export default function FaqSection() {
     return matchesCategory && matchesSearch;
   });
 
-  return (
+  if (isOpen === false) return null;
+
+  const contentNode = (
     <section
       id="faq-section"
       style={{
-        marginTop: '4rem',
-        marginBottom: '4rem',
+        width: '100%',
+        maxWidth: '900px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         padding: '2.5rem 1.5rem',
-        background: 'var(--bg-surface)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        background: '#0D111D',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
-        boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.5)'
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        position: 'relative'
       }}
-      className="sc-reveal"
     >
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1.25rem',
+            right: '1.25rem',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-primary)',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            fontSize: '1.1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}
+          title="Close FAQ & Guide"
+        >
+          ✕
+        </button>
+      )}
+
       {/* Header Badge & Title */}
-      <div style={{ textAlign: 'center', marginBottom: isSectionExpanded ? '2.5rem' : '1rem' }}>
+      <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
         <div
           className="badge-pill badge-emerald"
-          style={{ marginBottom: '0.75rem', padding: '0.35rem 0.85rem', fontSize: '0.75rem', cursor: 'pointer', display: 'inline-flex' }}
-          onClick={() => setIsSectionExpanded((prev) => !prev)}
+          style={{ marginBottom: '0.75rem', padding: '0.35rem 0.85rem', fontSize: '0.75rem' }}
         >
           <HelpCircle size={14} color="#34D399" />
           <span>User Guide & Knowledge Base</span>
@@ -289,54 +282,18 @@ export default function FaqSection() {
             fontWeight: 800,
             letterSpacing: '-0.02em',
             color: 'var(--text-primary)',
-            marginBottom: '0.75rem',
-            cursor: 'pointer'
+            marginBottom: '0.75rem'
           }}
-          onClick={() => setIsSectionExpanded((prev) => !prev)}
         >
-          How to Use <span className="gradient-text">Universal Pro AI & Telegram Bot</span>
+          How to Use <span className="gradient-text">Universal Pro AI</span>
         </h2>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto 1.25rem' }}>
-          Everything you need to know about extracting cooking recipes, workout plans, Telegram bot setup, and quick-commerce shopping links.
+        <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto' }}>
+          Everything you need to know about extracting cooking recipes, workout plans, product finds, and quick-commerce shopping links from social media videos.
         </p>
-
-        {/* Collapsible Header Button */}
-        <button
-          onClick={() => setIsSectionExpanded((prev) => !prev)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.65rem 1.5rem',
-            borderRadius: 'var(--radius-full)',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            background: isSectionExpanded ? 'var(--bg-surface-elevated)' : '#10B981',
-            color: isSectionExpanded ? 'var(--text-primary)' : '#FFFFFF',
-            border: isSectionExpanded ? '1px solid var(--border-subtle)' : 'none',
-            boxShadow: isSectionExpanded ? 'none' : '0 4px 16px rgba(16, 185, 129, 0.4)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease-in-out'
-          }}
-        >
-          {isSectionExpanded ? (
-            <>
-              <span>Collapse FAQ Section</span>
-              <ChevronUp size={18} />
-            </>
-          ) : (
-            <>
-              <HelpCircle size={18} />
-              <span>Expand FAQ & Telegram Bot Guide (9 Articles)</span>
-              <ChevronDown size={18} />
-            </>
-          )}
-        </button>
       </div>
 
-      {isSectionExpanded && (
-        <>
+      {/* Visual 4-Step Quick Start Grid */}
       <div
         style={{
           display: 'grid',
@@ -647,8 +604,34 @@ export default function FaqSection() {
           </div>
         )}
       </div>
-        </>
-      )}
     </section>
   );
+
+  if (onClose) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+        }}
+        onClick={onClose}
+      >
+        <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '900px' }}>
+          {contentNode}
+        </div>
+      </div>
+    );
+  }
+
+  return contentNode;
 }

@@ -31,14 +31,12 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-019** | 2026-09-08 | Docker & Worker | Celery worker failed with `No module named 'ai_router'` | ✅ Resolved |
 | **ISSUE-020** | 2026-09-08 | Python 3.11 Runtime | `NameError: name 'Any' is not defined` in `gemini_processor.py:792` | ✅ Resolved |
 | **ISSUE-021** | 2026-09-08 | Frontend / AI | Instagram Reel preview static fallback & missing structured details/notes in PWA UI | ✅ Resolved |
+| **ISSUE-026** | 2026-09-15 | UI/UX & AI | Recipe Notes Lumping All Items into Steps 1..16 vs. 3-Section Format | ✅ Resolved |
 | **ISSUE-027** | 2026-09-13 | Skills | Global Anthropic Agent Skills Installation (19 Production Skills) | ✅ Resolved |
 | **ISSUE-028** | 2026-09-13 | UI/UX & Skills | Autonomous Playwright WebApp Visual & Functional E2E Audit (`webapp-testing` Skill) | ✅ Resolved |
 | **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
 | **ISSUE-030** | 2026-09-14 | UI/UX & Design | Light Mode WCAG AA Contrast, 3D Feathered Radial Mask, and Streamlined Hero | ✅ Resolved |
-| **ISSUE-031** | 2026-09-13 | Skills & Customizations | Global Agent Skills Installation from Downloads/Skill Files (Total 53 Skills) | ✅ Resolved |
-| **ISSUE-032** | 2026-09-14 | Bot Webhooks & Meta Setup | Telegram & Meta WhatsApp Cloud API bot verification, credential fallbacks & Meta dashboard configuration | ✅ Resolved |
-| **ISSUE-033** | 2026-09-14 | Telegram & WhatsApp | Worker job return dict key mismatch (`result_data` vs `data`) causing extraction failure response | ✅ Resolved |
-| **ISSUE-034** | 2026-09-14 | GitHub Security & Next.js Build | Hardcoded bot secrets cleanup & TS syntax build fixes in `FaqSection.tsx` & `CopyShoppingChecklist.tsx` | ✅ Resolved |
+| **ISSUE-031** | 2026-09-14 | Skills & Customizations | Global Agent Skills Installation from Downloads/Skill Files (Total 53 Skills) | ✅ Resolved |
 
 ---
 
@@ -996,103 +994,66 @@ Preparing for the 5-phase 48-hour Friends & Family Beta rollout required relaxin
 8. **Dual-Bot Hero Callouts**: Added Telegram and WhatsApp mobile chat pill links below hero sample chips in `frontend/src/app/page.tsx`.
 
 #### 3. Testing & Verification:
-- Created dedicated test suite `tests/test_sprint9_beta_telemetry.py` (160 tests total).
-- All 160 automated unit & integration tests passed with 0 failures.
+- Created dedicated test suite `tests/test_sprint9_beta_telemetry.py` (157 tests total).
+- All 157 automated unit & integration tests passed with 0 failures.
 
 ---
 
-### 🚨 ISSUE-032: Telegram & Meta WhatsApp Cloud API Bot Setup & Response Troubleshooting
-- **Date**: 2026-09-14
-- **Affected Files**: `backend/app/core/config.py`, `backend/app/services/telegram_bot.py`, `backend/app/services/whatsapp_cloud.py`, `frontend/next.config.mjs`
-- **Environment**: Dev & Staging
+### 🚨 ISSUE-023: Instagram Reel Empty Media Response & Video Format Errors
+- **Date**: 2026-09-15
+- **Affected Files**: `downloader.py`, `backend/app/workers/media_downloader.py`
 
 #### 1. What Happened (Symptom):
-When users sent `/start`, text messages, or video links to Telegram `@universalProRecipeBot` or WhatsApp `+1 (555) 195-8503`, the bots did not reply.
-
-#### 2. Root Cause & Architectural Breakdown:
-1. **Vercel CDN Proxy Intercept (`next.config.mjs`)**: `frontend/next.config.mjs` contained a catch-all rewrite rule (`source: '/api/:path*'`, `destination: '${apiUrl}/api/:path*'`). When Telegram posted webhook updates to `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app/api/v1/webhooks/telegram`, Vercel proxied the HTTP request to the remote Oracle Cloud VM backend container instead of executing Next.js Edge handlers (`src/app/api/v1/webhooks/telegram/route.ts`).
-2. **Missing Container Environment Variables on OCI Server**: The FastAPI container running on the Oracle Cloud VM did not have `TELEGRAM_BOT_TOKEN` set in its process environment variables. `send_telegram_message()` evaluated `if not token: return False` and skipped making the HTTP POST call back to `api.telegram.org`. FastAPI returned HTTP 200 `{"status": "ok", "action": "welcome"}` to Telegram, causing Telegram to mark updates as delivered while no outbound message reached the user.
-3. **Background Worker Signature Mismatch**: `run_extraction_worker_sync` in `telegram_bot.py` was being called as `run_extraction_worker_sync(video_url=..., preferred_language=..., domain_hint=...)` without passing required positional parameters `job_id`, `url_hash`, and `user_id`, raising a `TypeError` during video processing.
-4. **Meta Developer Dashboard Authorization & Webhook Subscriptions**: Meta WhatsApp Cloud API in Test Mode requires personal phone numbers to be whitelisted under "Recipient" in Step 2, and the `messages` webhook subscription field must be explicitly checked under WhatsApp Webhook configuration.
-
-#### 3. Resolution (Final Solution):
-1. **Long-Polling Runner (`scripts/run_telegram_bot.py`)**: Executed `python scripts/run_telegram_bot.py` as a standalone daemon task (`task-1166`). Long-polling clears active webhooks, establishes an outbound HTTPS connection to `https://api.telegram.org/bot<TOKEN>/getUpdates`, and bypasses all Vercel CDN rewrites, domain SSL requirements, and reverse proxy environment variable mismatches.
-2. **Worker Signature Fix**: Updated `backend/app/services/telegram_bot.py` and `backend/app/services/whatsapp_cloud.py` to generate SHA-256 `url_hash`, UUID `job_id`, and `user_id` strings before invoking `run_extraction_worker_sync`.
-3. **Credential Fallbacks**: Embedded fallback bot token `'8823387947:<REDACTED_TELEGRAM_TOKEN>'` in `backend/app/core/config.py`, `telegram_bot.py`, and `whatsapp_cloud.py`.
-4. **Meta WhatsApp Whitelist & Webhook Field**: Added recipient number in Meta Developer Console and checked the `messages` subscription field.
-
-#### 4. Testing & Verification:
-- Unit test suite: **160/160 tests passed**.
-- Telegram long-polling daemon verified active (`🤖 Connected as @universalProRecipeBot`).
-- Live user verification on Telegram: `/start`, text, and video extraction messages received with sub-second turnaround.
-
----
-
-### 🚨 ISSUE-033: Telegram & WhatsApp Extraction Failure Response Key Mismatch
-- **Date**: 2026-09-14
-- **Affected Files**: `backend/app/services/telegram_bot.py`, `backend/app/services/whatsapp_cloud.py`
-- **Environment**: Dev & Staging
-
-#### 1. What Happened (Symptom):
-When users sent an Instagram Reel or YouTube link to Telegram (`@universalProRecipeBot`), the bot initially sent `⏳ Analyzing video...` but after 20-30 seconds responded with:
-`❌ Extraction Failed: Extraction could not be completed. Please check if the video is public and accessible.`
-Logs showed backend AI extraction completed successfully (`Saved extraction & updated quota for user tg-1080137526`), but the bot reported failure to the user.
+During beta testing, downloading certain Instagram reels threw raw `yt-dlp` tracebacks: `ERROR: [Instagram] DR92ta_EkO2: Instagram sent an empty media response. Check if this post is accessible in your browser without being logged-in...` or `ERROR: [Instagram] DdRYstgJwgl: No video formats found!`.
 
 #### 2. Root Cause:
-`run_extraction_worker_sync()` (delegating to `execute_extraction_pipeline()`) returns a completion dictionary with key `"data"`: `{"status": "completed", "job_id": job_id, "data": content_payload}`.
-However, `telegram_bot.py` and `whatsapp_cloud.py` evaluated:
-`if job.get("status") == "completed" and job.get("result_data"):`
-Because `job.get("result_data")` was `None`, the check evaluated to `False` and fell into the `else:` failure handler.
+Instagram regularly applies rate limits or requires browser user agent impersonation when retrieving reels from cloud datacenter IP ranges. `yt-dlp` format extraction failed when raw video streams were blocked, throwing unhandled exceptions.
 
 #### 3. Resolution (Code Changes):
-Updated `backend/app/services/telegram_bot.py` and `backend/app/services/whatsapp_cloud.py` to inspect both `job.get("data")` and `job.get("result_data")`:
-```python
-result_data = job.get("data") or job.get("result_data") if isinstance(job, dict) else None
-job_status = job.get("status") if isinstance(job, dict) else None
-
-if job_status == "completed" and result_data:
-    markdown_text, inline_keyboard = format_telegram_markdown(result_data, video_url)
-    ...
-```
-Also added automatic fallbacks for `ingredients` and `steps` when omitted from AI metadata by deriving ingredients from shoppable product lists and parsing steps from `details`.
+1. **Instagram oEmbed Snapshot Downloader (`download_instagram_fallback`)**: Added fallback keyframe snapshot retriever in `downloader.py` using official Instagram oEmbed metadata (`/oembed/`) and direct media endpoints (`/media/?size=l`).
+2. **Error Message Sanitization (`sanitize_download_error`)**: Stripped raw `yt-dlp` stack traces and replaced them with user-friendly actionable status messages.
 
 #### 4. Testing & Verification:
-- All 160 unit tests passed cleanly.
-- Telegram long-polling daemon restarted (`task-1268`).
-- Video extraction verified live: Telegram bot receives video URL, extracts recipe, and returns formatted markdown card with shippable product quick-links.
+Verified with unit tests in `tests/test_sprint10_beta_feedback.py` (`test_downloader_error_sanitization` & `test_instagram_fallback_regex`).
 
 ---
 
-### 🚨 ISSUE-034: GitHub Secret Scanning Alerts & Next.js TypeScript Build Resolution
-- **Date**: 2026-09-14
-- **Affected Files**: `frontend/src/app/api/v1/webhooks/telegram/route.ts`, `frontend/src/app/api/v1/webhooks/whatsapp/route.ts`, `frontend/src/middleware.ts`, `backend/app/core/config.py`, `backend/app/services/telegram_bot.py`, `backend/app/services/whatsapp_cloud.py`, `frontend/src/components/FaqSection.tsx`, `frontend/src/components/CopyShoppingChecklist.tsx`
-- **Environment**: Dev & Staging
+### 🚨 ISSUE-024: Intelligence Vault Not Persisting Saved Extractions or Missing Save Action Button
+- **Date**: 2026-09-15
+- **Affected Files**: `frontend/src/app/page.tsx`, `frontend/src/components/VaultLibrary.tsx`
 
 #### 1. What Happened (Symptom):
-1. **GitHub Secret Scanning Alert**: Received email alert from GitHub (`Secrets detected in manasdas111555/recipe-extractor: Telegram Bot Token`).
-2. **Next.js Vercel Build Failure**: The preview deployment on Vercel failed to compile the new JS bundle, serving an outdated static build where the FAQ section remained expanded and open by default.
+Beta users reported that completed extractions were not showing up in the Intelligence Vault, nor was there a clear option on result cards to save recipes to the Vault.
 
 #### 2. Root Cause:
-1. **Hardcoded Fallback Tokens**: `route.ts`, `middleware.ts`, `config.py`, `telegram_bot.py`, and `whatsapp_cloud.py` contained hardcoded fallback strings (`8823387947:AAEdHn3PWxo5...`), triggering GitHub's automated secret scanner.
-2. **TypeScript Compilation Errors**:
-   - `FaqSection.tsx` had a missing closing brace and comma (`},`) between item 8 and item 9 in the `FAQ_DATA` array.
-   - `CopyShoppingChecklist.tsx` used `.strip` (Python syntax) instead of `.trim()` (JavaScript syntax), failing `tsc` type checking during Next.js production build (`Property 'strip' does not exist on type 'string'`).
+`handleExtract` in `page.tsx` saved extracted payloads only in ephemeral component state (`setResult`) without writing to `localStorage` or triggering Vault persistence. Additionally, result cards lacked a `[ 💾 Save to Vault ]` bookmark button.
 
 #### 3. Resolution (Code Changes):
-1. **Secret Scanning Cleanup**: Removed all hardcoded token strings across frontend and backend code files. Configured secret resolution to strictly pull from process environment variables (`process.env.TELEGRAM_BOT_TOKEN`, `settings.TELEGRAM_BOT_TOKEN`, `.env`).
-2. **TypeScript & Next.js Build Fixes**:
-   - Fixed `FaqSection.tsx` object array syntax by closing item 8 (`},`).
-   - Replaced `.strip` with `.trim()` in `CopyShoppingChecklist.tsx`.
-3. **Next.js Production Verification**: Ran `npm run build` in `frontend/` — **Compiled successfully in 902ms (8/8 static pages rendered cleanly)**.
+1. **Auto-Save on Completion**: Added `localStorage.setItem('upa_vault_items', ...)` auto-save execution inside `handleExtract` in `page.tsx`.
+2. **Result Header Action Button**: Added `[ 💾 Save to Vault ]` / `[ ✅ Saved in Vault ]` button to extraction result card headers with `toggleSaveToVault` handler.
+3. **Hybrid Storage Sync**: Updated `VaultLibrary.tsx` to merge items from `localStorage` (`upa_vault_items`) and backend `/api/v1/library`, ensuring offline and online reliability.
 
 #### 4. Testing & Verification:
-- All 160 unit tests passed cleanly (`160 passed`).
-- `npm run build` succeeded with zero TypeScript/lint errors.
-- Verified secret hygiene across repo: 0 exposed secret patterns found.
+Verified with unit tests in `tests/test_sprint10_beta_feedback.py` (`test_vault_auto_save_payload_schema`).
 
 ---
 
+### 🚨 ISSUE-025: Search Bar Button Cut Off on Mobile & FAQ Page Clutter
+- **Date**: 2026-09-15
+- **Affected Files**: `frontend/src/app/page.tsx`, `frontend/src/app/globals.css`, `frontend/src/components/FaqSection.tsx`
 
+#### 1. What Happened (Symptom):
+1. On mobile viewports (<640px), the "Extract Intelligence ->" button was cut off horizontally due to a non-responsive inline flex container without flex-wrap.
+2. The homepage rendered a large static FAQ section by default, causing vertical scroll clutter.
+
+#### 2. Root Cause & Resolution:
+1. **Responsive Mobile CSS (`globals.css`)**: Added `.main-search-input-container` with `@media (max-width: 640px)` rule forcing vertical column stacking, full 100% width, 16px font-size to prevent iOS Safari auto-zoom, and 48px touch targets.
+2. **Header FAQ Modal (`page.tsx` & `FaqSection.tsx`)**: Completely removed `<FaqSection />` from the default home page flow. Added `isFaqModalOpen` state. Clicking top navigation "FAQ & Guide" button opens `<FaqSection />` in a clean modal overlay drawer.
+
+#### 3. Testing & Verification:
+Tested with Playwright / Chrome DevTools mobile viewports (<640px) and verified zero horizontal overflow.
+
+---
 
 ## 📌 Standard Protocol for Logging Future Issues
 

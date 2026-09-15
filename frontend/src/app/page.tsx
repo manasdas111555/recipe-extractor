@@ -84,6 +84,11 @@ interface ExtractionResult {
   media_url?: string;
   thumbnail_url?: string;
   cached?: boolean;
+  audio_song?: string;
+  reel_language?: string;
+  notes_english?: string;
+  notes_original_language?: string;
+  google_maps_locations?: Array<{ name: string; query: string; maps_url: string }>;
 }
 
 const DOMAIN_OPTIONS = [
@@ -107,6 +112,9 @@ function UniversalDashboard() {
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
+  const [isFaqModalOpen, setIsFaqModalOpen] = useState<boolean>(false);
+  const [isSavedInVault, setIsSavedInVault] = useState<boolean>(false);
+  const [langMode, setLangMode] = useState<'english' | 'native'>('english');
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState<boolean>(false);
   const [upgradeReason, setUpgradeReason] = useState<string>('');
   const [isCreatorVaultOpen, setIsCreatorVaultOpen] = useState<boolean>(false);
@@ -117,6 +125,36 @@ function UniversalDashboard() {
   const [waCountryCode, setWaCountryCode] = useState<string>('+91');
   const [waPhoneNumber, setWaPhoneNumber] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const toggleSaveToVault = () => {
+    if (!result) return;
+    try {
+      const rawLocal = localStorage.getItem('upa_vault_items');
+      let currentItems: any[] = [];
+      if (rawLocal) {
+        currentItems = JSON.parse(rawLocal);
+        if (!Array.isArray(currentItems)) currentItems = [];
+      }
+      const currentUrl = result.source_url || url;
+      if (isSavedInVault) {
+        const updated = currentItems.filter((i: any) => (i.source_url || i.url) !== currentUrl);
+        localStorage.setItem('upa_vault_items', JSON.stringify(updated));
+        setIsSavedInVault(false);
+      } else {
+        const newVaultItem = {
+          ...result,
+          source_url: currentUrl,
+          created_at: new Date().toISOString()
+        };
+        const filtered = currentItems.filter((i: any) => (i.source_url || i.url) !== currentUrl);
+        filtered.unshift(newVaultItem);
+        localStorage.setItem('upa_vault_items', JSON.stringify(filtered.slice(0, 50)));
+        setIsSavedInVault(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Synchronize initial theme from localStorage (default: light mode)
   useEffect(() => {
@@ -443,6 +481,25 @@ function UniversalDashboard() {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       setResult(finalData);
+      setIsSavedInVault(true);
+      try {
+        const rawLocal = localStorage.getItem('upa_vault_items');
+        let currentItems: any[] = [];
+        if (rawLocal) {
+          currentItems = JSON.parse(rawLocal);
+          if (!Array.isArray(currentItems)) currentItems = [];
+        }
+        const newVaultItem = {
+          ...finalData,
+          source_url: finalUrl,
+          created_at: new Date().toISOString()
+        };
+        const filtered = currentItems.filter((i: any) => (i.source_url || i.url) !== finalUrl);
+        filtered.unshift(newVaultItem);
+        localStorage.setItem('upa_vault_items', JSON.stringify(filtered.slice(0, 50)));
+      } catch (saveErr) {
+        console.warn('Vault auto-save error:', saveErr);
+      }
       setQuotaRemaining((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
       console.error(err);
@@ -462,14 +519,71 @@ function UniversalDashboard() {
     { label: '⚡ Viral Meme Short', url: 'https://www.youtube.com/shorts/fC7oUOUEEi4', domain: 'auto' },
   ];
 
+  const parseRecipeSections = (meta: any, detailsTextStr: string) => {
+    let equipment: string[] = meta?.equipment || [];
+    let ingredients: any[] = meta?.ingredients || [];
+    let instructions: string[] = meta?.instructions || [];
+
+    const textToParse = detailsTextStr || meta?.details || meta?.notes_english || meta?.full_text || '';
+    if (textToParse && (equipment.length === 0 || ingredients.length === 0 || instructions.length === 0)) {
+      let currSec = '';
+      const eqAcc: string[] = [];
+      const ingAcc: any[] = [];
+      const instAcc: string[] = [];
+
+      textToParse.split('\n').forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        const upper = trimmed.toUpperCase();
+
+        if (upper.includes('EQUIPMENT NEEDED') || upper.includes('EQUIPMENT:') || upper.includes('UTENSILS NEEDED') || upper.includes('COOKWARE NEEDED')) {
+          currSec = 'EQUIPMENT';
+          return;
+        } else if (upper.includes('II. INGREDIENTS') || upper.includes('INGREDIENTS:') || upper.includes('INGREDIENTS WITH EXACT')) {
+          currSec = 'INGREDIENTS';
+          return;
+        } else if (upper.includes('III. STEP-BY-STEP') || upper.includes('STEP-BY-STEP INSTRUCTIONS') || upper.includes('COOKING INSTRUCTIONS') || upper.includes('COOKING METHOD')) {
+          currSec = 'INSTRUCTIONS';
+          return;
+        } else if (upper.includes('CHEF TIPS') || upper.includes('VARIATIONS') || upper.includes('NUTRITION')) {
+          currSec = 'OTHER';
+          return;
+        }
+
+        const clean = trimmed.replace(/^[I|V|X\d\.\-\*\•\+a-zA-Z]\s*/, '').replace(/^\*\*\s*/, '').replace(/\s*\*\*$/, '').trim();
+        if (!clean) return;
+
+        if (currSec === 'EQUIPMENT') {
+          eqAcc.push(clean);
+        } else if (currSec === 'INGREDIENTS') {
+          const parts = clean.split(/\s*[\(\-\:]\s*/);
+          if (parts.length >= 2 && !clean.startsWith('(')) {
+            ingAcc.push({ name: parts[0].trim(), quantity: parts.slice(1).join(' ').replace(/[\(\)]/g, '').trim() });
+          } else {
+            ingAcc.push({ name: clean, quantity: '' });
+          }
+        } else if (currSec === 'INSTRUCTIONS') {
+          instAcc.push(clean);
+        }
+      });
+
+      if (equipment.length === 0 && eqAcc.length > 0) equipment = eqAcc;
+      if (ingredients.length === 0 && ingAcc.length > 0) ingredients = ingAcc;
+      if (instructions.length === 0 && instAcc.length > 0) instructions = instAcc;
+    }
+
+    return { equipment, ingredients, instructions };
+  };
+
   const generateStructuredText = (meta: any, isWhatsApp = false): string => {
     if (!meta) return '';
     const title = formatCleanTitle(meta.title || meta.recipe_title) || 'Universal AI Extraction';
     const category = (meta.category || meta.category_name || 'INTELLIGENCE').toUpperCase();
+    const isRecipe = category.includes('RECIPE') || category.includes('COOK');
 
     // Category emoji
     let emoji = '⚡';
-    if (category.includes('RECIPE') || category.includes('COOK')) emoji = '🍳';
+    if (isRecipe) emoji = '🍳';
     else if (category.includes('PRODUCT') || category.includes('UNBOX') || category.includes('GADGET')) emoji = '🛍️';
     else if (category.includes('TUTORIAL') || category.includes('TECH') || category.includes('CODE')) emoji = '💻';
     else if (category.includes('FITNESS') || category.includes('WORKOUT')) emoji = '🏋️';
@@ -492,46 +606,112 @@ function UniversalDashboard() {
       lines.push(isWhatsApp ? `📋 *Summary:*\n${meta.summary}\n` : `📋 Summary:\n${meta.summary}\n`);
     }
 
-    // Ingredients (if available)
-    if (meta.ingredients && meta.ingredients.length > 0) {
-      lines.push(isWhatsApp ? `🥗 *Ingredients:*` : `==================================================\n🥗 Ingredients:\n==================================================`);
-      meta.ingredients.forEach((ing: any) => {
-        const qty = ing.quantity ? ` - ${ing.quantity}` : '';
-        const unit = ing.unit ? ` ${ing.unit}` : '';
-        lines.push(`• ${ing.name}${qty}${unit}`);
-      });
-      lines.push('');
-    }
+    if (isRecipe) {
+      const { equipment, ingredients, instructions } = parseRecipeSections(meta, meta.details || meta.notes_english || '');
 
-    // Instructions / Steps / Specifications
-    const secTitle = getSectionTitle(meta.category);
-    if (meta.instructions && meta.instructions.length > 0) {
-      lines.push(isWhatsApp ? `📝 *${secTitle}:*` : `==================================================\n📝 ${secTitle}:\n==================================================`);
-      meta.instructions.forEach((step: string, idx: number) => {
-        const cleanStep = isWhatsApp ? step.replace(/\*\*/g, '*') : step.replace(/\*\*/g, '');
-        lines.push(`${idx + 1}. ${cleanStep}`);
-      });
-      lines.push('');
-    } else if (meta.details || detailsText) {
-      const d = meta.details || detailsText;
-      lines.push(isWhatsApp ? `📝 *${secTitle}:*\n${d}\n` : `==================================================\n📝 ${secTitle}:\n==================================================\n\n${d}\n`);
-    }
+      // I. Equipment Needed
+      if (equipment && equipment.length > 0) {
+        lines.push(isWhatsApp ? `🍳 *I. Equipment Needed:*` : `==================================================\n🍳 I. Equipment Needed:\n==================================================`);
+        equipment.forEach((eq: string, idx: number) => {
+          const letter = String.fromCharCode(97 + idx); // a, b, c...
+          lines.push(`   ${letter}. ${eq}`);
+        });
+        lines.push('');
+      }
 
-    // Products & E-Commerce / Quick Commerce Links
-    if (meta.products && meta.products.length > 0) {
-      const isRecipe = category.includes('RECIPE') || category.includes('COOK');
-      const prodHeader = isRecipe ? '🛒 Ingredients & 1-Click Buy Links:' : '🛍️ Featured Products & 1-Click Buy Links:';
-      lines.push(isWhatsApp ? `*${prodHeader}*` : `==================================================\n${prodHeader}\n==================================================`);
-      meta.products.forEach((p: any, idx: number) => {
-        const priceStr = p.price ? ` (${p.price})` : '';
-        lines.push(`${idx + 1}. ${p.name}${priceStr}`);
-        if (p.blinkit_url) lines.push(`   🟡 Blinkit (10-Min): ${p.blinkit_url}`);
-        if (p.zepto_url) lines.push(`   ⚡ Zepto (10-Min): ${p.zepto_url}`);
-        if (p.instamart_url) lines.push(`   🛵 Swiggy Instamart: ${p.instamart_url}`);
-        if (p.amazon_url) lines.push(`   🛒 Amazon: ${p.amazon_url}`);
-        if (p.flipkart_url) lines.push(`   ⚡ Flipkart: ${p.flipkart_url}`);
-      });
-      lines.push('');
+      // II. Ingredients
+      if (ingredients && ingredients.length > 0) {
+        lines.push(isWhatsApp ? `🥗 *II. Ingredients (with quantity):*` : `==================================================\n🥗 II. Ingredients (with quantity):\n==================================================`);
+        ingredients.forEach((ing: any, idx: number) => {
+          const qty = ing.quantity ? ` - ${ing.quantity}` : '';
+          const unit = ing.unit ? ` ${ing.unit}` : '';
+          const name = ing.name || ing;
+          lines.push(`   ${idx + 1}. ${name}${qty}${unit}`);
+        });
+        lines.push('');
+      }
+
+      // III. Step-by-Step Instructions
+      if (instructions && instructions.length > 0) {
+        lines.push(isWhatsApp ? `📝 *III. Step-by-Step Instructions:*` : `==================================================\n📝 III. Step-by-Step Instructions:\n==================================================`);
+        instructions.forEach((step: string, idx: number) => {
+          const cleanStep = isWhatsApp ? step.replace(/\*\*/g, '*') : step.replace(/\*\*/g, '');
+          lines.push(`   ${idx + 1}. ${cleanStep}`);
+        });
+        lines.push('');
+      } else if (meta.details) {
+        lines.push(isWhatsApp ? `📝 *III. Step-by-Step Instructions:*\n${meta.details}\n` : `==================================================\n📝 III. Step-by-Step Instructions:\n==================================================\n\n${meta.details}\n`);
+      }
+
+      // Products split into Equipment Links and Purchase Ingredients
+      if (meta.products && meta.products.length > 0) {
+        const equipProds: any[] = [];
+        const ingProds: any[] = [];
+        meta.products.forEach((p: any) => {
+          const pNameLower = (p.name || '').toLowerCase();
+          const isEquipKw = /\b(pan|skillet|knife|blender|cooker|oven|air fryer|bowl|board|apron|spatula|pot|kettle|kadai|tawa|wok|grinder|chopper|tray|sheet)\b/i.test(pNameLower);
+          if (isEquipKw) equipProds.push(p);
+          else ingProds.push(p);
+        });
+
+        if (equipProds.length > 0) {
+          lines.push(isWhatsApp ? `🛒 *1. Equipment Links:*` : `==================================================\n🛒 1. Equipment Links (Buy on Amazon / Flipkart):\n==================================================`);
+          equipProds.forEach((p: any, idx: number) => {
+            lines.push(`   ${idx + 1}. ${p.name}`);
+            if (p.amazon_url) lines.push(`      • Amazon: ${p.amazon_url}`);
+            if (p.flipkart_url) lines.push(`      • Flipkart: ${p.flipkart_url}`);
+          });
+          lines.push('');
+        }
+
+        if (ingProds.length > 0) {
+          lines.push(isWhatsApp ? `🥦 *2. Purchase Ingredients:*` : `==================================================\n🥦 2. Purchase Ingredients (Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon Fresh):\n==================================================`);
+          ingProds.forEach((p: any, idx: number) => {
+            lines.push(`   ${idx + 1}. ${p.name}`);
+            if (p.blinkit_url) lines.push(`      • Blinkit (10-Min): ${p.blinkit_url}`);
+            if (p.zepto_url) lines.push(`      • Zepto (10-Min): ${p.zepto_url}`);
+            if (p.instamart_url) lines.push(`      • Swiggy Instamart: ${p.instamart_url}`);
+            if (p.bigbasket_url) lines.push(`      • BigBasket: ${p.bigbasket_url}`);
+            if (p.amazon_url) lines.push(`      • Amazon Fresh: ${p.amazon_url}`);
+          });
+          lines.push('');
+        }
+      }
+    } else {
+      // General/Non-Recipe text output
+      if (meta.ingredients && meta.ingredients.length > 0) {
+        lines.push(isWhatsApp ? `🥗 *Ingredients:*` : `==================================================\n🥗 Ingredients:\n==================================================`);
+        meta.ingredients.forEach((ing: any) => {
+          const qty = ing.quantity ? ` - ${ing.quantity}` : '';
+          const unit = ing.unit ? ` ${ing.unit}` : '';
+          lines.push(`• ${ing.name}${qty}${unit}`);
+        });
+        lines.push('');
+      }
+
+      const secTitle = getSectionTitle(meta.category);
+      if (meta.instructions && meta.instructions.length > 0) {
+        lines.push(isWhatsApp ? `📝 *${secTitle}:*` : `==================================================\n📝 ${secTitle}:\n==================================================`);
+        meta.instructions.forEach((step: string, idx: number) => {
+          const cleanStep = isWhatsApp ? step.replace(/\*\*/g, '*') : step.replace(/\*\*/g, '');
+          lines.push(`${idx + 1}. ${cleanStep}`);
+        });
+        lines.push('');
+      } else if (meta.details || detailsText) {
+        const d = meta.details || detailsText;
+        lines.push(isWhatsApp ? `📝 *${secTitle}:*\n${d}\n` : `==================================================\n📝 ${secTitle}:\n==================================================\n\n${d}\n`);
+      }
+
+      if (meta.products && meta.products.length > 0) {
+        lines.push(isWhatsApp ? `*🛍️ Featured Products & Buy Links:*` : `==================================================\n🛍️ Featured Products & Buy Links:\n==================================================`);
+        meta.products.forEach((p: any, idx: number) => {
+          const priceStr = p.price ? ` (${p.price})` : '';
+          lines.push(`${idx + 1}. ${p.name}${priceStr}`);
+          if (p.amazon_url) lines.push(`   🛒 Amazon: ${p.amazon_url}`);
+          if (p.flipkart_url) lines.push(`   ⚡ Flipkart: ${p.flipkart_url}`);
+        });
+        lines.push('');
+      }
     }
 
     // Tutorial Resources
@@ -702,9 +882,7 @@ function UniversalDashboard() {
 
             {/* FAQ & How It Works Guide Button */}
             <button
-              onClick={() => {
-                document.getElementById('faq-section')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => setIsFaqModalOpen(true)}
               className="btn-ghost"
               style={{ padding: '0.45rem 0.85rem' }}
             >
@@ -781,7 +959,7 @@ function UniversalDashboard() {
             padding: '0.85rem 1rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap' }}>
+          <div className="main-search-input-container" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap' }}>
             {platformInfo && (
               <span
                 style={{
@@ -1172,7 +1350,9 @@ function UniversalDashboard() {
         )}
 
         {/* Extraction Results: Multi-Genre Responsive View */}
-        {result && (
+        {result && (() => {
+          const detailsText = langMode === 'native' && result.notes_original_language ? result.notes_original_language : (result.details || result.full_text || '');
+          return (
           <div
             style={{
               display: 'grid',
@@ -1568,10 +1748,44 @@ function UniversalDashboard() {
             {/* Right Column: Structured Intelligence Guide & Products */}
             <div>
               <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <span className="badge-pill badge-emerald" style={{ fontSize: '0.7rem' }}>
-                    {result.category || 'UNIVERSAL INTELLIGENCE'}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span className="badge-pill badge-emerald" style={{ fontSize: '0.7rem' }}>
+                      {result.category || 'UNIVERSAL INTELLIGENCE'}
+                    </span>
+                    {result.audio_song && (
+                      <span className="badge-pill badge-purple" style={{ fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        🎵 Song: {result.audio_song}
+                      </span>
+                    )}
+                    {result.reel_language && (
+                      <span className="badge-pill" style={{ fontSize: '0.7rem', background: 'rgba(56, 189, 248, 0.14)', color: '#38BDF8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                        🌐 {result.reel_language}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* UPA-1009: Save to Vault Action Button */}
+                  <button
+                    onClick={toggleSaveToVault}
+                    className="btn-tactile"
+                    style={{
+                      background: isSavedInVault ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+                      border: isSavedInVault ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--border-subtle)',
+                      color: isSavedInVault ? '#34D399' : 'var(--text-primary)',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                  >
+                    <Bookmark size={14} color={isSavedInVault ? '#34D399' : 'var(--text-secondary)'} />
+                    <span>{isSavedInVault ? 'Saved in Vault' : 'Save to Vault'}</span>
+                  </button>
                 </div>
 
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>
@@ -1582,6 +1796,89 @@ function UniversalDashboard() {
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
                     {result.summary}
                   </p>
+                )}
+
+                {/* Travel Google Maps Location Card (Item 7) */}
+                {result.google_maps_locations && result.google_maps_locations.length > 0 && (
+                  <div
+                    style={{
+                      marginBottom: '1.25rem',
+                      padding: '0.85rem 1rem',
+                      background: 'rgba(56, 189, 248, 0.08)',
+                      border: '1px solid rgba(56, 189, 248, 0.25)',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                      <Globe size={15} />
+                      <span>📍 Featured Travel Locations & Google Maps Directions</span>
+                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      {result.google_maps_locations.map((loc, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                          <span>• {loc.name}</span>
+                          <a
+                            href={loc.maps_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: '#38BDF8',
+                              fontWeight: 700,
+                              textDecoration: 'none',
+                              fontSize: '0.74rem',
+                              background: 'rgba(56, 189, 248, 0.15)',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                          >
+                            <span>Open Map</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Non-English Reel Dual Language Toggle (Item 6) */}
+                {result.notes_original_language && result.reel_language && result.reel_language.toLowerCase() !== 'english' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Notes Language:</span>
+                    <button
+                      onClick={() => setLangMode('english')}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                        border: langMode === 'english' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                        background: langMode === 'english' ? '#10B981' : 'transparent',
+                        color: langMode === 'english' ? '#FFFFFF' : 'var(--text-secondary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      English (Default)
+                    </button>
+                    <button
+                      onClick={() => setLangMode('native')}
+                      style={{
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        borderRadius: '6px',
+                        border: langMode === 'native' ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                        background: langMode === 'native' ? '#10B981' : 'transparent',
+                        color: langMode === 'native' ? '#FFFFFF' : 'var(--text-secondary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {result.reel_language} (Original)
+                    </button>
+                  </div>
                 )}
 
                 {/* Recipe-Specific: Serving Scaler if Ingredients exist */}
@@ -1595,232 +1892,159 @@ function UniversalDashboard() {
                   </div>
                 )}
 
-                {/* Step-by-Step Instructions / Workout Routines / Features & Specs */}
-                <div style={{ marginTop: '1.25rem' }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '0.75rem',
-                    }}
-                  >
-                    <h3
-                      style={{
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        margin: 0,
-                      }}
-                    >
-                      <CheckCircle2 size={18} color="var(--accent-emerald)" />
-                      <span>{getSectionTitle(result.category)}</span>
-                    </h3>
+                {/* Recipe Extraction 3-Section Rendering & General Content Fallback */}
+                {(() => {
+                  const isRecipeDomain = (result.category || '').toUpperCase().includes('RECIPE') || (result.category_name || '').toUpperCase().includes('RECIPE');
+                  const recipeData = isRecipeDomain ? parseRecipeSections(result, detailsText) : null;
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button
-                        onClick={() => {
-                          handleDownloadTxt();
-                          setDownloadedTxt(true);
-                          setTimeout(() => setDownloadedTxt(false), 2500);
-                        }}
-                        style={{
-                          background: 'rgba(2, 132, 199, 0.15)',
-                          border: '1px solid rgba(56, 189, 248, 0.3)',
-                          borderRadius: '6px',
-                          color: '#38BDF8',
-                          padding: '4px 9px',
-                          fontSize: '0.74rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                        title="Download complete structured intelligence as a .txt file"
-                      >
-                        {downloadedTxt ? <Check size={12} color="#34D399" /> : <Download size={12} />}
-                        <span>{downloadedTxt ? 'Downloaded!' : '.txt Notes'}</span>
-                      </button>
+                  if (isRecipeDomain && recipeData) {
+                    const { equipment, ingredients, instructions } = recipeData;
+                    const equipProds: any[] = [];
+                    const ingProds: any[] = [];
+                    (result.products || []).forEach((p: any) => {
+                      const pNameLower = (p.name || '').toLowerCase();
+                      const isEquipKw = /\b(pan|skillet|knife|blender|cooker|oven|air fryer|bowl|board|apron|spatula|pot|kettle|kadai|tawa|wok|grinder|chopper|tray|sheet)\b/i.test(pNameLower);
+                      if (isEquipKw) equipProds.push(p);
+                      else ingProds.push(p);
+                    });
 
-                      <button
-                        onClick={() => handleShareWhatsApp()}
-                        style={{
-                          background: 'rgba(37, 211, 102, 0.15)',
-                          border: '1px solid rgba(37, 211, 102, 0.3)',
-                          borderRadius: '6px',
-                          color: '#25D366',
-                          padding: '4px 9px',
-                          fontSize: '0.74rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                        title="Share complete recipe and notes via WhatsApp"
-                      >
-                        <MessageSquare size={12} />
-                        <span>WhatsApp</span>
-                      </button>
-
-                      {detailsText && (
-                        <button
-                          onClick={() => handleCopyNotes(detailsText)}
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            border: '1px solid var(--border-subtle)',
-                            borderRadius: '6px',
-                            color: 'var(--text-secondary)',
-                            padding: '4px 9px',
-                            fontSize: '0.74rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          {copiedNotes ? <Check size={12} color="#34D399" /> : <Copy size={12} />}
-                          <span>{copiedNotes ? 'Copied!' : 'Copy Notes'}</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                    {result.instructions && result.instructions.length > 0 ? (
-                      result.instructions.map((step, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '0.75rem',
-                            padding: '0.65rem 0.85rem',
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(255, 255, 255, 0.04)',
-                          }}
-                        >
-                          <span
-                            style={{
-                              minWidth: '22px',
-                              height: '22px',
-                              borderRadius: '50%',
-                              background: 'rgba(16, 185, 129, 0.2)',
-                              color: 'var(--accent-emerald)',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            {idx + 1}
-                          </span>
-                          <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)', margin: 0 }}>
-                            {step}
-                          </p>
-                        </div>
-                      ))
-                    ) : detailsText ? (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.5rem',
-                        }}
-                      >
-                        {detailsText.split('\n').map((line, idx) => {
-                          const trimmed = line.trim();
-                          if (!trimmed) return null;
-
-                          if (trimmed.startsWith('**') && (trimmed.endsWith('**') || trimmed.endsWith(':**') || trimmed.endsWith('**:') || trimmed.endsWith(':'))) {
-                            const cleanHeader = trimmed.replace(/\*\*/g, '').replace(/:$/, '');
-                            return (
-                              <div
-                                key={idx}
-                                style={{
-                                  fontSize: '0.88rem',
-                                  fontWeight: 700,
-                                  color: 'var(--accent-emerald)',
-                                  marginTop: idx > 0 ? '0.5rem' : 0,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.35rem',
-                                }}
-                              >
-                                <span>⚡</span>
-                                <span>{cleanHeader}</span>
-                              </div>
-                            );
-                          }
-
-                          if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('• ')) {
-                            const withoutBullet = trimmed.replace(/^[-*•]\s*/, '');
-                            const boldMatch = withoutBullet.match(/^\*\*([^*]+)\*\*:\s*(.+)$/);
-                            if (boldMatch) {
-                              return (
-                                <div
-                                  key={idx}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    gap: '0.6rem',
-                                    padding: '0.55rem 0.75rem',
-                                    background: 'rgba(255, 255, 255, 0.02)',
-                                    borderRadius: '8px',
-                                    border: '1px solid rgba(255, 255, 255, 0.04)',
-                                    fontSize: '0.88rem',
-                                    lineHeight: 1.5,
-                                  }}
-                                >
-                                  <span style={{ color: 'var(--accent-emerald)', fontWeight: 700, minWidth: '6px' }}>•</span>
-                                  <div>
-                                    <strong style={{ color: '#38BDF8', fontWeight: 600 }}>{boldMatch[1]}: </strong>
-                                    <span style={{ color: 'var(--text-primary)' }}>{boldMatch[2]}</span>
+                    return (
+                      <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {/* Section I. Equipment Needed */}
+                        {equipment && equipment.length > 0 && (
+                          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
+                            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                              <Flame size={16} color="#38BDF8" />
+                              <span>I. Equipment Needed</span>
+                            </h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              {equipment.map((item, idx) => {
+                                const letter = String.fromCharCode(97 + idx); // a, b, c...
+                                return (
+                                  <div key={idx} style={{ padding: '0.45rem 0.75rem', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontWeight: 800, color: '#38BDF8' }}>{letter}.</span>
+                                    <span>{item}</span>
                                   </div>
-                                </div>
-                              );
-                            }
-                            return (
-                              <div
-                                key={idx}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'flex-start',
-                                  gap: '0.6rem',
-                                  padding: '0.55rem 0.75rem',
-                                  background: 'rgba(255, 255, 255, 0.02)',
-                                  borderRadius: '8px',
-                                  border: '1px solid rgba(255, 255, 255, 0.04)',
-                                  fontSize: '0.88rem',
-                                  lineHeight: 1.5,
-                                  color: 'var(--text-primary)',
-                                }}
-                              >
-                                <span style={{ color: 'var(--accent-emerald)', fontWeight: 700 }}>•</span>
-                                <span>{withoutBullet}</span>
-                              </div>
-                            );
-                          }
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
 
-                          return (
-                            <p key={idx} style={{ fontSize: '0.88rem', color: 'var(--text-primary)', margin: '0.2rem 0', lineHeight: 1.5 }}>
-                              {trimmed}
-                            </p>
-                          );
-                        })}
+                        {/* Section II. Ingredients */}
+                        {ingredients && ingredients.length > 0 && (
+                          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
+                            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#34D399', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                              <ChefHat size={16} color="#34D399" />
+                              <span>II. Ingredients (with quantity)</span>
+                            </h3>
+                            <ServingAdjuster
+                              initialServings={result.servings || 2}
+                              ingredients={ingredients}
+                              recipeTitle={formatCleanTitle(result.title || result.recipe_title) || 'Recipe'}
+                            />
+                          </div>
+                        )}
+
+                        {/* Section III. Step-by-Step Instructions */}
+                        <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
+                          <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
+                            <CheckCircle2 size={16} color="var(--accent-emerald)" />
+                            <span>III. Step-by-Step Instructions</span>
+                          </h3>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                            {instructions && instructions.length > 0 ? (
+                              instructions.map((step, idx) => (
+                                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(0, 0, 0, 0.2)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                  <span style={{ minWidth: '22px', height: '22px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--accent-emerald)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {idx + 1}
+                                  </span>
+                                  <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)', margin: 0 }}>{step}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Follow the video clip for step-by-step guidance.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Buy Links Divided into 1. Equipment Links & 2. Purchase Ingredients */}
+                        {(equipProds.length > 0 || ingProds.length > 0) && (
+                          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {equipProds.length > 0 && (
+                              <div>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#FF9900', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <ShoppingCart size={15} color="#FF9900" />
+                                  <span>1. Equipment Links (Buy on Amazon / Flipkart)</span>
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
+                                  {equipProds.map((p, idx) => (
+                                    <div key={idx} style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
+                                      <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.45rem' }}>
+                                        {p.amazon_url && <a href={p.amazon_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', padding: '0.28rem', background: 'rgba(255, 153, 0, 0.15)', color: '#FF9900', border: '1px solid rgba(255, 153, 0, 0.3)', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>Amazon</a>}
+                                        {p.flipkart_url && <a href={p.flipkart_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', padding: '0.28rem', background: 'rgba(40, 116, 240, 0.15)', color: '#60A5FA', border: '1px solid rgba(40, 116, 240, 0.3)', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>Flipkart</a>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {ingProds.length > 0 && (
+                              <div>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34D399', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <ShoppingBag size={15} color="#34D399" />
+                                  <span>2. Purchase Ingredients (Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon Fresh)</span>
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
+                                  {ingProds.map((p, idx) => (
+                                    <div key={idx} style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.45rem' }}>
+                                        {p.blinkit_url && <a href={p.blinkit_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(244, 196, 48, 0.15)', color: '#F4C430', border: '1px solid rgba(244, 196, 48, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Blinkit</a>}
+                                        {p.zepto_url && <a href={p.zepto_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(167, 139, 250, 0.15)', color: '#A78BFA', border: '1px solid rgba(167, 139, 250, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Zepto</a>}
+                                        {p.instamart_url && <a href={p.instamart_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(252, 128, 25, 0.15)', color: '#FC8019', border: '1px solid rgba(252, 128, 25, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Instamart</a>}
+                                        {p.bigbasket_url && <a href={p.bigbasket_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(132, 204, 22, 0.15)', color: '#84CC16', border: '1px solid rgba(132, 204, 22, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>BigBasket</a>}
+                                        {p.amazon_url && <a href={p.amazon_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Amazon Fresh</a>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                        Follow the video clip for exact step-by-step guidance.
-                      </p>
-                    )}
-                  </div>
-                </div>
+                    );
+                  }
+
+                  // Non-Recipe Standard UI Fallback
+                  return (
+                    <div style={{ marginTop: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                          <CheckCircle2 size={18} color="var(--accent-emerald)" />
+                          <span>{getSectionTitle(result.category)}</span>
+                        </h3>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {result.instructions && result.instructions.length > 0 ? (
+                          result.instructions.map((step, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                              <span style={{ minWidth: '22px', height: '22px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', color: 'var(--accent-emerald)', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {idx + 1}
+                              </span>
+                              <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)', margin: 0 }}>{step}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Follow the video clip for exact step-by-step guidance.</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Shoppable Products & Gadgets Section */}
                 {result.products && result.products.length > 0 && (
@@ -1997,14 +2221,14 @@ function UniversalDashboard() {
                       {result.chef_tips[0]}
                     </p>
                   </div>
-                )}
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
-        {/* Interactive FAQ & User Guide Section */}
-        <FaqSection />
+        {/* Interactive FAQ & User Guide Modal Drawer */}
+        <FaqSection isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
       </main>
 
       {/* Slide-out Intelligence Vault Library Drawer */}

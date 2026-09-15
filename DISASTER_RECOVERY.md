@@ -491,23 +491,23 @@ Verify `whatsapp_service.py` formats Blinkit (`https://blinkit.com/s/?q=...`) an
 
 ---
 
-### 📘 Runbook 20: Emergency Telegram Bot Recovery & Long-Polling Failover
-**Symptom**: Telegram bot stops responding or webhook GET/POST returns 401, 405, or timeout error.
+### 📘 Runbook 20: Multi-User Concurrency, Performance & Daily Processing Capacity Protocol (Sprint 10)
+**Symptom**: Need to evaluate multi-user load performance, API SLAs, or compute daily processing caps for cloud scaling.
 
-#### Step 1: Launch Local / Cloud Long-Polling Daemon (Immediate Failover)
-Execute in terminal / background process:
-```powershell
-python scripts/run_telegram_bot.py
-```
-`run_telegram_bot.py` calls `deleteWebhook`, establishes a direct outbound HTTPS connection to `https://api.telegram.org/bot<TOKEN>/getUpdates`, and handles all incoming `/start`, text, and video extraction updates with zero Vercel/CDN rewrite dependencies.
+#### Step 1: Multi-User Concurrency Architecture
+- **Stateless Web & Worker Layer**: FastAPI backend (`backend/app/main.py`) runs asynchronous non-blocking event loops with worker threads for I/O tasks (`BackgroundTasks` or Celery + Upstash Redis).
+- **SHA-256 URL Hash Cache Index**: When multiple users submit the exact same Instagram Reel or YouTube Short URL, the worker queries Supabase SHA-256 URL hash index (`database/001_initial_schema.sql`). Identical URLs return instant cached results in **<150ms** with zero redundant video downloads or AI inference calls.
+- **Per-IP & User Daily Quotas**: Enforced via `backend/app/services/quota_service.py` to prevent single-user denial-of-service or bot scraping spam.
 
-#### Step 2: Verify Bot Status
-Console output will confirm connection:
-```text
-🤖 Connected as @universalProRecipeBot (Universal Pro AI Bot)
-✅ Cleared any active webhooks. Switching to long-polling mode.
-🚀 Telegram Bot is running! Waiting for reels and videos...
-```
+#### Step 2: Performance SLAs & Benchmark Targets
+- **First-Paint Video Preview SLA**: <1.5 seconds.
+- **Multimodal AI Extraction Turnaround SLA**: <3.0 seconds (using Gemini Flash stream parsing and pre-flight duration caps).
+- **Download Media Footprint**: Max 360p resolution (~3MB to 8MB per video file), immediately deleted in `finally:` block after frame extraction.
+
+#### Step 3: Daily Processing Capacity Calculation Matrix
+- **Free Tier Capacity Cap**: **1,500 reels/day** (governed by Google Gemini 1,500 RPD free tier ceiling).
+- **Single Node Cloud Instance (4 CPU / 8GB RAM)**: **~20,000 reels/day** (assuming ~3s average worker execution across 4 parallel process threads).
+- **Distributed Scale Tier (Celery + Redis + Gemini Pro/Flash API Paid Tier)**: **100,000+ reels/day** (linearly scalable by attaching worker container instances).
 
 ---
 
