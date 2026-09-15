@@ -512,6 +512,21 @@ Verify `whatsapp_service.py` formats Blinkit (`https://blinkit.com/s/?q=...`) an
 
 ---
 
+### 📘 Runbook 21: Dynamic Travel Itinerary Day-by-Day Activity & Google Maps Link Recovery Protocol
+**Symptom**: Travel reels do not extract into day-by-day activities or Google Maps search links are broken.
+
+#### Step 1: Verify Gemini Prompt Instruction Contract
+- Check `gemini_processor.py` prompt instructions for `TRAVEL_GUIDE` category. Ensure prompt enforces `Day 1:` -> `- Activity 1: <Description> | LOCATION: <Place> | SEARCH: <Query>` structure.
+
+#### Step 2: Verify Parser & Google Maps URL Encoding
+- Check `parse_extracted_content` in `gemini_processor.py` and `parseTravelItinerary` helper in `frontend/src/app/page.tsx`.
+- All location query strings passed to Google Maps URLs MUST be wrapped in `urllib.parse.quote_plus` / `encodeURIComponent` (`https://www.google.com/maps/search/?api=1&query={encoded_query}`).
+
+#### Step 3: Execute Unit Verification
+- Run `python -m pytest tests/test_sprint10_travel_formatting.py` to verify day extraction and activity link parsing (**169 / 169 PASSED**).
+
+---
+
 
 
 

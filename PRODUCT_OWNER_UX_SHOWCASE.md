@@ -635,18 +635,22 @@ Please review each module deliverable and provide your official sign-off status 
   - Enforced AGENTS.md Rule 8 by pruning non-existent 404 endpoints (`gemini-3.1-pro`, `gemini-3-flash`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.5-flash-lite`) from `preferred_candidates` array in `gemini_processor.py`.
 - **E2E Multimodal Verification (`UPA-1014`)**:
   - Tested and verified 6 user-provided video links across Cooking, Travel (9 Google Maps locations!), Interior, Gaming Settings, and Gadget Shorts.
+- **Dynamic Travel Itinerary Day-by-Day & Activity Formatting (`UPA-1015`)**:
+  - Implemented dynamic Day (`📍 Day 1`, `📍 Day 2`) and Activity (`Activity 1`, `Activity 2`) formatting based on annotated PO directive.
+  - Generates 1-click `📍 Open in Google Maps` search buttons for every activity location across UI cards, WhatsApp messages, and downloadable `.txt` files.
 
 #### 2. PO Sign-Off Verification:
 - [x] **Downloader Resilience**: Instagram format and empty response errors resolve gracefully via snapshot fallback.
 - [x] **Minimalist UI**: Homepage is ultra-sleek and uncluttered; FAQ opens exclusively via top header modal drawer.
 - [x] **3-Section Recipe Format**: Recipe notes render under Equipment, Ingredients (quantity), and Instructions sections.
+- [x] **Dynamic Travel Itinerary**: Formatted dynamically by Day 1 / Activity 1 with 1-click Google Maps links for all activities.
 - [x] **Interior & Gaming Categories**: Auto-detects and categorizes home decor and game settings reels.
 - [x] **Mobile Responsiveness**: Viewports <640px render full-width stacked input controls with zero horizontal overflow.
 - [x] **Audio Song Recognition**: Background music tracks display under `🎵 Song` badges.
 - [x] **Multi-Language Reel Toggle**: Interactive toggle switches between English and Native language notes.
 - [x] **Travel Google Maps Card**: Direct 1-click Google Maps links render for travel destinations.
 - [x] **Intelligence Vault Persistence**: Extractions auto-save to local storage and display in Vault drawer, with manual bookmark button.
-- [x] **Automated Test Suite**: All 168 automated unit & integration tests passing cleanly with 0 failures.
+- [x] **Automated Test Suite**: All 169 automated unit & integration tests passing cleanly with 0 failures.
 
 ---
 

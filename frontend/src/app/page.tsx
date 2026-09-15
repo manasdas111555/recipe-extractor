@@ -91,6 +91,7 @@ interface ExtractionResult {
   notes_english?: string;
   notes_original_language?: string;
   google_maps_locations?: Array<{ name: string; query: string; maps_url: string }>;
+  travel_itinerary?: Array<{ day: string; activities: Array<{ description: string; location_name?: string; maps_url?: string }> }>;
 }
 
 const DOMAIN_OPTIONS = [
@@ -581,11 +582,90 @@ function UniversalDashboard() {
     return { equipment, ingredients, instructions };
   };
 
+  const parseTravelItinerary = (meta: any, detailsTextStr: string) => {
+    if (meta?.travel_itinerary && Array.isArray(meta.travel_itinerary) && meta.travel_itinerary.length > 0) {
+      return meta.travel_itinerary;
+    }
+
+    const textToParse = detailsTextStr || meta?.details || meta?.notes_english || meta?.full_text || '';
+    const itinerary: Array<{ day: string; activities: Array<{ description: string; location_name?: string; maps_url?: string }> }> = [];
+
+    if (!textToParse && (!meta?.instructions || meta.instructions.length === 0)) {
+      return itinerary;
+    }
+
+    let currentDay = 'Day 1';
+    let currentActivities: Array<{ description: string; location_name?: string; maps_url?: string }> = [];
+
+    const lines = meta?.instructions && meta.instructions.length > 0 ? meta.instructions : textToParse.split('\n');
+
+    lines.forEach((line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      const dayMatch = trimmed.match(/^(?:\*\*)?(Day\s*\d+|Day\s*[IVXLCDM]+|Day\s*\d+[:\-]?)(?:\*\*)?/i);
+      if (dayMatch && (trimmed.toLowerCase().startsWith('day') || trimmed.startsWith('**Day'))) {
+        if (currentActivities.length > 0) {
+          itinerary.push({ day: currentDay, activities: [...currentActivities] });
+          currentActivities = [];
+        }
+        let rawDay = dayMatch[1].replace(/[:\-]$/, '').trim();
+        if (!rawDay.toLowerCase().startsWith('day')) rawDay = `Day ${rawDay}`;
+        currentDay = rawDay;
+        return;
+      }
+
+      let cleanAct = trimmed
+        .replace(/^(?:Activity\s*\d+[:\-]?|[\-\*•\d\.]+\s*)/i, '')
+        .replace(/^\*\*\s*/, '')
+        .replace(/\s*\*\*$/, '')
+        .trim();
+
+      if (!cleanAct) return;
+
+      let location_name = '';
+      let maps_url = '';
+
+      const locMatch = cleanAct.match(/\|?\s*LOCATION:\s*([^\|]+)(?:\|\s*SEARCH:\s*([^\|]+))?/i);
+      if (locMatch) {
+        location_name = locMatch[1].trim();
+        const searchQ = (locMatch[2] || location_name).trim();
+        cleanAct = cleanAct.replace(/\|?\s*LOCATION:[^\|]+(?:\|\s*SEARCH:[^\|]+)?/i, '').trim();
+        maps_url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQ)}`;
+      } else if (meta?.google_maps_locations && Array.isArray(meta.google_maps_locations)) {
+        for (const loc of meta.google_maps_locations) {
+          if (loc.name && cleanAct.toLowerCase().includes(loc.name.toLowerCase())) {
+            location_name = loc.name;
+            maps_url = loc.maps_url;
+            break;
+          }
+        }
+      }
+
+      if (!maps_url && cleanAct) {
+        maps_url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanAct.slice(0, 60))}`;
+      }
+
+      currentActivities.push({
+        description: cleanAct,
+        location_name,
+        maps_url,
+      });
+    });
+
+    if (currentActivities.length > 0) {
+      itinerary.push({ day: currentDay, activities: [...currentActivities] });
+    }
+
+    return itinerary;
+  };
+
   const generateStructuredText = (meta: any, isWhatsApp = false): string => {
     if (!meta) return '';
     const title = formatCleanTitle(meta.title || meta.recipe_title) || 'Universal AI Extraction';
     const category = (meta.category || meta.category_name || 'INTELLIGENCE').toUpperCase();
     const isRecipe = category.includes('RECIPE') || category.includes('COOK');
+    const isTravel = category.includes('TRAVEL') || (meta.travel_itinerary && meta.travel_itinerary.length > 0);
 
     // Category emoji
     let emoji = '⚡';
@@ -594,7 +674,7 @@ function UniversalDashboard() {
     else if (category.includes('TUTORIAL') || category.includes('TECH') || category.includes('CODE')) emoji = '💻';
     else if (category.includes('FITNESS') || category.includes('WORKOUT')) emoji = '🏋️';
     else if (category.includes('BEAUTY') || category.includes('SKINCARE')) emoji = '✨';
-    else if (category.includes('TRAVEL')) emoji = '✈️';
+    else if (isTravel) emoji = '✈️';
     else if (category.includes('INTERIOR')) emoji = '🏠';
     else if (category.includes('GAMING') || category.includes('GAME')) emoji = '🎮';
 
@@ -684,6 +764,21 @@ function UniversalDashboard() {
           });
           lines.push('');
         }
+      }
+    } else if (isTravel) {
+      const travelData = parseTravelItinerary(meta, meta.details || meta.notes_english || '');
+      if (travelData && travelData.length > 0) {
+        travelData.forEach((dayGroup: any) => {
+          lines.push(isWhatsApp ? `✈️ *${dayGroup.day}:*` : `==================================================\n✈️ ${dayGroup.day}:\n==================================================`);
+          dayGroup.activities.forEach((act: any, idx: number) => {
+            const cleanDesc = isWhatsApp ? act.description.replace(/\*\*/g, '*') : act.description.replace(/\*\*/g, '');
+            lines.push(`   Activity ${idx + 1} : ${cleanDesc}`);
+            if (act.maps_url) {
+              lines.push(`      📍 Google Maps: ${act.maps_url}`);
+            }
+          });
+          lines.push('');
+        });
       }
     } else {
       // General/Non-Recipe text output
@@ -1839,6 +1934,75 @@ function UniversalDashboard() {
                               </div>
                             )}
                           </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  const isTravelDomain = (result.category || '').toUpperCase().includes('TRAVEL') || (result.category_name || '').toUpperCase().includes('TRAVEL') || (result.travel_itinerary && result.travel_itinerary.length > 0);
+
+                  if (isTravelDomain) {
+                    const travelData = parseTravelItinerary(result, detailsText);
+                    return (
+                      <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                          <Globe size={18} color="#38BDF8" />
+                          <span>Day-by-Day Travel Itinerary</span>
+                        </h3>
+
+                        {travelData && travelData.length > 0 ? (
+                          travelData.map((dayGroup: any, dayIdx: number) => (
+                            <div key={dayIdx} style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(56, 189, 248, 0.22)', borderRadius: '12px', padding: '1.1rem' }}>
+                              <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#38BDF8', marginBottom: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>📍 {dayGroup.day}</span>
+                              </h4>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {dayGroup.activities && dayGroup.activities.map((act: any, actIdx: number) => (
+                                  <div key={actIdx} style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.75rem 0.9rem', background: 'rgba(0, 0, 0, 0.25)', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', flex: 1 }}>
+                                        <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#38BDF8', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '2px 8px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
+                                          Activity {actIdx + 1}
+                                        </span>
+                                        <p style={{ fontSize: '0.88rem', lineHeight: 1.45, color: 'var(--text-primary)', margin: 0, fontWeight: 500 }}>
+                                          {act.description}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {act.maps_url && (
+                                      <div style={{ marginTop: '0.2rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <a
+                                          href={act.maps_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{
+                                            fontSize: '0.74rem',
+                                            fontWeight: 700,
+                                            color: '#38BDF8',
+                                            background: 'rgba(56, 189, 248, 0.12)',
+                                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                                            borderRadius: '6px',
+                                            padding: '3px 10px',
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            transition: 'all 0.2s ease',
+                                          }}
+                                        >
+                                          <span>📍 Open in Google Maps</span>
+                                          <ExternalLink size={11} />
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>No detailed itinerary steps found.</p>
                         )}
                       </div>
                     );

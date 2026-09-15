@@ -385,7 +385,12 @@ CRITICAL NEGATIVE GUARDRAIL: DO NOT list software, APIs, coding libraries, plugi
 - If RECIPE: Full ingredients with exact measurements, equipment needed, prep & cook time, step-by-step instructions, and chef tips.
 - If WORKOUT: Target muscles, equipment needed, warm-up, each exercise with sets x reps and rest intervals, and form cues.
 - If FINANCE_BUSINESS: Key financial thesis, metrics/formulas, step-by-step strategy, and risk factors.
-- If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing, and itinerary tips.
+- If TRAVEL_GUIDE: Dynamically identify the number of days and activities per day based on the video. Format strictly as:
+  Day 1:
+  - Activity 1: <Detailed activity description> | LOCATION: <Exact Hotel/Beach/Cafe/Spot Name & City> | SEARCH: <Targeted Google Maps search query>
+  - Activity 2: <Detailed activity description> | LOCATION: <Exact Spot Name & City> | SEARCH: <Targeted Google Maps search query>
+  Day 2:
+  - Activity 1: <Detailed activity description> | LOCATION: <Exact Spot Name & City> | SEARCH: <Targeted Google Maps search query>
 - If BEAUTY_FASHION: Target look, product order, step-by-step routine, and pro tips.
 - If INTERIOR_DESIGN: Room layout, aesthetic theme, color palette, key furniture/decor elements, lighting & styling tips.
 - If GAMING: Game title, optimal graphics/resolution settings, sensitivity/DPI, keybinds/controller layout, and performance tips.
@@ -895,6 +900,56 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
             elif curr_sec == "INSTRUCTIONS":
                 instructions_list.append(cleaned_item)
 
+    # Parse Travel Itinerary (Day-by-Day Breakdown with Activities & Google Maps Links)
+    travel_itinerary = []
+    if category == "TRAVEL_GUIDE" or "DAY 1" in details.upper() or "DAY 2" in details.upper():
+        curr_day = None
+        day_activities = []
+        for line in details.splitlines():
+            line_str = line.strip()
+            if not line_str:
+                continue
+            day_match = re.match(r'^(?:\*\*)?(Day\s*\d+[:\-]?|Day\s*[IVXLCDM]+[:\-]?)(?:\*\*)?', line_str, re.IGNORECASE)
+            if day_match:
+                if curr_day and day_activities:
+                    travel_itinerary.append({"day": curr_day, "activities": day_activities})
+                curr_day = day_match.group(1).rstrip(':- ').strip()
+                if not curr_day.lower().startswith("day"):
+                    curr_day = f"Day {curr_day}"
+                day_activities = []
+                continue
+
+            if curr_day or line_str.lower().startswith("activity") or line_str.startswith("-"):
+                clean_act = re.sub(r'^(?:Activity\s*\d+[:\-]?|[\-\*•\d\.]+\s*)', '', line_str).strip()
+                clean_act = re.sub(r'^\*\*\s*', '', clean_act).strip()
+                clean_act = re.sub(r'\s*\*\*$', '', clean_act).strip()
+                if not clean_act:
+                    continue
+
+                loc_name = ""
+                loc_maps_url = ""
+                loc_m = re.search(r'\|\s*LOCATION:\s*([^|]+)(?:\|\s*SEARCH:\s*([^|]+))?', clean_act, re.IGNORECASE)
+                if loc_m:
+                    loc_name = loc_m.group(1).strip()
+                    loc_search = (loc_m.group(2) or loc_name).strip()
+                    clean_act = clean_act[:loc_m.start()].strip()
+                    enc_q = urllib.parse.quote_plus(loc_search)
+                    loc_maps_url = f"https://www.google.com/maps/search/?api=1&query={enc_q}"
+                else:
+                    for g_loc in google_maps_locations:
+                        if g_loc['name'].lower() in clean_act.lower():
+                            loc_name = g_loc['name']
+                            loc_maps_url = g_loc['maps_url']
+                            break
+
+                day_activities.append({
+                    "description": clean_act,
+                    "location_name": loc_name,
+                    "maps_url": loc_maps_url
+                })
+        if curr_day and day_activities:
+            travel_itinerary.append({"day": curr_day, "activities": day_activities})
+
     emoji = CATEGORY_EMOJIS.get(category, "📝")
     category_name = CATEGORY_NAMES.get(category, "General Intelligence")
 
@@ -909,6 +964,7 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
         "notes_english": details,
         "notes_original_language": notes_original_language,
         "google_maps_locations": google_maps_locations,
+        "travel_itinerary": travel_itinerary,
         "products": products,
         "resources": resources,
         "equipment": equipment_list,
@@ -1031,8 +1087,20 @@ def format_downloadable_txt(meta: Dict[str, Any]) -> str:
                 if p.get("google_shopping_url"): formatted += f"   • Compare Stores: {p['google_shopping_url']}\n"
                 formatted += "\n"
 
+    if meta.get("travel_itinerary") and len(meta["travel_itinerary"]) > 0:
+        formatted += f"\n{'='*50}\n✈️ Day-by-Day Travel Itinerary & Google Maps Links:\n{'='*50}\n\n"
+        for day_item in meta["travel_itinerary"]:
+            formatted += f"{day_item.get('day', 'Day 1')}:\n"
+            for idx, act in enumerate(day_item.get("activities", []), 1):
+                desc = act.get("description", "")
+                maps_url = act.get("maps_url", "")
+                formatted += f"  Activity {idx} : {desc}\n"
+                if maps_url:
+                    formatted += f"    📍 Google Maps: {maps_url}\n"
+            formatted += "\n"
+
     clean_details = meta.get("details", "").strip()
-    if clean_details:
+    if clean_details and not meta.get("travel_itinerary"):
         formatted += f"\n{'='*50}\nDetailed Steps & Notes:\n{'='*50}\n\n{clean_details}\n"
 
     return formatted
