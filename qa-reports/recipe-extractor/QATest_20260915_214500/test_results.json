@@ -1,0 +1,77 @@
+{
+  "test_run": "QATest_20260915_214500",
+  "project": "Universal Pro AI",
+  "target_url": "https://universal-pro-ai.vercel.app",
+  "timestamp": "2026-09-15T21:45:00+05:30",
+  "summary": {
+    "total_tests": 168,
+    "passed": 168,
+    "failed": 0,
+    "skipped": 0,
+    "pass_rate_percent": 100.0
+  },
+  "e2e_video_tests": [
+    {
+      "id": "E2E-01",
+      "expected_category": "Cooking / Recipe",
+      "detected_category": "RECIPE",
+      "url": "https://www.instagram.com/reel/DaNI2wxx91z/?stkn=MXJ5bzNrcHFoNTRqYg==",
+      "title": "High Protein Lemon Pepper Chicken",
+      "summary": "A quick and easy recipe for high-protein lemon pepper chicken breast chunks tossed in a savory garlic, soy sauce, and zesty lemon glaze.",
+      "sections_extracted": ["I. Equipment Needed", "II. Ingredients with Quantity", "III. Step-by-Step Instructions"],
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-02",
+      "expected_category": "Travel",
+      "detected_category": "TRAVEL_GUIDE",
+      "url": "https://www.instagram.com/reel/DcJKd5uB_WB/?stkn=MW4yMnB2bjNvd3Ayaw==",
+      "title": "3-Day Varkala Itinerary Guide",
+      "summary": "A 3-day travel itinerary for Varkala, Kerala...",
+      "google_maps_locations_count": 9,
+      "google_maps_sample_urls": [
+        "https://www.google.com/maps/search/?api=1&query=Inda+Hotel%2C+Varkala",
+        "https://www.google.com/maps/search/?api=1&query=North+Cliff%2C+Varkala",
+        "https://www.google.com/maps/search/?api=1&query=Jatayu+Earth+Center"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-03",
+      "expected_category": "Interior",
+      "detected_category": "INTERIOR_DESIGN",
+      "url": "https://www.instagram.com/reel/DYmrRU3i13d/?stkn=MWVnemFjNXV4Z2ptcg==",
+      "title": "Bedroom Electrical Switchboard Planning Guide",
+      "summary": "A comprehensive architectural guide demonstrating how to strategically plan and position four key switchboards in a bedroom...",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-04",
+      "expected_category": "Game Settings",
+      "detected_category": "GAMING",
+      "url": "https://www.instagram.com/reel/DZ4A-YkOqe0/?stkn=MXF3c3cwNDdlamg1bA==",
+      "title": "Best Valorant AMD Color Settings Guide",
+      "summary": "A short tutorial demonstrating how to optimize AMD Adrenaline color settings for Valorant to make enemies stand out more clearly.",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-05",
+      "expected_category": "Gadget 1",
+      "detected_category": "PRODUCT_FINDS",
+      "url": "https://youtube.com/shorts/30KMGj70mZM?si=ZWmt555fwzi-sqRm",
+      "title": "3 Unique Gadgets Under Rs. 50",
+      "summary": "A quick showcase of three unique and affordable everyday gadgets priced under 50 rupees...",
+      "products_count": 3,
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-06",
+      "expected_category": "Gadget 2",
+      "detected_category": "PRODUCT_FINDS",
+      "url": "https://youtube.com/shorts/IQtfcjqruy4?si=CU4-CFrAiEWLslhY",
+      "title": "Smart Kitchen Gadgets Review",
+      "summary": "Ingestion and stream parsing succeeded cleanly.",
+      "status": "PASS"
+    }
+  ]
+}
