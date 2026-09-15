@@ -63,6 +63,8 @@ interface ResourceItem {
 
 interface ExtractionResult {
   category?: string;
+  category_name?: string;
+  emoji?: string;
   title?: string;
   recipe_title?: string;
   summary?: string;
@@ -2044,6 +2046,7 @@ function UniversalDashboard() {
                       {result.chef_tips[0]}
                     </p>
                   </div>
+                )}
               </div>
             </div>
           </div>

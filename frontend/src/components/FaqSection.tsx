@@ -197,6 +197,9 @@ const FAQ_DATA: FaqItem[] = [
       </div>
     ),
     tags: ['telegram', 'whatsapp', 'bot', 'chat', 'mobile', 'blinkit', 'zepto']
+  }
+];
+
 interface FaqSectionProps {
   isOpen?: boolean;
   onClose?: () => void;
