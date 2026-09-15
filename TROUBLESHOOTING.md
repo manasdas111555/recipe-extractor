@@ -1079,6 +1079,28 @@ Tested with Playwright / Chrome DevTools mobile viewports (<640px) and verified 
 
 ---
 
+### 🚨 ISSUE-033: Dynamic Travel Itinerary Day-by-Day Activity & Google Maps Link Formatting
+- **Date**: 2026-09-15
+- **Affected Files**: `gemini_processor.py`, `frontend/src/app/page.tsx`, `tests/test_sprint10_travel_formatting.py`
+
+#### 1. What Happened (Symptom):
+Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinerary format breaking down travel reels by Days (`Day 1:`, `Day 2:`) and Activities (`Activity 1:`, `Activity 2:`) with 1-click Google Maps location links for every place.
+
+#### 2. Root Cause & Resolution:
+1. **Gemini Processor (`gemini_processor.py`)**: Updated `TRAVEL_GUIDE` category prompt to enforce `Day N:` -> `- Activity M: <Description> | LOCATION: <Place> | SEARCH: <Query>` output structure. Enhanced `parse_extracted_content` to build structured `travel_itinerary` JSON array with `day` and `activities` objects. Updated `format_downloadable_txt` to format day-by-day activities and Google Maps links.
+2. **Frontend UI & Text Export (`page.tsx`)**:
+   - Added `travel_itinerary` to `ExtractionResult` interface.
+   - Built `parseTravelItinerary` helper function for robust day and activity parsing.
+   - Updated `generateStructuredText` to format WhatsApp and downloadable `.txt` files with `Activity 1:`, `Activity 2:` and Google Maps search URLs.
+   - Built dedicated Travel Itinerary UI card component rendering styled day cards (`📍 Day 1`), activity badges (`Activity 1`), descriptions, and 1-click `📍 Open in Google Maps` buttons.
+3. **Unit Testing (`tests/test_sprint10_travel_formatting.py`)**: Created dedicated test suite validating travel itinerary day extraction, activity parsing, location search query construction, and `.txt` formatting (**169 / 169 tests passed**).
+
+#### 3. Testing & Verification:
+- Next.js local build (`npm run build`): Passed cleanly (**0 errors**).
+- Pytest unit test suite: **169 / 169 PASSED**.
+
+---
+
 ## 📌 Standard Protocol for Logging Future Issues
 
 Whenever a new bug or unexpected behavior occurs:
