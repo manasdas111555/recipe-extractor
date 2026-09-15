@@ -79,9 +79,9 @@ class TestSprint6CreatorTagVault:
         product = {"name": "Garam Masala Powder", "quantity": "100", "unit": "g"}
         enriched = ae.enrich_product_links(product, user_affiliate_tags=creator_tags, category="RECIPE")
 
-        # Must use creator custom tags
-        assert "tag=creatorpro-21" in enriched["amazon_url"]
-        assert "r=creator_ek_7788" in enriched["flipkart_url"]
+        # Strict Owner Affiliate Tag Shield: custom tags are ignored in favor of owner constants
+        assert "tag=manasdas11155-21" in enriched["amazon_url"]
+        assert "r=5608766" in enriched["flipkart_url"]
 
     def test_default_affiliate_tag_fallback(self):
         ae = AffiliateEngine()
