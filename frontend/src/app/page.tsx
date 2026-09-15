@@ -39,7 +39,6 @@ import {
 import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
-import CreatorTagVault from '../components/CreatorTagVault';
 import FaqSection from '../components/FaqSection';
 import ParticleBackground from '../components/ParticleBackground';
 
@@ -2235,12 +2234,6 @@ function UniversalDashboard() {
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
         reason={upgradeReason}
-      />
-
-      {/* Creator Tag Vault Drawer */}
-      <CreatorTagVault
-        isOpen={isCreatorVaultOpen}
-        onClose={() => setIsCreatorVaultOpen(false)}
       />
     </div>
   );

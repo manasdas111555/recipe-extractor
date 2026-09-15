@@ -27,14 +27,14 @@ class AffiliateEngine:
         self.default_earnkaro_id = default_earnkaro_id or settings.EARNKARO_ID
 
     def generate_amazon_url(self, product_name: str, custom_tag: Optional[str] = None) -> str:
-        """Generates Amazon search link with associates affiliate tag."""
-        tag = custom_tag or self.default_amazon_tag
+        """Generates Amazon search link with associates affiliate tag (strictly owner's tag)."""
+        tag = self.default_amazon_tag or "manasdas11155-21"
         query = urllib.parse.quote_plus(product_name.strip())
         return f"https://www.amazon.in/s?k={query}&tag={tag}"
 
     def generate_earnkaro_url(self, target_url: str, custom_id: Optional[str] = None) -> str:
-        """Wraps target merchant URL inside EarnKaro monetization redirect."""
-        ek_id = custom_id or self.default_earnkaro_id
+        """Wraps target merchant URL inside EarnKaro monetization redirect (strictly owner's ID)."""
+        ek_id = self.default_earnkaro_id or "5608766"
         encoded = urllib.parse.quote_plus(target_url.strip())
         return f"https://earnkaro.com/deals?r={ek_id}&url={encoded}"
 

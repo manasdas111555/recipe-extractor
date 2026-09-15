@@ -1101,6 +1101,23 @@ Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinera
 
 ---
 
+### 🚨 ISSUE-034: Enforce Owner Immutable Affiliate Tag Shield & Removal of Creator Tag Overrides
+- **Date**: 2026-09-15
+- **Affected Files**: `backend/app/services/affiliate_engine.py`, `frontend/src/app/page.tsx`
+
+#### 1. What Happened (Symptom):
+Repository Owner issued strict directive: Creator Affiliate Tag Vault custom overrides must be disabled completely so 100% of shopping links strictly and exclusively use the owner's immutable affiliate tags (`manasdas11155-21` for Amazon and `5608766` for EarnKaro).
+
+#### 2. Root Cause & Resolution:
+1. **Affiliate Engine Lock (`affiliate_engine.py`)**: Updated `generate_amazon_url` and `generate_earnkaro_url` to ignore custom override parameters and enforce owner's default immutable tags (`manasdas11155-21` and `5608766`).
+2. **Frontend UI Overhaul (`page.tsx`)**: Completely removed `CreatorTagVault` component import and JSX element. Ensured all e-commerce product links strictly append owner tags.
+
+#### 3. Testing & Verification:
+- Next.js local build (`npm run build`): Passed cleanly (**0 errors**).
+- Pytest unit test suite: **169 / 169 PASSED**.
+
+---
+
 ## 📌 Standard Protocol for Logging Future Issues
 
 Whenever a new bug or unexpected behavior occurs:
