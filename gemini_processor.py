@@ -60,6 +60,8 @@ CATEGORY_EMOJIS = {
     "FINANCE_BUSINESS": "💰",
     "TRAVEL_GUIDE": "✈️",
     "BEAUTY_FASHION": "💄",
+    "INTERIOR_DESIGN": "🏠",
+    "GAMING": "🎮",
     "LIFE_HACKS": "💡",
     "KNOWLEDGE_SUMMARY": "💡",
     "GENERAL": "📝"
@@ -76,6 +78,8 @@ CATEGORY_NAMES = {
     "FINANCE_BUSINESS": "Finance & Business Insights",
     "TRAVEL_GUIDE": "Travel & Places Guide",
     "BEAUTY_FASHION": "Beauty, Skincare & Fashion",
+    "INTERIOR_DESIGN": "Interior & Home Decor",
+    "GAMING": "Gaming & Tech Setup",
     "LIFE_HACKS": "Life Hacks & Productivity",
     "KNOWLEDGE_SUMMARY": "Knowledge & Executive Summary",
     "GENERAL": "General Intelligence"
@@ -325,6 +329,8 @@ First, classify the video into one of these specific CATEGORIES:
 - FINANCE_BUSINESS: Personal finance, investing, stock market, crypto, business breakdowns, or economics.
 - TRAVEL_GUIDE: Destinations, places to visit, restaurants, itinerary tips, or city guides.
 - BEAUTY_FASHION: Makeup tutorials, skincare routines, hairstyle guides, or clothing outfit styling.
+- INTERIOR_DESIGN: Interior decor, home makeover, room aesthetic, architectural styling, furniture layout, wall decor.
+- GAMING: Video game settings, graphics optimization, sensitivity/keybind setup, gaming gear, gameplay walkthroughs.
 - LIFE_HACKS: Everyday life shortcuts, organization tricks, or productivity habits.
 - GENERAL: Any other informative or entertainment content.
 
@@ -338,9 +344,12 @@ CRITICAL CLASSIFICATION RULES:
 3. PRODUCT_FINDS vs BEAUTY_FASHION:
    - If cosmetics, skincare, or fashion -> BEAUTY_FASHION.
    - If electronics, gadgets, or tools -> PRODUCT_FINDS.
+4. INTERIOR_DESIGN vs GAMING:
+   - If home decor, room aesthetic, furniture, walls -> INTERIOR_DESIGN.
+   - If video game settings, graphics, sensitivities, crosshair, keybinds, gaming setups -> GAMING.
 
 Structure your response strictly as follows:
-[CATEGORY]: <EDUCATIONAL | TUTORIAL | KITCHEN_FINDS | RECIPE | PRODUCT_FINDS | WORKOUT | FINANCE_BUSINESS | TRAVEL_GUIDE | BEAUTY_FASHION | LIFE_HACKS | GENERAL>
+[CATEGORY]: <EDUCATIONAL | TUTORIAL | KITCHEN_FINDS | RECIPE | PRODUCT_FINDS | WORKOUT | FINANCE_BUSINESS | TRAVEL_GUIDE | BEAUTY_FASHION | INTERIOR_DESIGN | GAMING | LIFE_HACKS | GENERAL>
 [TITLE]: <A clear, descriptive title-cased name for this video, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates, explains, or reviews>
 [AUDIO_SONG]: <Song Title - Artist if background music/audio track is present, e.g. 'Shape of You - Ed Sheeran', or 'NONE'>
@@ -378,6 +387,8 @@ CRITICAL NEGATIVE GUARDRAIL: DO NOT list software, APIs, coding libraries, plugi
 - If FINANCE_BUSINESS: Key financial thesis, metrics/formulas, step-by-step strategy, and risk factors.
 - If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing, and itinerary tips.
 - If BEAUTY_FASHION: Target look, product order, step-by-step routine, and pro tips.
+- If INTERIOR_DESIGN: Room layout, aesthetic theme, color palette, key furniture/decor elements, lighting & styling tips.
+- If GAMING: Game title, optimal graphics/resolution settings, sensitivity/DPI, keybinds/controller layout, and performance tips.
 - If LIFE_HACKS or GENERAL: Core principles, bulleted step-by-step breakdown, and actionable takeaways.
 
 [ORIGINAL_LANGUAGE_NOTES]:
@@ -1101,12 +1112,7 @@ def process_video_and_generate_recipe(
             "gemini-3.6-flash",       # Gemini 3.6 Flash
             "gemini-3.5-flash",       # Proven High-Throughput Workhorse
             "gemini-3.5-flash-lite",  # Ultra-Fast High-Throughput Fallback
-            "gemini-3.1-pro",         # Gemini 3.1 Pro
             "gemini-3.1-flash-lite",  # Frontier-Class Low Cost Fallback
-            "gemini-3-flash",         # Gemini 3 Flash
-            "gemini-2.5-flash",       # Gemini 2.5 Flash
-            "gemini-2.5-pro",         # Gemini 2.5 Pro
-            "gemini-2.5-flash-lite",  # Gemini 2.5 Flash Lite
         ]
 
         models_to_try = list(preferred_candidates)

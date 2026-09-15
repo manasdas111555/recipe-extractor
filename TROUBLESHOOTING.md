@@ -37,6 +37,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
 | **ISSUE-030** | 2026-09-14 | UI/UX & Design | Light Mode WCAG AA Contrast, 3D Feathered Radial Mask, and Streamlined Hero | ✅ Resolved |
 | **ISSUE-031** | 2026-09-14 | Skills & Customizations | Global Agent Skills Installation from Downloads/Skill Files (Total 53 Skills) | ✅ Resolved |
+| **ISSUE-032** | 2026-09-15 | UI/UX & AI | Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation | ✅ Resolved |
 
 ---
 
@@ -1052,6 +1053,29 @@ Verified with unit tests in `tests/test_sprint10_beta_feedback.py` (`test_vault_
 
 #### 3. Testing & Verification:
 Tested with Playwright / Chrome DevTools mobile viewports (<640px) and verified zero horizontal overflow.
+
+---
+
+### 🚨 ISSUE-032: Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation
+- **Date**: 2026-09-15
+- **Affected Files**: `frontend/src/app/page.tsx`, `gemini_processor.py`, `frontend/src/app/api/v1/webhooks/whatsapp/route.ts`, `frontend/src/app/api/v1/webhooks/telegram/route.ts`
+
+#### 1. What Happened (Symptom):
+1. PO Feedback annotated screenshot highlighted non-minimal UI clutter: top SLA badge, upper telemetry badges, non-functional chat bot callout bar, Platform Superpowers section, and bottom telemetry badges.
+2. App needed auto-detection and prompt guidance for Interior Design (`INTERIOR_DESIGN` / 🏠) and Gaming Settings (`GAMING` / 🎮) categories.
+3. Fallback Gemini candidate list contained deprecated 404 endpoints (`gemini-3.1-pro`, `gemini-3-flash`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.5-flash-lite`), causing ~20s latency spikes on congested requests.
+
+#### 2. Root Cause & Resolution:
+1. **Ultra-Minimalist UI Overhaul (`page.tsx`)**: Removed top SLA badge, upper/lower telemetry pills, bot callout bar, and Platform Superpowers grid. Streamlined hero subtitle to single line: `"Instant AI extraction for recipes, travel, gadgets, interior, gaming & shorts."`
+2. **Category System Expansion (`gemini_processor.py` & `page.tsx`)**:
+   - Added `INTERIOR_DESIGN` (🏠) and `GAMING` (🎮) to `CATEGORY_EMOJIS`, `CATEGORY_NAMES`, `DOMAIN_OPTIONS`, `getSectionTitle`, auto-detect prompts, and category parsers.
+3. **Deprecated Model Pruning (`gemini_processor.py`, webhook routes)**:
+   - Enforced **AGENTS.md Rule 8** by pruning non-existent 404 endpoints from `preferred_candidates` array in `gemini_processor.py`.
+   - Updated WhatsApp and Telegram webhook routes to use `gemini-3.8-flash`.
+
+#### 3. Testing & Verification:
+- **Unit Tests**: Full suite passed 100% green (**168 / 168 tests passed**).
+- **E2E Video Test**: Verified 6 user-provided video links across Cooking, Travel (9 Google Maps links parsed!), Interior, Gaming Settings, and Gadget Shorts.
 
 ---
 

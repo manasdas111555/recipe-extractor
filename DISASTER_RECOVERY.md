@@ -74,7 +74,8 @@ This document details:
 - **Dynamic Module Reloader (`_safe_load_module`)**: Resolves Streamlit Cloud stale cache `ImportError` bugs upon hot reload.
 
 ### 2. Multimodal Extraction Engine (`gemini_processor.py`, `downloader.py`)
-- **Primary Path**: Direct video upload to Google Gemini 2.5 Flash via Files API.
+- **Primary Path**: Direct video upload to Google Gemini Cloud via Files API (`gemini-3.8-flash` flagship model).
+- **Resilient Fallback Tier**: Sequential failover across active Flash models (`gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`). Proactively pruned deprecated 404 endpoints (`gemini-3.1-pro`, `gemini-3-flash`, `gemini-2.5-*`) to prevent latency spikes per **AGENTS.md Rule 8**.
 - **Resilient Fallback Path**: If video direct upload fails or exceeds limits, extracts audio to Groq Whisper transcription and feeds video keyframes to Gemini Multimodal Vision.
 - **Resolution Limiting**: `downloader.py` forces `360p` max resolution to save server memory, disk bandwidth, and prevent memory exhaustion.
 
