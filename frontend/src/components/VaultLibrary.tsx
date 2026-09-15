@@ -35,18 +35,54 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
   const fetchLibrary = async (query = '') => {
     setLoading(true);
     setError(null);
+    let localItems: LibraryItem[] = [];
+    try {
+      const rawLocal = localStorage.getItem('upa_vault_items');
+      if (rawLocal) {
+        const parsed = JSON.parse(rawLocal);
+        if (Array.isArray(parsed)) {
+          localItems = parsed.map((it: any, idx: number) => ({
+            id: it.id || `local_${idx}_${it.created_at || Date.now()}`,
+            source_url: it.source_url || it.url || '#',
+            platform: it.category || 'Saved Extraction',
+            recipe_data: it,
+            created_at: it.created_at || new Date().toISOString()
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading local vault items:', e);
+    }
+
     try {
       const url = query
         ? `/api/v1/library?search=${encodeURIComponent(query)}&limit=20`
         : `/api/v1/library?limit=20`;
       const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`Failed to load vault library: ${res.statusText}`);
+      if (res.ok) {
+        const data = await res.json();
+        const remoteItems = data.items || [];
+        const merged = [...localItems];
+        const existingUrls = new Set(localItems.map(i => i.source_url));
+        for (const rItem of remoteItems) {
+          if (!existingUrls.has(rItem.source_url)) {
+            merged.push(rItem);
+          }
+        }
+        if (query.trim()) {
+          const qLower = query.toLowerCase();
+          setItems(merged.filter(it => 
+            (it.recipe_data?.title || it.recipe_data?.recipe_title || '').toLowerCase().includes(qLower) ||
+            it.source_url.toLowerCase().includes(qLower)
+          ));
+        } else {
+          setItems(merged);
+        }
+      } else {
+        setItems(localItems);
       }
-      const data = await res.json();
-      setItems(data.items || []);
     } catch (err: any) {
-      setError(err.message || 'Error fetching recipes');
+      setItems(localItems);
     } finally {
       setLoading(false);
     }
@@ -64,15 +100,18 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
       return;
     }
     try {
-      const res = await fetch(`/api/v1/library/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setItems((prev) => prev.filter((it) => it.id !== id));
-      } else {
-        alert('Failed to delete item.');
+      const rawLocal = localStorage.getItem('upa_vault_items');
+      if (rawLocal) {
+        const parsed = JSON.parse(rawLocal);
+        const updated = parsed.filter((it: any, idx: number) => `local_${idx}_${it.created_at || ''}` !== id && it.id !== id);
+        localStorage.setItem('upa_vault_items', JSON.stringify(updated));
+      }
+      setItems((prev) => prev.filter((it) => it.id !== id));
+      if (!id.startsWith('local_')) {
+        await fetch(`/api/v1/library/${id}`, { method: 'DELETE' }).catch(() => {});
       }
     } catch (err) {
-      console.error(err);
-      alert('Network error deleting item.');
+      setItems((prev) => prev.filter((it) => it.id !== id));
     }
   };
 

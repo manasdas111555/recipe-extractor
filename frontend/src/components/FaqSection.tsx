@@ -197,13 +197,15 @@ const FAQ_DATA: FaqItem[] = [
       </div>
     ),
     tags: ['telegram', 'whatsapp', 'bot', 'chat', 'mobile', 'blinkit', 'zepto']
-  }
-];
+interface FaqSectionProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
 
-export default function FaqSection() {
+export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [openId, setOpenId] = useState<string | null>('how-to-extract'); // Open first FAQ by default
+  const [openId, setOpenId] = useState<string | null>('how-to-extract');
 
   const toggleAccordion = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
@@ -218,22 +220,52 @@ export default function FaqSection() {
     return matchesCategory && matchesSearch;
   });
 
-  return (
+  if (isOpen === false) return null;
+
+  const contentNode = (
     <section
       id="faq-section"
       style={{
-        marginTop: '4rem',
-        marginBottom: '4rem',
+        width: '100%',
+        maxWidth: '900px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         padding: '2.5rem 1.5rem',
-        background: 'var(--bg-surface)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        background: '#0D111D',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
-        boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.5)'
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        position: 'relative'
       }}
-      className="sc-reveal"
     >
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1.25rem',
+            right: '1.25rem',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-primary)',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            fontSize: '1.1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}
+          title="Close FAQ & Guide"
+        >
+          ✕
+        </button>
+      )}
+
       {/* Header Badge & Title */}
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
         <div
@@ -574,4 +606,32 @@ export default function FaqSection() {
       </div>
     </section>
   );
+
+  if (onClose) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+        }}
+        onClick={onClose}
+      >
+        <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '900px' }}>
+          {contentNode}
+        </div>
+      </div>
+    );
+  }
+
+  return contentNode;
 }

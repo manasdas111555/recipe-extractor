@@ -128,23 +128,33 @@ For each product:
     elif "recipe" in clean_mode or "cook" in clean_mode:
         return """
 Analyze this video and extract a comprehensive cooking recipe.
-Structure your response as follows:
+Structure your response strictly as follows:
 [CATEGORY]: RECIPE
 [TITLE]: <Exact dish name, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence overview of the dish, taste profile, and prep time>
 
 [PRODUCTS]:
-If any special kitchen gadgets, appliances, cookware, or branded gourmet ingredients are featured or recommended to buy, list each one in this exact line format:
-- PRODUCT: <Brand/Item Name> | PRICE: <Price or price range if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
-If no specific purchasable products/gadgets are featured, write:
+List BOTH kitchen equipment/cookware featured (for Amazon/Flipkart links) AND edible ingredients (for Blinkit/Zepto/Instamart/BigBasket links) in this exact line format:
+- PRODUCT: <Brand/Item Name> | PRICE: <Price if stated, or 'N/A'> | SEARCH: <Targeted search keywords to buy this item online>
+If no specific products are featured, write:
 [PRODUCTS]: NONE
 
 ---
 [DETAILS]:
-- Servings & Prep/Cook Time:
-- Ingredients with exact measurements:
-- Step-by-Step Cooking Instructions:
-- Chef tips, substitutions & nutrition (if mentioned):
+I. Equipment Needed:
+a. <Equipment 1, e.g. Frying Pan>
+b. <Equipment 2, e.g. Skillet>
+
+II. Ingredients: (Get quantity if available for each ingredient)
+1. <Ingredient 1 with exact quantity>
+2. <Ingredient 2 with exact quantity>
+
+III. Step-by-Step Instructions:
+1. <Step 1 detailed cooking instruction>
+2. <Step 2 detailed cooking instruction>
+
+Chef Tips & Variations (if mentioned):
+- <Tip 1>
 """
     elif "educational" in clean_mode or "academic" in clean_mode or "science" in clean_mode or "history" in clean_mode or "explainer" in clean_mode:
         return """
@@ -333,6 +343,15 @@ Structure your response strictly as follows:
 [CATEGORY]: <EDUCATIONAL | TUTORIAL | KITCHEN_FINDS | RECIPE | PRODUCT_FINDS | WORKOUT | FINANCE_BUSINESS | TRAVEL_GUIDE | BEAUTY_FASHION | LIFE_HACKS | GENERAL>
 [TITLE]: <A clear, descriptive title-cased name for this video, max 6-8 words>
 [SUMMARY]: <A 2-3 sentence executive summary of what this video demonstrates, explains, or reviews>
+[AUDIO_SONG]: <Song Title - Artist if background music/audio track is present, e.g. 'Shape of You - Ed Sheeran', or 'NONE'>
+[REEL_LANGUAGE]: <Primary spoken language or caption language of the video, e.g. 'Hindi', 'English', 'Spanish', 'French', 'Tamil', 'Telugu', 'German', etc.>
+
+[LOCATIONS & MAPS]:
+If this video is a TRAVEL_GUIDE or mentions specific geographic places, cities, landmarks, cafes, or restaurants to visit:
+List each location in this exact line format:
+- LOCATION: <Exact Place Name & City> | SEARCH: <Targeted search query for Google Maps, e.g. 'Agra Fort, Agra'>
+If no geographic places or travel locations are featured, write:
+[LOCATIONS & MAPS]: NONE
 
 [RESOURCES & TUTORIALS]:
 If this video recommends or mentions tutorials, lectures, courses, frameworks, libraries, tools, or learning roadmaps (e.g. YouTube tutorials, Stanford/MIT lectures, GitHub repos, documentation):
@@ -350,7 +369,7 @@ CRITICAL NEGATIVE GUARDRAIL: DO NOT list software, APIs, coding libraries, plugi
 
 ---
 [DETAILS]:
-(Provide rich, comprehensive, actionable details tailored to the category):
+(Provide rich, comprehensive, actionable details in clean English tailored to the category):
 - If EDUCATIONAL: Core concepts, theoretical foundations, key definitions, real-world examples, and key study takeaways.
 - If TUTORIAL: Prerequisites & tools, step-by-step procedures/roadmap, exact commands/code, and tips/pitfalls.
 - If KITCHEN_FINDS or PRODUCT_FINDS: List each item with key features, usability tips, and pros/cons.
@@ -360,6 +379,9 @@ CRITICAL NEGATIVE GUARDRAIL: DO NOT list software, APIs, coding libraries, plugi
 - If TRAVEL_GUIDE: Place names, exact locations, recommendations, pricing, and itinerary tips.
 - If BEAUTY_FASHION: Target look, product order, step-by-step routine, and pro tips.
 - If LIFE_HACKS or GENERAL: Core principles, bulleted step-by-step breakdown, and actionable takeaways.
+
+[ORIGINAL_LANGUAGE_NOTES]:
+(If REEL_LANGUAGE is NOT English, provide the complete detailed notes translated into that spoken reel language here. If REEL_LANGUAGE is English, write 'NONE'.)
 
 Be thorough, precise, and practical. Do not omit crucial steps, tutorial names, or product names.
 """
@@ -520,7 +542,9 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
         found_cat = cat_match.group(1).upper().strip()
         if any(c in found_cat for c in ["EDUCATIONAL", "EDUCATION", "EXPLAINER", "ACADEMIC", "SCIENCE", "HISTORY", "THEORY"]):
             category = "EDUCATIONAL"
-        elif any(c in found_cat for c in ["TUTORIAL", "TECH_TUTORIAL", "TECH", "CODE", "PROGRAMMING", "HOW_TO", "HOWTO", "DIY", "GUIDE"]):
+        elif any(c in found_cat for c in ["TRAVEL_GUIDE", "TRAVEL", "PLACE", "RESTAURANT", "FOOD_GUIDE", "ITINERARY"]):
+            category = "TRAVEL_GUIDE"
+        elif any(c in found_cat for c in ["TUTORIAL", "TECH_TUTORIAL", "TECH", "CODE", "PROGRAMMING", "HOW_TO", "HOWTO", "DIY"]):
             category = "TUTORIAL"
         elif any(c in found_cat for c in ["KITCHEN_FINDS", "KITCHEN_FIND", "KITCHEN_GADGET", "HOME_FIND"]):
             category = "KITCHEN_FINDS"
@@ -530,8 +554,6 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
             category = "WORKOUT"
         elif any(c in found_cat for c in ["FINANCE_BUSINESS", "FINANCE", "BUSINESS", "INVESTING", "MONEY", "CRYPTO", "STOCKS"]):
             category = "FINANCE_BUSINESS"
-        elif any(c in found_cat for c in ["TRAVEL_GUIDE", "TRAVEL", "PLACE", "RESTAURANT", "FOOD_GUIDE", "ITINERARY"]):
-            category = "TRAVEL_GUIDE"
         elif any(c in found_cat for c in ["BEAUTY_FASHION", "BEAUTY", "SKINCARE", "MAKEUP", "FASHION", "STYLE", "GROOMING"]):
             category = "BEAUTY_FASHION"
         elif any(c in found_cat for c in ["LIFE_HACKS", "LIFE_HACK", "PRODUCTIVITY", "HACK", "HABIT"]):
@@ -753,6 +775,61 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
         details = re.sub(r'\[RESOURCES & TUTORIALS\]:\s*.+', '', details, flags=re.DOTALL | re.IGNORECASE).strip()
         details = re.sub(r'\[RESOURCES\]:\s*.+', '', details, flags=re.DOTALL | re.IGNORECASE).strip()
 
+    # Extract Audio Song / Background Music
+    audio_song = ""
+    song_match = re.search(r'\[AUDIO_SONG\]:\s*(.+)', raw_text, re.IGNORECASE)
+    if song_match:
+        found_song = song_match.group(1).strip()
+        if found_song.upper() not in ["NONE", "N/A", "NO SONG", "UNKNOWN", "NOT DETECTED"]:
+            audio_song = re.sub(r'[*_#"]', '', found_song).strip()
+
+    # Extract Reel Language
+    reel_language = "English"
+    lang_match = re.search(r'\[REEL_LANGUAGE\]:\s*(.+)', raw_text, re.IGNORECASE)
+    if lang_match:
+        found_lang = lang_match.group(1).strip()
+        if found_lang.upper() not in ["NONE", "UNKNOWN", "N/A"]:
+            reel_language = re.sub(r'[*_#"]', '', found_lang).strip()
+
+    # Extract Original Language Notes if present
+    notes_original_language = ""
+    orig_notes_match = re.search(r'\[ORIGINAL_LANGUAGE_NOTES\]:\s*(.+?)(?=\n---\n|\[PRODUCTS\]|\[RESOURCES\]|\[LOCATIONS\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+    if orig_notes_match:
+        found_orig_notes = orig_notes_match.group(1).strip()
+        if found_orig_notes.upper() != "NONE" and not found_orig_notes.upper().startswith("NONE"):
+            notes_original_language = found_orig_notes
+
+    # Extract Google Maps Travel Locations
+    google_maps_locations = []
+    loc_section_match = re.search(r'\[LOCATIONS(?:\s*&\s*MAPS)?\]:\s*(.+?)(?=\n---\n|\[PRODUCTS\]|\[DETAILS\]|\[RESOURCES\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
+    if loc_section_match:
+        loc_text = loc_section_match.group(1).strip()
+        if loc_text.upper() != "NONE" and not loc_text.upper().startswith("NONE"):
+            for line in loc_text.splitlines():
+                line = line.strip()
+                if not line or line.startswith(('#', '=')) or line.upper() == "NONE":
+                    continue
+                l_match = re.search(r'LOCATION:\s*([^|]+)(?:\|\s*SEARCH:\s*(.+))?', line, re.IGNORECASE)
+                if l_match:
+                    l_name = l_match.group(1).strip()
+                    l_search = (l_match.group(2) or l_name).strip()
+                else:
+                    cleaned_line = re.sub(r'^[-*•\d\.]+\s*', '', line).strip()
+                    if len(cleaned_line) > 2 and not cleaned_line.startswith('['):
+                        l_name = cleaned_line
+                        l_search = cleaned_line
+                    else:
+                        continue
+                l_name_clean = re.sub(r'[*_#"]', '', l_name).strip()
+                l_search_clean = re.sub(r'[*_#"]', '', l_search).strip()
+                if l_name_clean:
+                    enc_q = urllib.parse.quote_plus(l_search_clean)
+                    google_maps_locations.append({
+                        "name": l_name_clean,
+                        "query": l_search_clean,
+                        "maps_url": f"https://www.google.com/maps/search/?api=1&query={enc_q}"
+                    })
+
     # Sanitize title for filename & normalize currency symbols
     clean_title = title.replace('₹', 'Rs_').replace('$', 'USD_').replace('€', 'EUR_').replace('£', 'GBP_')
     clean_title = re.sub(r'[\\/*?:"<>|]', '', clean_title)
@@ -765,6 +842,48 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
     if not clean_title:
         clean_title = "Extracted_Content"
 
+    # Parse Recipe 3-Section details (Equipment, Ingredients, Instructions)
+    equipment_list = []
+    ingredients_list = []
+    instructions_list = []
+
+    if details:
+        curr_sec = None
+        for line in details.splitlines():
+            line_str = line.strip()
+            if not line_str:
+                continue
+            line_upper = line_str.upper()
+            if any(k in line_upper for k in ["EQUIPMENT NEEDED", "EQUIPMENT:", "COOKWARE NEEDED", "UTENSILS NEEDED"]):
+                curr_sec = "EQUIPMENT"
+                continue
+            elif any(k in line_upper for k in ["INGREDIENTS:", "II. INGREDIENTS", "INGREDIENTS WITH EXACT"]):
+                curr_sec = "INGREDIENTS"
+                continue
+            elif any(k in line_upper for k in ["III. STEP-BY-STEP", "STEP-BY-STEP INSTRUCTIONS", "COOKING INSTRUCTIONS", "COOKING METHOD"]):
+                curr_sec = "INSTRUCTIONS"
+                continue
+            elif any(k in line_upper for k in ["CHEF TIPS", "VARIATIONS", "NUTRITION", "SERVINGS & PREP"]):
+                curr_sec = "OTHER"
+                continue
+
+            cleaned_item = re.sub(r'^(?:[IVXLCDM]+\.|\d+[\.\)]|[a-zA-Z][\.\)]|[-*•+])\s*', '', line_str).strip()
+            cleaned_item = re.sub(r'^\*\*\s*', '', cleaned_item).strip()
+            cleaned_item = re.sub(r'\s*\*\*$', '', cleaned_item).strip()
+            if not cleaned_item:
+                continue
+
+            if curr_sec == "EQUIPMENT":
+                equipment_list.append(cleaned_item)
+            elif curr_sec == "INGREDIENTS":
+                ing_parts = re.split(r'\s*[\(\-\:]\s*', cleaned_item, maxsplit=1)
+                if len(ing_parts) == 2 and not cleaned_item.startswith('('):
+                    ingredients_list.append({"name": ing_parts[0].strip(), "quantity": ing_parts[1].strip('() ')})
+                else:
+                    ingredients_list.append({"name": cleaned_item, "quantity": ""})
+            elif curr_sec == "INSTRUCTIONS":
+                instructions_list.append(cleaned_item)
+
     emoji = CATEGORY_EMOJIS.get(category, "📝")
     category_name = CATEGORY_NAMES.get(category, "General Intelligence")
 
@@ -774,8 +893,16 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
         "emoji": emoji,
         "title": title,
         "summary": summary,
+        "audio_song": audio_song,
+        "reel_language": reel_language,
+        "notes_english": details,
+        "notes_original_language": notes_original_language,
+        "google_maps_locations": google_maps_locations,
         "products": products,
         "resources": resources,
+        "equipment": equipment_list,
+        "ingredients": ingredients_list,
+        "instructions": instructions_list,
         "details": details,
         "clean_filename": clean_title,
         "raw_text": raw_text
@@ -841,32 +968,57 @@ def format_downloadable_txt(meta: Dict[str, Any]) -> str:
         cat_str = str(meta.get("category", "") or meta.get("category_name", "")).upper()
         is_recipe = any(k in cat_str for k in ["RECIPE", "FOOD", "COOKING"])
         is_fashion = any(k in cat_str for k in ["FASHION", "BEAUTY", "STYLE", "CLOTH"])
-        formatted += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Buy Links:\n{'='*50}\n"
-        for idx, p in enumerate(meta["products"], 1):
-            price_str = f" ({p['price']})" if p.get("price") else ""
-            formatted += f"{idx}. {p['name']}{price_str}\n"
-            if p.get("amazon_url"):
-                amz_lbl = "Amazon Fresh" if is_recipe else ("Amazon Fashion" if is_fashion else "Amazon")
-                formatted += f"   • {amz_lbl}: {p['amazon_url']}\n"
-            if p.get("flipkart_url"):
-                formatted += f"   • Flipkart: {p['flipkart_url']}\n"
-            if p.get("myntra_url"):
-                formatted += f"   • Myntra: {p['myntra_url']}\n"
-            if p.get("meesho_url"):
-                formatted += f"   • Meesho: {p['meesho_url']}\n"
-            if p.get("ajio_url"):
-                formatted += f"   • AJIO: {p['ajio_url']}\n"
-            if p.get("blinkit_url"):
-                formatted += f"   • Blinkit (10-Min): {p['blinkit_url']}\n"
-            if p.get("zepto_url"):
-                formatted += f"   • Zepto (10-Min): {p['zepto_url']}\n"
-            if p.get("instamart_url"):
-                formatted += f"   • Swiggy Instamart: {p['instamart_url']}\n"
-            if p.get("bigbasket_url"):
-                formatted += f"   • BigBasket: {p['bigbasket_url']}\n"
-            if p.get("google_shopping_url"):
-                formatted += f"   • Compare Stores: {p['google_shopping_url']}\n"
-            formatted += "\n"
+
+        if is_recipe:
+            # Separate products into Equipment vs Ingredients
+            equip_prods = []
+            ing_prods = []
+            for p in meta["products"]:
+                p_name_lower = p.get("name", "").lower()
+                is_equip_kw = bool(re.search(r'\b(pan|skillet|knife|blender|cooker|oven|air fryer|bowl|board|apron|spatula|pot|kettle|kadai|tawa|wok|grinder|chopper|tray|sheet)\b', p_name_lower))
+                if is_equip_kw:
+                    equip_prods.append(p)
+                else:
+                    ing_prods.append(p)
+
+            if equip_prods:
+                formatted += f"\n{'='*50}\n1. Equipment Links (Buy on Amazon / Flipkart):\n{'='*50}\n"
+                for idx, p in enumerate(equip_prods, 1):
+                    price_str = f" ({p['price']})" if p.get("price") else ""
+                    formatted += f"{idx}. {p['name']}{price_str}\n"
+                    if p.get("amazon_url"): formatted += f"   • Amazon: {p['amazon_url']}\n"
+                    if p.get("flipkart_url"): formatted += f"   • Flipkart: {p['flipkart_url']}\n"
+                    formatted += "\n"
+
+            if ing_prods:
+                formatted += f"\n{'='*50}\n2. Purchase Ingredients (Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon Fresh):\n{'='*50}\n"
+                for idx, p in enumerate(ing_prods, 1):
+                    price_str = f" ({p['price']})" if p.get("price") else ""
+                    formatted += f"{idx}. {p['name']}{price_str}\n"
+                    if p.get("blinkit_url"): formatted += f"   • Blinkit (10-Min): {p['blinkit_url']}\n"
+                    if p.get("zepto_url"): formatted += f"   • Zepto (10-Min): {p['zepto_url']}\n"
+                    if p.get("instamart_url"): formatted += f"   • Swiggy Instamart: {p['instamart_url']}\n"
+                    if p.get("bigbasket_url"): formatted += f"   • BigBasket: {p['bigbasket_url']}\n"
+                    if p.get("amazon_url"): formatted += f"   • Amazon Fresh: {p['amazon_url']}\n"
+                    formatted += "\n"
+        else:
+            formatted += f"\n{'='*50}\n🛍️ Featured Products & 1-Click Buy Links:\n{'='*50}\n"
+            for idx, p in enumerate(meta["products"], 1):
+                price_str = f" ({p['price']})" if p.get("price") else ""
+                formatted += f"{idx}. {p['name']}{price_str}\n"
+                if p.get("amazon_url"):
+                    amz_lbl = "Amazon Fashion" if is_fashion else "Amazon"
+                    formatted += f"   • {amz_lbl}: {p['amazon_url']}\n"
+                if p.get("flipkart_url"): formatted += f"   • Flipkart: {p['flipkart_url']}\n"
+                if p.get("myntra_url"): formatted += f"   • Myntra: {p['myntra_url']}\n"
+                if p.get("meesho_url"): formatted += f"   • Meesho: {p['meesho_url']}\n"
+                if p.get("ajio_url"): formatted += f"   • AJIO: {p['ajio_url']}\n"
+                if p.get("blinkit_url"): formatted += f"   • Blinkit (10-Min): {p['blinkit_url']}\n"
+                if p.get("zepto_url"): formatted += f"   • Zepto (10-Min): {p['zepto_url']}\n"
+                if p.get("instamart_url"): formatted += f"   • Swiggy Instamart: {p['instamart_url']}\n"
+                if p.get("bigbasket_url"): formatted += f"   • BigBasket: {p['bigbasket_url']}\n"
+                if p.get("google_shopping_url"): formatted += f"   • Compare Stores: {p['google_shopping_url']}\n"
+                formatted += "\n"
 
     clean_details = meta.get("details", "").strip()
     if clean_details:

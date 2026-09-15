@@ -31,6 +31,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-019** | 2026-09-08 | Docker & Worker | Celery worker failed with `No module named 'ai_router'` | ✅ Resolved |
 | **ISSUE-020** | 2026-09-08 | Python 3.11 Runtime | `NameError: name 'Any' is not defined` in `gemini_processor.py:792` | ✅ Resolved |
 | **ISSUE-021** | 2026-09-08 | Frontend / AI | Instagram Reel preview static fallback & missing structured details/notes in PWA UI | ✅ Resolved |
+| **ISSUE-026** | 2026-09-15 | UI/UX & AI | Recipe Notes Lumping All Items into Steps 1..16 vs. 3-Section Format | ✅ Resolved |
 | **ISSUE-027** | 2026-09-13 | Skills | Global Anthropic Agent Skills Installation (19 Production Skills) | ✅ Resolved |
 | **ISSUE-028** | 2026-09-13 | UI/UX & Skills | Autonomous Playwright WebApp Visual & Functional E2E Audit (`webapp-testing` Skill) | ✅ Resolved |
 | **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
@@ -998,8 +999,61 @@ Preparing for the 5-phase 48-hour Friends & Family Beta rollout required relaxin
 
 ---
 
+### 🚨 ISSUE-023: Instagram Reel Empty Media Response & Video Format Errors
+- **Date**: 2026-09-15
+- **Affected Files**: `downloader.py`, `backend/app/workers/media_downloader.py`
 
+#### 1. What Happened (Symptom):
+During beta testing, downloading certain Instagram reels threw raw `yt-dlp` tracebacks: `ERROR: [Instagram] DR92ta_EkO2: Instagram sent an empty media response. Check if this post is accessible in your browser without being logged-in...` or `ERROR: [Instagram] DdRYstgJwgl: No video formats found!`.
 
+#### 2. Root Cause:
+Instagram regularly applies rate limits or requires browser user agent impersonation when retrieving reels from cloud datacenter IP ranges. `yt-dlp` format extraction failed when raw video streams were blocked, throwing unhandled exceptions.
+
+#### 3. Resolution (Code Changes):
+1. **Instagram oEmbed Snapshot Downloader (`download_instagram_fallback`)**: Added fallback keyframe snapshot retriever in `downloader.py` using official Instagram oEmbed metadata (`/oembed/`) and direct media endpoints (`/media/?size=l`).
+2. **Error Message Sanitization (`sanitize_download_error`)**: Stripped raw `yt-dlp` stack traces and replaced them with user-friendly actionable status messages.
+
+#### 4. Testing & Verification:
+Verified with unit tests in `tests/test_sprint10_beta_feedback.py` (`test_downloader_error_sanitization` & `test_instagram_fallback_regex`).
+
+---
+
+### 🚨 ISSUE-024: Intelligence Vault Not Persisting Saved Extractions or Missing Save Action Button
+- **Date**: 2026-09-15
+- **Affected Files**: `frontend/src/app/page.tsx`, `frontend/src/components/VaultLibrary.tsx`
+
+#### 1. What Happened (Symptom):
+Beta users reported that completed extractions were not showing up in the Intelligence Vault, nor was there a clear option on result cards to save recipes to the Vault.
+
+#### 2. Root Cause:
+`handleExtract` in `page.tsx` saved extracted payloads only in ephemeral component state (`setResult`) without writing to `localStorage` or triggering Vault persistence. Additionally, result cards lacked a `[ 💾 Save to Vault ]` bookmark button.
+
+#### 3. Resolution (Code Changes):
+1. **Auto-Save on Completion**: Added `localStorage.setItem('upa_vault_items', ...)` auto-save execution inside `handleExtract` in `page.tsx`.
+2. **Result Header Action Button**: Added `[ 💾 Save to Vault ]` / `[ ✅ Saved in Vault ]` button to extraction result card headers with `toggleSaveToVault` handler.
+3. **Hybrid Storage Sync**: Updated `VaultLibrary.tsx` to merge items from `localStorage` (`upa_vault_items`) and backend `/api/v1/library`, ensuring offline and online reliability.
+
+#### 4. Testing & Verification:
+Verified with unit tests in `tests/test_sprint10_beta_feedback.py` (`test_vault_auto_save_payload_schema`).
+
+---
+
+### 🚨 ISSUE-025: Search Bar Button Cut Off on Mobile & FAQ Page Clutter
+- **Date**: 2026-09-15
+- **Affected Files**: `frontend/src/app/page.tsx`, `frontend/src/app/globals.css`, `frontend/src/components/FaqSection.tsx`
+
+#### 1. What Happened (Symptom):
+1. On mobile viewports (<640px), the "Extract Intelligence ->" button was cut off horizontally due to a non-responsive inline flex container without flex-wrap.
+2. The homepage rendered a large static FAQ section by default, causing vertical scroll clutter.
+
+#### 2. Root Cause & Resolution:
+1. **Responsive Mobile CSS (`globals.css`)**: Added `.main-search-input-container` with `@media (max-width: 640px)` rule forcing vertical column stacking, full 100% width, 16px font-size to prevent iOS Safari auto-zoom, and 48px touch targets.
+2. **Header FAQ Modal (`page.tsx` & `FaqSection.tsx`)**: Completely removed `<FaqSection />` from the default home page flow. Added `isFaqModalOpen` state. Clicking top navigation "FAQ & Guide" button opens `<FaqSection />` in a clean modal overlay drawer.
+
+#### 3. Testing & Verification:
+Tested with Playwright / Chrome DevTools mobile viewports (<640px) and verified zero horizontal overflow.
+
+---
 
 ## 📌 Standard Protocol for Logging Future Issues
 
