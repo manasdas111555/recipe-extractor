@@ -96,6 +96,8 @@ const DOMAIN_OPTIONS = [
   { id: 'recipe', label: '🍳 Cooking Recipe & Food', icon: '🍳' },
   { id: 'kitchen_product', label: '🛍️ Kitchen Finds & Home Gadgets', icon: '🛍️' },
   { id: 'fitness_workout', label: '🏋️ Fitness & Workout Routine', icon: '🏋️' },
+  { id: 'interior_design', label: '🏠 Interior & Home Decor', icon: '🏠' },
+  { id: 'gaming', label: '🎮 Gaming & Tech Setup', icon: '🎮' },
   { id: 'tech_diy', label: '💻 Tech Tutorial & Code Guide', icon: '💻' },
   { id: 'unboxing', label: '📦 Product Unboxing & Amazon Finds', icon: '📦' },
   { id: 'diy', label: '💡 Life Hacks & Productivity', icon: '💡' },
@@ -265,6 +267,8 @@ function UniversalDashboard() {
     if (c.includes('EDUCATIONAL') || c.includes('EXPLAINER')) return 'Core Concepts & Key Takeaways';
     if (c.includes('FINANCE') || c.includes('BUSINESS')) return 'Strategy, Metrics & Action Steps';
     if (c.includes('BEAUTY') || c.includes('FASHION')) return 'Styling Routine & Application Steps';
+    if (c.includes('INTERIOR')) return 'Interior Styling & Design Recommendations';
+    if (c.includes('GAMING') || c.includes('GAME')) return 'Game Settings, Keybinds & Gear Setup';
     if (c.includes('LIFE_HACK') || c.includes('HACK')) return 'Productivity Hacks & Actionable Tips';
     return 'Detailed Steps & Intelligence Notes';
   };
@@ -589,6 +593,8 @@ function UniversalDashboard() {
     else if (category.includes('FITNESS') || category.includes('WORKOUT')) emoji = '🏋️';
     else if (category.includes('BEAUTY') || category.includes('SKINCARE')) emoji = '✨';
     else if (category.includes('TRAVEL')) emoji = '✈️';
+    else if (category.includes('INTERIOR')) emoji = '🏠';
+    else if (category.includes('GAMING') || category.includes('GAME')) emoji = '🎮';
 
     const lines: string[] = [];
 
@@ -905,26 +911,6 @@ function UniversalDashboard() {
 
       {/* Hero Ingestion Section */}
       <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '2rem 1.5rem', position: 'relative', zIndex: 1 }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }} className="plane-far sc-reveal sc-visible">
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.35rem 0.85rem',
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: 'var(--radius-full)',
-              marginBottom: '1rem',
-              boxShadow: '0 0 20px rgba(16, 185, 129, 0.15)',
-            }}
-          >
-            <span className="live-dot" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34D399', letterSpacing: '0.03em' }}>
-              SUB-3S UNIVERSAL AI • MULTI-GENRE MULTIMODAL ENGINE
-            </span>
-          </div>
-
           <h1
             style={{
               fontSize: '2.65rem',
@@ -937,18 +923,9 @@ function UniversalDashboard() {
             Universal Reel & Shorts <br />
             <span className="gradient-text-animated">AI Intelligence Extractor</span>
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', maxWidth: '680px', margin: '0 auto 1rem', lineHeight: '1.5' }}>
-            Turn any Instagram Reel or YouTube Short into structured step-by-step recipes, workout
-            routines, code tutorials, and monetized shoppable product links — in under 3 seconds.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', maxWidth: '640px', margin: '0 auto 1.25rem', lineHeight: '1.5' }}>
+            Instant AI extraction for recipes, tutorials, travel guides, gadgets & shorts.
           </p>
-
-          {/* Trust Proof Metrics Badges directly under hero subtitle */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-            <span className="badge-pill badge-emerald">⚡ ~2.4s AI SLA</span>
-            <span className="badge-pill badge-rose">🛒 Amazon & Flipkart Links</span>
-            <span className="badge-pill badge-amber">📱 1-Click WhatsApp Export</span>
-          </div>
-        </div>
 
         {/* Input Bar Card - Undisputed Streamlined Focal Point */}
         <div
@@ -1066,67 +1043,6 @@ function UniversalDashboard() {
                 {s.label}
               </button>
             ))}
-          </div>
-
-          {/* Omnichannel Telegram & WhatsApp Ingestion Callout */}
-          <div
-            style={{
-              marginTop: '0.65rem',
-              paddingTop: '0.5rem',
-              borderTop: '1px dashed var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span>⚡ Prefer Mobile Chat?</span>
-            <a
-              href="https://t.me/UniversalProAIBot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chip-tactile"
-              style={{
-                color: '#38BDF8',
-                fontWeight: 700,
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                background: 'rgba(56, 189, 248, 0.1)',
-                padding: '3px 9px',
-                borderRadius: '6px',
-                border: '1px solid rgba(56, 189, 248, 0.25)',
-              }}
-            >
-              <span>Telegram Bot</span>
-              <ExternalLink size={11} />
-            </a>
-            <span>•</span>
-            <a
-              href="https://wa.me/919999999999?text=Hi%20Universal%20Pro%20AI"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chip-tactile"
-              style={{
-                color: '#25D366',
-                fontWeight: 700,
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                background: 'rgba(37, 211, 102, 0.1)',
-                padding: '3px 9px',
-                borderRadius: '6px',
-                border: '1px solid rgba(37, 211, 102, 0.25)',
-              }}
-            >
-              <span>WhatsApp Bot</span>
-              <ExternalLink size={11} />
-            </a>
           </div>
         </div>
 
@@ -1254,100 +1170,7 @@ function UniversalDashboard() {
           </div>
         )}
 
-        {/* Platform Superpowers Showcase (Displayed when no active extraction) */}
-        {!result && !isLoading && (
-          <div style={{ maxWidth: '980px', margin: '2.5rem auto 0' }}>
-            <h2
-              style={{
-                fontSize: '1rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--text-secondary)',
-                textAlign: 'center',
-                marginBottom: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <Sparkles size={16} color="var(--accent-emerald)" />
-              <span>Platform Superpowers</span>
-            </h2>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '1rem',
-              }}
-            >
-              <div className="awwwards-card sc-reveal sc-stagger-1 accent-border-t-cyan" style={{ padding: '1.35rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
-                  <Globe size={20} color="#38BDF8" />
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Universal Stream Parsing</h3>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Seamless ingestion of Instagram Reels, YouTube Shorts, and TikTok with high-res auto-resolution.
-                </p>
-              </div>
-
-              <div className="awwwards-card sc-reveal sc-stagger-2 accent-border-t-purple" style={{ padding: '1.35rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
-                  <Cpu size={20} color="#A78BFA" />
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Multimodal Neural Vision</h3>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Simultaneously analyzes video frames, on-screen text, audio transcripts & voiceovers.
-                </p>
-              </div>
-
-              <div className="awwwards-card sc-reveal sc-stagger-3 accent-border-t" style={{ padding: '1.35rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
-                  <ShoppingBag size={20} color="#F472B6" />
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Shoppable Product Links</h3>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Identifies cookware, fitness gear, gadgets & ingredients with instant 1-click buy tags.
-                </p>
-              </div>
-
-              <div className="awwwards-card sc-reveal sc-stagger-4 accent-border-t-cyan" style={{ padding: '1.35rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.5rem' }}>
-                  <MessageSquare size={20} color="#34D399" />
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Instant WhatsApp Sync</h3>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                  Direct delivery of clean, formatted intelligence notes straight to your phone.
-                </p>
-              </div>
-            </div>
-
-            {/* Bottom Telemetry Badges */}
-            <div
-              className="sc-reveal sc-stagger-2"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '1rem',
-                marginTop: '1.75rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <span className="badge-pill chip-tactile tabular-num" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
-                ⚡ ~2.4s AI Turnaround
-              </span>
-              <span className="badge-pill chip-tactile" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
-                🛒 Amazon and Flipkart link
-              </span>
-              <span className="badge-pill chip-tactile" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>
-                📲 1-Click WhatsApp Share
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Extraction Results: Multi-Genre Responsive View */}
         {result && (() => {
