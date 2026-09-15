@@ -110,10 +110,10 @@ class TestAffiliateAndQuickCommerce(unittest.TestCase):
         self.assertIn("tag=manasdas11155-21", url)
 
     def test_amazon_custom_affiliate_override(self):
-        """Verify Pro / Creator tier can override default Amazon tag."""
+        """Verify owner immutable Amazon tag is strictly enforced across custom override attempts."""
         url = self.engine.generate_amazon_url("Whey Protein Isolate", custom_tag="creatorpro-21")
-        self.assertIn("tag=creatorpro-21", url)
-        self.assertNotIn("tag=manasdas11155-21", url)
+        self.assertIn("tag=manasdas11155-21", url)
+        self.assertNotIn("tag=creatorpro-21", url)
 
     def test_earnkaro_redirect_wrapping(self):
         """Verify merchant URL is wrapped through EarnKaro with user ID."""
