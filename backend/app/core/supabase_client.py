@@ -369,6 +369,32 @@ class SupabaseRestClient:
 
         return True
 
+    def log_beta_telemetry(
+        self,
+        source_platform: str,
+        source_url: str,
+        classified_domain: Optional[str] = None,
+        turnaround_time_ms: Optional[int] = None,
+        status: str = "completed"
+    ) -> bool:
+        """Logs beta telemetry into public.beta_telemetry_feed table."""
+        if not self.is_configured():
+            return True
+        url = f"{self.base_url}/rest/v1/beta_telemetry_feed"
+        payload = {
+            "source_platform": source_platform,
+            "source_url": source_url,
+            "classified_domain": classified_domain or "general",
+            "turnaround_time_ms": turnaround_time_ms or 0,
+            "status": status
+        }
+        try:
+            r = requests.post(url, headers=self._get_headers(use_service_role=True), json=payload, timeout=5)
+            return r.status_code in [200, 201, 204]
+        except Exception as e:
+            logger.error(f"Error logging beta telemetry: {e}")
+            return False
+
     def get_telemetry_funnel(self) -> Dict[str, Any]:
         """Calculates conversion funnel counts and drop-off metrics."""
         events = list(getattr(self, "_in_memory_telemetry", []))

@@ -190,6 +190,13 @@ def execute_extraction_pipeline(
                 "status": "completed"
             })
             supabase.increment_daily_quota(user_id)
+            supabase.log_beta_telemetry(
+                source_platform="web",
+                source_url=video_url,
+                classified_domain=meta.get("category", "RECIPE"),
+                turnaround_time_ms=2500,
+                status="completed"
+            )
             logger.info("[%s] Saved extraction & updated quota for user %s", job_id, user_id)
         except Exception as db_exc:
             logger.warning("[%s] Supabase persistence notice: %s", job_id, db_exc)
