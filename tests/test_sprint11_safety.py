@@ -70,8 +70,20 @@ class TestSprint11SafetySchema(unittest.TestCase):
         self.assertIn("getFilteredIngredients", content)
 
 
+    def test_duration_parser_utility_exists(self):
+        """Verify that frontend/src/utils/durationParser.ts exists and exports parseInstructionDurations."""
+        parser_file = self.root_dir / "frontend" / "src" / "utils" / "durationParser.ts"
+        self.assertTrue(parser_file.exists(), "Missing frontend/src/utils/durationParser.ts")
+        content = parser_file.read_text(encoding="utf-8")
+        
+        self.assertIn("export function parseInstructionDurations(text: string): ParsedDuration[]", content)
+        self.assertIn("durationRegex", content)
+        self.assertIn("totalSeconds", content)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
