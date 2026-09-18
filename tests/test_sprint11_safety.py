@@ -45,6 +45,19 @@ class TestSprint11SafetySchema(unittest.TestCase):
         self.assertIn("wakeLockSentinelRef.current.release()", content)
 
 
+    def test_use_step_timer_hook_exists(self):
+        """Verify that frontend/src/hooks/useStepTimer.ts exists and implements delta math + Web Audio."""
+        hook_file = self.root_dir / "frontend" / "src" / "hooks" / "useStepTimer.ts"
+        self.assertTrue(hook_file.exists(), "Missing frontend/src/hooks/useStepTimer.ts")
+        content = hook_file.read_text(encoding="utf-8")
+        
+        self.assertIn("export function useStepTimer({ durationSeconds, onComplete }: UseStepTimerOptions): UseStepTimerReturn", content)
+        self.assertIn("targetEndTimeRef.current = Date.now() + remainingSeconds * 1000", content)
+        self.assertIn("AudioContext", content)
+        self.assertIn("vibrate", content)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
