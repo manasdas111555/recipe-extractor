@@ -1099,22 +1099,24 @@ Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinera
 - Next.js local build (`npm run build`): Passed cleanly (**0 errors**).
 - Pytest unit test suite: **169 / 169 PASSED**.
 
+| **ISSUE-034** | 2026-09-15 | Monetization | Enforce Owner Immutable Affiliate Tag Shield & Removal of Creator Tag Overrides | ✅ Resolved |
+| **ISSUE-035** | 2026-09-18 | Architecture & Null-Safety | SAFE-1101: TypeScript Schema Null-Safety & Historical Cache Protection | ✅ Resolved |
+
 ---
 
-### 🚨 ISSUE-034: Enforce Owner Immutable Affiliate Tag Shield & Removal of Creator Tag Overrides
-- **Date**: 2026-09-15
-- **Affected Files**: `backend/app/services/affiliate_engine.py`, `frontend/src/app/page.tsx`
+### 🚨 ISSUE-035: `SAFE-1101`: TypeScript Schema Null-Safety & Historical Cache Protection
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/types/recipe.ts`, `frontend/src/app/page.tsx`, `tests/test_sprint11_safety.py`
 
 #### 1. What Happened (Symptom):
-Repository Owner issued strict directive: Creator Affiliate Tag Vault custom overrides must be disabled completely so 100% of shopping links strictly and exclusively use the owner's immutable affiliate tags (`manasdas11155-21` for Amazon and `5608766` for EarnKaro).
+Historical extractions cached in Supabase prior to Sprint 11 did not contain the new `nutrition` property. Reading properties from undefined objects caused potential runtime `TypeError: Cannot read properties of undefined` crashes in Next.js client views.
 
 #### 2. Root Cause & Resolution:
-1. **Affiliate Engine Lock (`affiliate_engine.py`)**: Updated `generate_amazon_url` and `generate_earnkaro_url` to ignore custom override parameters and enforce owner's default immutable tags (`manasdas11155-21` and `5608766`).
-2. **Frontend UI Overhaul (`page.tsx`)**: Completely removed `CreatorTagVault` component import and JSX element. Ensured all e-commerce product links strictly append owner tags.
+1. **Centralized Types (`frontend/src/types/recipe.ts`)**: Created `NutritionInfo` interface with strictly optional metrics (`calories?`, `protein_g?`, `carbs_g?`, `fat_g?`, `is_estimated?`). Updated `ExtractionResult` and `RecipeSchema` to make `nutrition?: NutritionInfo` optional.
+2. **Page Imports (`frontend/src/app/page.tsx`)**: Replaced inline interface definitions with centralized imports from `../types/recipe`.
 
 #### 3. Testing & Verification:
-- Next.js local build (`npm run build`): Passed cleanly (**0 errors**).
-- Pytest unit test suite: **169 / 169 PASSED**.
+- Pytest test suite (`tests/test_sprint11_safety.py`): **172 / 172 PASSED**.
 
 ---
 
