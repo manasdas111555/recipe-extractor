@@ -59,3 +59,28 @@
   - `docs/qa-reports/` & `docs/ui-ux-audits/`: Automated E2E QA reports and visual inspection logs.
   - `backend/database/`: Supabase SQL schemas and migration scripts.
 - **Verification Rule**: No feature implementation or bug fix is considered complete until all 3 living documents reflect the updated state of the codebase.
+
+## 10. Multi-LLM Council Consensus & Latency SLA Guardrail
+- **Single-Pass Sub-3s Default**: The default extraction pipeline for all web, Telegram, WhatsApp, and API requests MUST remain the fast, single-pass `gemini-3.8-flash` engine to satisfy our core turnaround SLA (<2.4s).
+- **Council Mode Invariant**: The 3-Stage Multi-LLM Council Consensus Engine (Gemini + Groq Llama 3.3 + Mistral) must NEVER be configured as the default execution pipeline. It must strictly remain an explicit opt-in selection or an internal fallback retry mechanism.
+- **Provider Key Isolation**: Council execution must degrade gracefully if secondary provider keys (`GROQ_API_KEY`, `MISTRAL_API_KEY`) are missing, falling back to single-provider execution without throwing 500 errors.
+
+## 11. Schema Backward Compatibility & Historical Cache Defense
+- **Zero Breaking Assumptions on `structured_data`**: The Supabase `extractions` table contains historical records from earlier sprints that lack newer schema keys (e.g., `nutrition_per_serving`, `equipment_needed`, `google_maps_locations`, `audio_song`).
+- **Mandatory Optional Types & Null Guards**: All newly introduced JSON fields must be defined as optional (`field?: Type`) in TypeScript interfaces. Frontend components must strictly use optional chaining (`data.nutrition?.calories`) and default fallbacks. Agents must never assume a database record contains newly invented schema fields.
+- **Single-Inference Extraction Schema**: New domain properties (such as nutritional macros) must be incorporated directly into the primary Gemini JSON schema prompt. Agents must NEVER trigger secondary round-trip LLM calls to fetch supplementary metadata for an already extracted video.
+
+## 12. Mobile In-App Browser & Web API Progressive Enhancement
+- **Strict Feature Detection**: Advanced browser APIs (`navigator.wakeLock`, `AudioContext`, `navigator.clipboard`, `navigator.vibrate`) are heavily restricted or unsupported inside mobile in-app webviews (Instagram WKWebView, WhatsApp browser, Telegram webview).
+- **Mandatory Defensive Wrappers**:
+  - `wakeLock.request('screen')` must always be wrapped in a defensive try/catch block, catching `NotAllowedError` silently without breaking UI state.
+  - Timers must calculate remaining duration using target epoch timestamp deltas (`targetTime - Date.now()`), never raw `setInterval` decrements which freeze under mobile OS background tab throttling.
+  - Audio chimes must initialize and pre-unlock on an explicit user gesture tick before playing programmatically.
+  - Clipboard operations must implement an `execCommand('copy')` textarea fallback for legacy webviews.
+
+## 13. Regional & Hinglish Culinary Prompt Invariants
+- **Prompt Preservation**: System prompts in `backend/app/services/gemini_processor.py` and `multimodal.py` contain tuned culinary rules for South Asian and Hinglish terminology. Agents must NEVER delete, overwrite, or simplify these rules during prompt refactoring.
+- **Mandatory Linguistic Mappings**:
+  - Spoken metrics must always translate to standardized units while preserving native terms in parentheses: *1 katori* $\rightarrow$ *1 cup (~150g)*, *1 chamach* $\rightarrow$ *1 tbsp*, *chutki bhar* $\rightarrow$ *pinch*.
+  - Native ingredient names must be preserved in parentheses: e.g., *Cumin seeds (Jeera)*, *Asafoetida (Hing)*, *Dried Fenugreek (Kasuri Methi)*.
+  - Quick-commerce link builders must prioritize the colloquial Indian spice name to ensure accurate search indexing on Blinkit and Zepto.

@@ -1101,8 +1101,23 @@ Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinera
 
 | **ISSUE-034** | 2026-09-15 | Monetization | Enforce Owner Immutable Affiliate Tag Shield & Removal of Creator Tag Overrides | ✅ Resolved |
 | **ISSUE-035** | 2026-09-18 | Architecture & Null-Safety | SAFE-1101: TypeScript Schema Null-Safety & Historical Cache Protection | ✅ Resolved |
+| **ISSUE-036** | 2026-09-18 | Core UX Infrastructure | SAFE-1102: Screen Wake-Lock Defensive Hook & Auto-Reacquire | ✅ Resolved |
 
 ---
+
+### 🚨 ISSUE-036: `SAFE-1102`: Screen Wake-Lock Defensive Hook & Auto-Reacquire
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/hooks/useWakeLock.ts`, `tests/test_sprint11_safety.py`
+
+#### 1. What Happened (Symptom):
+In mobile webviews, in-app browsers, or iOS WKWebView, calling `navigator.wakeLock.request('screen')` directly threw uncaught `NotAllowedError` exceptions or lost the wake lock sentinel permanently when users switched apps or tab visibility changed.
+
+#### 2. Root Cause & Resolution:
+1. **Defensive Hook (`frontend/src/hooks/useWakeLock.ts`)**: Built `useWakeLock` hook with safe feature detection (`'wakeLock' in navigator`), `try...catch` wrapper for `NotAllowedError`, and an unmount release sentinel cleanup.
+2. **Auto-Reacquire Listener**: Added a `visibilitychange` event listener that automatically re-acquires the screen lock when `document.visibilityState === 'visible'`.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint11_safety.py`): **173 / 173 PASSED**.
 
 ### 🚨 ISSUE-035: `SAFE-1101`: TypeScript Schema Null-Safety & Historical Cache Protection
 - **Date**: 2026-09-18
