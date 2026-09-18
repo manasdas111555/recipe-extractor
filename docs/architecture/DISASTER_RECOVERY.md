@@ -2,7 +2,7 @@
 
 **Product**: Universal Reel & Shorts AI Extractor (Universal Pro AI)  
 **Document Type**: Living Disaster Recovery (DR) Plan & Technical Specification  
-**Current Milestone**: Sprint 12 (Interactive Hands-Free Cooking Mode)  
+**Current Milestone**: Sprint 13 (Dynamic Smart Recipe Scaling Engine)  
 **Recovery Time Objective (RTO)**: $\le 5\text{ minutes}$ (Site restored)  
 **Recovery Point Objective (RPO)**: $\le 1\text{ hour}$ (Data loss minimal to zero)  
 **Last Updated**: September 18, 2026  

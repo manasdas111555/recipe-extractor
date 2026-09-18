@@ -10,61 +10,20 @@ interface Ingredient {
   notes?: string;
 }
 
+import { scaleIngredientItem, ScaledIngredientResult } from '../utils/scalingEngine';
+import { useRecipe } from '../context/RecipeContext';
+
+interface Ingredient {
+  name: string;
+  quantity?: string | number;
+  unit?: string;
+  notes?: string;
+}
+
 interface ServingAdjusterProps {
   initialServings?: number;
   ingredients: (Ingredient | string)[];
   recipeTitle: string;
-}
-
-/**
- * Parses numeric value or simple fraction from an ingredient quantity string
- */
-function parseQuantity(qty: string | number | undefined): number | null {
-  if (qty === undefined || qty === null) return null;
-  if (typeof qty === 'number') return qty;
-  const str = qty.trim();
-  if (!str) return null;
-
-  // Check fraction like 1/2, 3/4
-  if (str.includes('/')) {
-    const parts = str.split('/');
-    if (parts.length === 2) {
-      const num = parseFloat(parts[0]);
-      const den = parseFloat(parts[1]);
-      if (!isNaN(num) && !isNaN(den) && den !== 0) {
-        return num / den;
-      }
-    }
-  }
-
-  // Range like 2-3 (use average or first)
-  if (str.includes('-')) {
-    const parts = str.split('-');
-    const first = parseFloat(parts[0]);
-    if (!isNaN(first)) return first;
-  }
-
-  const num = parseFloat(str);
-  return isNaN(num) ? null : num;
-}
-
-/**
- * Formats scaled quantity cleanly (e.g. 1.5 -> 1 1/2 or 1.5)
- */
-function formatQuantity(val: number): string {
-  if (Math.abs(val - Math.round(val)) < 0.05) {
-    return Math.round(val).toString();
-  }
-  // Check common fractions
-  const whole = Math.floor(val);
-  const frac = val - whole;
-  if (Math.abs(frac - 0.5) < 0.05) return whole > 0 ? `${whole} ½` : '½';
-  if (Math.abs(frac - 0.25) < 0.05) return whole > 0 ? `${whole} ¼` : '¼';
-  if (Math.abs(frac - 0.75) < 0.05) return whole > 0 ? `${whole} ¾` : '¾';
-  if (Math.abs(frac - 0.33) < 0.06) return whole > 0 ? `${whole} ⅓` : '⅓';
-  if (Math.abs(frac - 0.67) < 0.06) return whole > 0 ? `${whole} ⅔` : '⅔';
-
-  return val.toFixed(1).replace(/\.0$/, '');
 }
 
 export default function ServingAdjuster({
@@ -74,56 +33,29 @@ export default function ServingAdjuster({
 }: ServingAdjusterProps) {
   const [servings, setServings] = useState<number>(initialServings > 0 ? initialServings : 2);
   const [copied, setCopied] = useState<boolean>(false);
+  const { excludedPantryIds, togglePantryExclusion, servingsMultiplier, setServingsMultiplier } = useRecipe();
 
-  const scaleFactor = servings / (initialServings > 0 ? initialServings : 2);
+  const baseServings = initialServings > 0 ? initialServings : 2;
+  const scaleFactor = servings / baseServings;
 
   const adjustServings = (delta: number) => {
-    setServings((prev) => Math.min(12, Math.max(1, prev + delta)));
+    const nextServings = Math.min(12, Math.max(1, servings + delta));
+    setServings(nextServings);
+    setServingsMultiplier(nextServings / baseServings);
   };
 
-  // Scaled ingredient list
-  const scaledItems = ingredients.map((item) => {
-    if (typeof item === 'string') {
-      // Attempt regex extract if string starts with a number
-      const match = item.match(/^([\d\/\.\-]+)\s*([a-zA-Z]+)?\s*(.*)$/);
-      if (match) {
-        const parsed = parseQuantity(match[1]);
-        if (parsed !== null) {
-          const scaled = parsed * scaleFactor;
-          const unit = match[2] || '';
-          const rest = match[3] || '';
-          return {
-            name: `${unit} ${rest}`.trim(),
-            displayQty: formatQuantity(scaled),
-            rawItem: `${formatQuantity(scaled)} ${unit} ${rest}`.trim(),
-            cleanName: rest || unit || item,
-          };
-        }
-      }
-      return {
-        name: item,
-        displayQty: '',
-        rawItem: item,
-        cleanName: item,
-      };
-    } else {
-      const parsed = parseQuantity(item.quantity);
-      const displayQty = parsed !== null ? formatQuantity(parsed * scaleFactor) : item.quantity ? String(item.quantity) : '';
-      const unit = item.unit || '';
-      return {
-        name: `${unit} ${item.name}`.trim(),
-        displayQty,
-        rawItem: `${displayQty} ${unit} ${item.name}`.trim(),
-        cleanName: item.name,
-      };
-    }
-  });
+  // Scaled ingredient items using scalingEngine
+  const scaledItems: ScaledIngredientResult[] = ingredients.map((item, idx) =>
+    scaleIngredientItem(item as any, idx, baseServings, servings, excludedPantryIds)
+  );
 
   const handleCopyClipboard = () => {
     const textLines = [
       `🍽️ ${recipeTitle} (Scaled to ${servings} Servings)`,
       `──────────────────────────────`,
-      ...scaledItems.map((it) => `• ${it.rawItem}`),
+      ...scaledItems
+        .filter((it) => !it.isExcluded)
+        .map((it) => `• ${it.scaledText}`),
       `──────────────────────────────`,
       `Extracted via Universal Pro AI`,
     ];

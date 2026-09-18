@@ -1212,6 +1212,21 @@ Cooking instructions were presented as a flat static list, forcing users to manu
 #### 3. Testing & Verification:
 - Pytest test suite (`tests/test_sprint12_cooking.py`): **184 / 184 PASSED**.
 
+### 🚨 ISSUE-040: Sprint 13: Dynamic Smart Recipe Scaling Engine
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/utils/scalingEngine.ts`, `frontend/src/components/ServingAdjuster.tsx`, `tests/test_sprint13_scaling.py`
+
+#### 1. What Happened (Symptom):
+Adjusting recipe yield servings previously performed naive string splitting without handling complex fractions (`1 1/2`, `3/4`), ranges (`2-3`), or regional parenthetical unit notes (`1 katori (~150g)`), violating AGENTS.md Rule 13.
+
+#### 2. Root Cause & Resolution:
+1. **Scaling Engine Utility (`frontend/src/utils/scalingEngine.ts`)**: Created standalone scaling engine providing `parseQuantity`, `formatQuantity`, and `scaleIngredientItem`.
+2. **Rule 13 Native Term Protection**: Implemented parenthetical metric scaling (e.g. `1 katori (~150g)` scaled 2x $\rightarrow$ `2 katori (~300g)`) while preserving regional spice terms.
+3. **Pantry Exclusion & Context Store (`ServingAdjuster.tsx`)**: Bound `RecipeContext` for `servingsMultiplier` and `excludedPantryIds` filtering.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint13_scaling.py`): **187 / 187 PASSED**.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
