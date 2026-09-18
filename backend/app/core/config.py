@@ -84,3 +84,46 @@ def get_settings() -> Settings:
     if _settings_instance is None:
         _settings_instance = Settings()
     return _settings_instance
+
+
+# Re-export legacy configuration helpers for backwards compatibility
+try:
+    from app.services.config import (
+        MAX_VIDEO_DURATION,
+        get_download_dir,
+        ensure_download_dir,
+        get_youtube_cookie_file,
+        cleanup_old_downloads,
+        get_env_var,
+        set_env_var,
+        get_api_key,
+        save_api_key,
+        get_mistral_api_key,
+        get_aionlabs_api_key,
+        get_groq_api_key,
+        get_nvidia_api_key,
+        get_affiliate_tags,
+        save_affiliate_tags
+    )
+except ImportError:
+    try:
+        from backend.app.services.config import (
+            MAX_VIDEO_DURATION,
+            get_download_dir,
+            ensure_download_dir,
+            get_youtube_cookie_file,
+            cleanup_old_downloads,
+            get_env_var,
+            set_env_var,
+            get_api_key,
+            save_api_key,
+            get_mistral_api_key,
+            get_aionlabs_api_key,
+            get_groq_api_key,
+            get_nvidia_api_key,
+            get_affiliate_tags,
+            save_affiliate_tags
+        )
+    except ImportError:
+        pass
+

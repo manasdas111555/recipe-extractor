@@ -50,7 +50,12 @@
 
 ## 9. Mandatory 3-Core Document Governance Contract (Immutable Rule)
 - **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following 3 core living documents without exception:
-  1. **`TROUBLESHOOTING.md`**: Log every encountered error/bug, root cause, exact code resolution diffs, and verification steps.
-  2. **`PRODUCT_OWNER_UX_SHOWCASE.md`** (and sprint showcase `SPRINT_X_PO_SHOWCASE.md`): Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
-  3. **`DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
+  1. **`docs/TROUBLESHOOTING.md`**: Log every encountered error/bug, root cause, exact code resolution diffs, and verification steps.
+  2. **`docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`** (and sprint showcases under `docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md`): Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
+  3. **`docs/architecture/DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
+- **Canonical Folder Hierarchy**:
+  - `docs/architecture/`: Infrastructure, cloud deployment specs (`ENVIRONMENTS.md`, `ORACLE_CLOUD_DEPLOYMENT.md`, `ROADMAP_AND_STRATEGY.md`).
+  - `docs/po-governance/`: Product directives, backlogs (`JIRA_BACKLOG.md`), test specs (`TEST_CASES.md`), and sprint showcases (`showcases/`).
+  - `docs/qa-reports/` & `docs/ui-ux-audits/`: Automated E2E QA reports and visual inspection logs.
+  - `backend/database/`: Supabase SQL schemas and migration scripts.
 - **Verification Rule**: No feature implementation or bug fix is considered complete until all 3 living documents reflect the updated state of the codebase.
