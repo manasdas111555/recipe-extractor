@@ -1103,6 +1103,23 @@ Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinera
 | **ISSUE-035** | 2026-09-18 | Architecture & Null-Safety | SAFE-1101: TypeScript Schema Null-Safety & Historical Cache Protection | ✅ Resolved |
 | **ISSUE-036** | 2026-09-18 | Core UX Infrastructure | SAFE-1102: Screen Wake-Lock Defensive Hook & Auto-Reacquire | ✅ Resolved |
 | **ISSUE-037** | 2026-09-18 | Core Utility Engine | SAFE-1103: Mobile Timer Delta Math & Web Audio Pre-Unlock | ✅ Resolved |
+| **ISSUE-038** | 2026-09-18 | State Architecture | SAFE-1104: Centralized Recipe & Pantry Context Store | ✅ Resolved |
+
+---
+
+### 🚨 ISSUE-038: `SAFE-1104`: Centralized Recipe & Pantry Context Store
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/context/RecipeContext.tsx`, `tests/test_sprint11_safety.py`
+
+#### 1. What Happened (Symptom):
+Serving size scaling, ingredient checking, and pantry exclusions were managed independently in disconnected UI components, leading to desynchronization between clipboard exports, UI displays, and e-commerce affiliate cart parameters.
+
+#### 2. Root Cause & Resolution:
+1. **Context Store (`frontend/src/context/RecipeContext.tsx`)**: Created `RecipeProvider` and `useRecipeContext` hook managing `servingsMultiplier` ($1 \le n \le 12$), `checkedIngredientIds: Set<string>`, and `excludedPantryIds: Set<string>`.
+2. **Pantry Exclusion Selector**: Implemented `getFilteredIngredients()` selector and `excludeDefaultPantryBasics()` helper to instantly filter staple ingredients across all views.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint11_safety.py`): **175 / 175 PASSED**.
 
 ---
 
