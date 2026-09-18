@@ -57,7 +57,21 @@ class TestSprint11SafetySchema(unittest.TestCase):
         self.assertIn("vibrate", content)
 
 
+    def test_recipe_context_store_exists(self):
+        """Verify that frontend/src/context/RecipeContext.tsx exists and exposes context provider."""
+        context_file = self.root_dir / "frontend" / "src" / "context" / "RecipeContext.tsx"
+        self.assertTrue(context_file.exists(), "Missing frontend/src/context/RecipeContext.tsx")
+        content = context_file.read_text(encoding="utf-8")
+        
+        self.assertIn("export const RecipeProvider", content)
+        self.assertIn("servingsMultiplier", content)
+        self.assertIn("checkedIngredientIds", content)
+        self.assertIn("excludedPantryIds", content)
+        self.assertIn("getFilteredIngredients", content)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
