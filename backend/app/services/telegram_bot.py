@@ -122,12 +122,18 @@ def format_telegram_markdown(result: Dict[str, Any], canonical_url: str) -> Tupl
 
     inline_keyboard.append(action_row)
 
-    # 2. Web View Button (PO Directive: Option A - Bridge into Web App)
+    # 2. Web View Buttons (PO Directive: Option A - Bridge into Web App & Cooking Mode)
     web_app_url = "https://universalpro-stage.streamlit.app"
-    inline_keyboard.append([{
-        "text": "🌐 View Full Interactive Recipe",
-        "url": web_app_url
-    }])
+    inline_keyboard.append([
+        {
+            "text": "🧑‍🍳 Start Cooking Mode",
+            "url": f"{web_app_url}?mode=cook"
+        },
+        {
+            "text": "🌐 View Full Interactive Recipe",
+            "url": web_app_url
+        }
+    ])
 
     return text_content, inline_keyboard
 

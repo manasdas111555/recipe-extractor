@@ -14,7 +14,7 @@
 | `SAFE-1102` | Screen Wake-Lock Hook | Defensive wake lock hook with `visibilitychange` auto-reacquire | ✅ PASSED (174/174) | `frontend/src/hooks/useWakeLock.ts` |
 | `SAFE-1103` | Step Timer & Web Audio | Timestamp delta math execution timer with Web Audio chime pre-unlock | ✅ PASSED (175/175) | `frontend/src/hooks/useStepTimer.ts` |
 | `SAFE-1104` | Recipe Context Store | Centralized state store for servings yield, ingredient checks & pantry exclusions | ✅ PASSED (176/176) | `frontend/src/context/RecipeContext.tsx` |
-| `SAFE-1105` | Duration Tokenizer | Zero-latency regex duration tokenizer for instruction time phrases | ✅ PASSED (176/176) | `frontend/src/utils/durationParser.ts` |
+| `SAFE-1106` | Omnichannel Deep-Link Routing | Deep-link routing (`?mode=cook`) in WhatsApp outbound & Telegram bot inline keyboard | ✅ PASSED (177/177) | `whatsapp_service.py`, `telegram_bot.py`, `page.tsx` |
 
 ---
 
@@ -25,7 +25,4 @@
 - [x] `SAFE-1103`: Mobile step timer created using target timestamp delta math, Web Audio pre-unlock, and haptics.
 - [x] `SAFE-1104`: Centralized Recipe & Pantry Context Store created with `getFilteredIngredients()` selector.
 - [x] `SAFE-1105`: Deterministic Regex Duration Tokenizer Sandbox created with 0ms network overhead.
-- [ ] `SAFE-1106`: Deep-Link Routing.
-- [ ] `SAFE-1104`: Centralized Recipe & Pantry Context Store.
-- [ ] `SAFE-1105`: Duration Tokenizer Sandbox.
-- [ ] `SAFE-1106`: Deep-Link Routing.
+- [x] `SAFE-1106`: Omnichannel Cooking Deep-Link Routing (`?mode=cook`) auto-focusing instructions on load.

@@ -80,6 +80,24 @@ class TestSprint11SafetySchema(unittest.TestCase):
         self.assertIn("durationRegex", content)
         self.assertIn("totalSeconds", content)
 
+    def test_omnichannel_cooking_deep_link_routing(self):
+        """Verify SAFE-1106 deep link parameters in WhatsApp, Telegram, and Page components."""
+        from backend.app.services.whatsapp_service import format_whatsapp_recipe
+        from backend.app.services.telegram_bot import format_telegram_markdown
+        from scripts.run_telegram_bot import get_feedback_keyboard
+
+        wa_msg = format_whatsapp_recipe({"title": "Test Recipe", "ingredients": ["1 cup flour"], "instructions": ["Mix well"]}, public_slug="test-slug-123")
+        self.assertIn("?mode=cook", wa_msg)
+        self.assertIn("https://universalpro.ai/r/test-slug-123?mode=cook", wa_msg)
+
+        _, tg_kb = format_telegram_markdown({"recipe_title": "Test Recipe"}, "https://example.com/reel")
+        has_cook_mode = any(b.get("text") == "🧑‍🍳 Start Cooking Mode" and "?mode=cook" in b.get("url", "") for row in tg_kb for b in row)
+        self.assertTrue(has_cook_mode, "Telegram inline keyboard missing Start Cooking Mode button")
+
+        fb_kb = get_feedback_keyboard("ext_123", "https://universalpro.ai")
+        has_fb_cook = any(b.get("text") == "🧑‍🍳 Start Cooking Mode" and "?mode=cook" in b.get("url", "") for row in fb_kb.get("inline_keyboard", []) for b in row)
+        self.assertTrue(has_fb_cook, "Telegram feedback keyboard missing Start Cooking Mode button")
+
 
 if __name__ == "__main__":
     unittest.main()
