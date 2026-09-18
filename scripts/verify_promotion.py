@@ -85,7 +85,11 @@ def check_clean_imports() -> bool:
         # Run import in a completely isolated sub-process
         test_code = (
             f"import sys; from pathlib import Path; "
-            f"sys.path.insert(0, r'{ROOT_DIR}'); "
+            f"root = Path(r'{ROOT_DIR}'); "
+            f"sys.path.insert(0, str(root)); "
+            f"sys.path.insert(0, str(root / 'backend' / 'app' / 'services')); "
+            f"sys.path.insert(0, str(root / 'backend' / 'app' / 'core')); "
+            f"sys.path.insert(0, str(root / 'backend')); "
             f"import {mod}; "
             f"print('IMPORTED_SUCCESSFULLY')"
         )
