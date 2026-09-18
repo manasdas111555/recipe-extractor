@@ -1227,6 +1227,21 @@ Adjusting recipe yield servings previously performed naive string splitting with
 #### 3. Testing & Verification:
 - Pytest test suite (`tests/test_sprint13_scaling.py`): **187 / 187 PASSED**.
 
+### 🚨 ISSUE-041: Sprint 14: Automated Grocery Cart Integration & Quick Commerce Deep Links
+- **Date**: 2026-09-18
+- **Affected Files**: `backend/app/services/affiliate_engine.py`, `frontend/src/components/ServingAdjuster.tsx`, `tests/test_sprint14_commerce.py`
+
+#### 1. What Happened (Symptom):
+Outbound quick-commerce links for Blinkit, Zepto, Swiggy Instamart, and JioMart required strict URL encoding validation and domain-level category suppression to prevent irrelevant store links from appearing on non-food extractions.
+
+#### 2. Root Cause & Resolution:
+1. **Affiliate Engine Quick Commerce (`backend/app/services/affiliate_engine.py`)**: Added `generate_blinkit_url`, `generate_zepto_url`, `generate_instamart_url`, and `generate_jiomart_url` with strict `urllib.parse.quote_plus` encoding.
+2. **Monetization & Shield Invariants**: Asserted immutable owner tags `tag=manasdas11155-21` and `r=5608766` across all generated product search links (AGENTS.md Rule 3).
+3. **Category-Conditional Filtering**: Suppressed Blinkit/Zepto on fashion/tutorial domains and suppressed Myntra/Meesho on culinary recipe extractions.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint14_commerce.py`): **191 / 191 PASSED**.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
