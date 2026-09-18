@@ -33,5 +33,18 @@ class TestSprint11SafetySchema(unittest.TestCase):
         self.assertIn("export type RecipeSchema = ExtractionResult;", content)
 
 
+    def test_use_wake_lock_hook_exists(self):
+        """Verify that frontend/src/hooks/useWakeLock.ts exists and handles visibilitychange."""
+        hook_file = self.root_dir / "frontend" / "src" / "hooks" / "useWakeLock.ts"
+        self.assertTrue(hook_file.exists(), "Missing frontend/src/hooks/useWakeLock.ts")
+        content = hook_file.read_text(encoding="utf-8")
+        
+        self.assertIn("export function useWakeLock(): UseWakeLockReturn", content)
+        self.assertIn("'wakeLock' in navigator", content)
+        self.assertIn("visibilitychange", content)
+        self.assertIn("wakeLockSentinelRef.current.release()", content)
+
+
 if __name__ == "__main__":
     unittest.main()
+
