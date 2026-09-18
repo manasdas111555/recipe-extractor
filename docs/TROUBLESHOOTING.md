@@ -1102,6 +1102,23 @@ Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinera
 | **ISSUE-034** | 2026-09-15 | Monetization | Enforce Owner Immutable Affiliate Tag Shield & Removal of Creator Tag Overrides | ✅ Resolved |
 | **ISSUE-035** | 2026-09-18 | Architecture & Null-Safety | SAFE-1101: TypeScript Schema Null-Safety & Historical Cache Protection | ✅ Resolved |
 | **ISSUE-036** | 2026-09-18 | Core UX Infrastructure | SAFE-1102: Screen Wake-Lock Defensive Hook & Auto-Reacquire | ✅ Resolved |
+| **ISSUE-037** | 2026-09-18 | Core Utility Engine | SAFE-1103: Mobile Timer Delta Math & Web Audio Pre-Unlock | ✅ Resolved |
+
+---
+
+### 🚨 ISSUE-037: `SAFE-1103`: Mobile Timer Delta Math & Web Audio Pre-Unlock
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/hooks/useStepTimer.ts`, `tests/test_sprint11_safety.py`
+
+#### 1. What Happened (Symptom):
+Standard `setInterval` counter decrements suffered severe timer drift when mobile browser tabs were throttled in the background. Furthermore, mobile browsers blocked completion chimes played programmatically without prior gesture pre-unlock.
+
+#### 2. Root Cause & Resolution:
+1. **Delta Math (`frontend/src/hooks/useStepTimer.ts`)**: Built `useStepTimer` hook using target epoch timestamp deltas (`targetEndTime - Date.now()`), instantly recalculating accurate remaining time upon tab focus restoration.
+2. **Audio & Haptics Pre-Unlock**: Added `unlockAudio` callback pre-unlocking a silent 1ms Web Audio `AudioContext` buffer on user gestures, enabling A5 (880Hz) sine tone completion chimes and `navigator.vibrate([200, 100, 200])`.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint11_safety.py`): **174 / 174 PASSED**.
 
 ---
 
