@@ -1197,6 +1197,21 @@ Outbound WhatsApp message templates and Telegram bot inline keyboards lacked dee
 #### 3. Testing & Verification:
 - Pytest test suite (`tests/test_sprint11_safety.py`): **177 / 177 PASSED**.
 
+### 🚨 ISSUE-039: Sprint 12: Fullscreen Interactive Hands-Free Cooking Mode
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/components/CookingModeDrawer.tsx`, `frontend/src/app/page.tsx`, `tests/test_sprint12_cooking.py`
+
+#### 1. What Happened (Symptom):
+Cooking instructions were presented as a flat static list, forcing users to manually interact with their mobile screens while cooking (leading to dirty screen touches, display timeouts, and loss of current step location).
+
+#### 2. Root Cause & Resolution:
+1. **Cooking Mode Component (`frontend/src/components/CookingModeDrawer.tsx`)**: Created fullscreen glassmorphic drawer UI featuring high-contrast step text, step progress track, and slide-over ingredients checklist.
+2. **Wake Lock & Timer Integration**: Automatically activates `useWakeLock` hook to keep screen awake during cooking, and embeds interactive `useStepTimer` cards for detected duration phrases.
+3. **Voice Navigation & Touch Gestures**: Integrated Web Speech API fallback for hands-free voice commands ("next", "back", "timer", "stop") and touch swipe gesture navigation.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint12_cooking.py`): **184 / 184 PASSED**.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues

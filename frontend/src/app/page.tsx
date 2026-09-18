@@ -41,6 +41,7 @@ import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
 import FaqSection from '../components/FaqSection';
 import ParticleBackground from '../components/ParticleBackground';
+import CookingModeDrawer from '../components/CookingModeDrawer';
 import { ProductItem, ResourceItem, ExtractionResult } from '../types/recipe';
 
 
@@ -80,6 +81,7 @@ function UniversalDashboard() {
   const [waCountryCode, setWaCountryCode] = useState<string>('+91');
   const [waPhoneNumber, setWaPhoneNumber] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isCookingDrawerOpen, setIsCookingDrawerOpen] = useState<boolean>(false);
 
   const toggleSaveToVault = () => {
     if (!result) return;
@@ -249,6 +251,7 @@ function UniversalDashboard() {
     }
 
     if (mode === 'cook') {
+      setIsCookingDrawerOpen(true);
       setTimeout(() => {
         const cookEl = document.getElementById('cooking-mode-section');
         if (cookEl) {
@@ -1829,10 +1832,20 @@ function UniversalDashboard() {
 
                         {/* Section III. Step-by-Step Instructions */}
                         <div id="cooking-mode-section" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
-                          <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
-                            <CheckCircle2 size={16} color="var(--accent-emerald)" />
-                            <span>III. Step-by-Step Instructions</span>
-                          </h3>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                              <CheckCircle2 size={16} color="var(--accent-emerald)" />
+                              <span>III. Step-by-Step Instructions</span>
+                            </h3>
+
+                            <button
+                              onClick={() => setIsCookingDrawerOpen(true)}
+                              className="btn-emerald btn-tactile"
+                              style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontWeight: 700, borderRadius: '8px' }}
+                            >
+                              <span>🧑‍🍳 Start Cooking Mode</span>
+                            </button>
+                          </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                             {instructions && instructions.length > 0 ? (
                               instructions.map((step, idx) => (
@@ -2196,6 +2209,13 @@ function UniversalDashboard() {
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
         reason={upgradeReason}
+      />
+
+      {/* Fullscreen Interactive Cooking Mode Drawer */}
+      <CookingModeDrawer
+        isOpen={isCookingDrawerOpen}
+        onClose={() => setIsCookingDrawerOpen(false)}
+        recipe={result}
       />
     </div>
   );
