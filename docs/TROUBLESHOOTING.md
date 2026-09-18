@@ -1104,6 +1104,22 @@ Product Owner annotated screenshot requested a dedicated, dynamic Travel Itinera
 | **ISSUE-036** | 2026-09-18 | Core UX Infrastructure | SAFE-1102: Screen Wake-Lock Defensive Hook & Auto-Reacquire | ✅ Resolved |
 | **ISSUE-037** | 2026-09-18 | Core Utility Engine | SAFE-1103: Mobile Timer Delta Math & Web Audio Pre-Unlock | ✅ Resolved |
 | **ISSUE-038** | 2026-09-18 | State Architecture | SAFE-1104: Centralized Recipe & Pantry Context Store | ✅ Resolved |
+| **ISSUE-039** | 2026-09-18 | Parsing Algorithm | SAFE-1105: Deterministic Regex Duration Tokenizer Sandbox | ✅ Resolved |
+
+---
+
+### 🚨 ISSUE-039: `SAFE-1105`: Deterministic Regex Duration Tokenizer Sandbox
+- **Date**: 2026-09-18
+- **Affected Files**: `frontend/src/utils/durationParser.ts`, `tests/test_sprint11_safety.py`
+
+#### 1. What Happened (Symptom):
+Converting instruction time strings (e.g. `"simmer for 15-20 mins"`, `"bake for 1 hr 30 min"`) into countdown timers previously relied on secondary LLM API round-trips, introducing 1.5s+ latency and additional inference costs.
+
+#### 2. Root Cause & Resolution:
+1. **Regex Tokenizer (`frontend/src/utils/durationParser.ts`)**: Built `parseInstructionDurations` tokenizer scanning single values, hyphenated/word ranges (taking upper/max bound), and compound durations (`"1 hr 30 mins"`) into structured seconds intervals in 0ms without network calls.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint11_safety.py`): **176 / 176 PASSED**.
 
 ---
 
