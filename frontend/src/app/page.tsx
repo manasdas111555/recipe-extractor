@@ -239,11 +239,22 @@ function UniversalDashboard() {
   useEffect(() => {
     const initialUrl = searchParams.get('url');
     const autostart = searchParams.get('autostart');
+    const mode = searchParams.get('mode');
+
     if (initialUrl) {
       setUrl(initialUrl);
       if (autostart === '1') {
         handleExtract(initialUrl);
       }
+    }
+
+    if (mode === 'cook') {
+      setTimeout(() => {
+        const cookEl = document.getElementById('cooking-mode-section');
+        if (cookEl) {
+          cookEl.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
     }
   }, [searchParams]);
 
@@ -1817,7 +1828,7 @@ function UniversalDashboard() {
                         )}
 
                         {/* Section III. Step-by-Step Instructions */}
-                        <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
+                        <div id="cooking-mode-section" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '1rem' }}>
                           <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
                             <CheckCircle2 size={16} color="var(--accent-emerald)" />
                             <span>III. Step-by-Step Instructions</span>

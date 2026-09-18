@@ -454,7 +454,7 @@ def format_whatsapp_recipe(structured_data: dict, public_slug: str = None) -> st
     )
 
     if public_slug:
-        msg += f"\n🌐 *View Full Recipe & Scale Yield:*\nhttps://universalpro.ai/r/{public_slug}"
+        msg += f"\n🌐 *View Full Recipe & Scale Yield:*\nhttps://universalpro.ai/r/{public_slug}?mode=cook"
 
     return msg
 

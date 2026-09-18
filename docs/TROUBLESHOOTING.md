@@ -1183,6 +1183,20 @@ Historical extractions cached in Supabase prior to Sprint 11 did not contain the
 #### 3. Testing & Verification:
 - Pytest test suite (`tests/test_sprint11_safety.py`): **172 / 172 PASSED**.
 
+### 🚨 ISSUE-038: `SAFE-1106`: Omnichannel Cooking Deep-Link Routing
+- **Date**: 2026-09-18
+- **Affected Files**: `backend/app/services/whatsapp_service.py`, `backend/app/services/telegram_bot.py`, `scripts/run_telegram_bot.py`, `frontend/src/app/page.tsx`, `tests/test_sprint11_safety.py`
+
+#### 1. What Happened (Symptom):
+Outbound WhatsApp message templates and Telegram bot inline keyboards lacked deep-link routing parameter `?mode=cook`. Users opening outbound links landed at the top hero section of the web application instead of being auto-focused on step-by-step cooking instructions.
+
+#### 2. Root Cause & Resolution:
+1. **WhatsApp & Telegram Outbound Formatting (`whatsapp_service.py`, `telegram_bot.py`, `run_telegram_bot.py`)**: Added `?mode=cook` query parameter to outbound web application URLs and added `🧑‍🍳 Start Cooking Mode` inline keyboard button.
+2. **Next.js Deep-Link Listener (`frontend/src/app/page.tsx`)**: Added `id="cooking-mode-section"` to Section III instructions container and updated `searchParams` listener hook to auto-scroll into view when `mode === 'cook'`.
+
+#### 3. Testing & Verification:
+- Pytest test suite (`tests/test_sprint11_safety.py`): **177 / 177 PASSED**.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
