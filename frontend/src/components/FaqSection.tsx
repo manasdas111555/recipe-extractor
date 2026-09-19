@@ -234,12 +234,12 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
         maxHeight: '90vh',
         overflowY: 'auto',
         padding: '2.5rem 1.5rem',
-        background: '#0D111D',
+        background: 'var(--bg-surface-elevated)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        boxShadow: 'var(--shadow-card)',
         position: 'relative'
       }}
     >
@@ -250,7 +250,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
             position: 'absolute',
             top: '1.25rem',
             right: '1.25rem',
-            background: 'rgba(255, 255, 255, 0.08)',
+            background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             color: 'var(--text-primary)',
             borderRadius: '50%',
@@ -549,7 +549,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
           }}
         >
           <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34D399', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 0.5rem' }}>
               <BookOpen size={20} /> Universal Pro AI — Complete User Manual & Feature Guide
             </h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -558,7 +558,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
-            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
               <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10B981', margin: '0 0 0.35rem' }}>
                 1. ⚡ Sub-3s Video Extraction
               </h4>
@@ -567,8 +567,8 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
               </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#38BDF8', margin: '0 0 0.35rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0284C7', margin: '0 0 0.35rem' }}>
                 2. 🧑‍🍳 Interactive Hands-Free Cooking Mode
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
@@ -576,8 +576,8 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
               </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#F59E0B', margin: '0 0 0.35rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#D97706', margin: '0 0 0.35rem' }}>
                 3. 📊 Smart Recipe Yield Scaling (1-12x)
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
@@ -585,8 +585,8 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
               </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#EC4899', margin: '0 0 0.35rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#E11D48', margin: '0 0 0.35rem' }}>
                 4. 🛒 10-Minute Quick Commerce
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
@@ -594,8 +594,8 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
               </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#A855F7', margin: '0 0 0.35rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#9333EA', margin: '0 0 0.35rem' }}>
                 5. 💬 WhatsApp & Telegram Bots
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
@@ -603,8 +603,8 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
               </p>
             </div>
 
-            <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#6366F1', margin: '0 0 0.35rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#4F46E5', margin: '0 0 0.35rem' }}>
                 6. 📚 Intelligence Vault
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
