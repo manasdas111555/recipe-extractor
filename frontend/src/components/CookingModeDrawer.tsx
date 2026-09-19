@@ -49,7 +49,7 @@ export default function CookingModeDrawer({
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   // Screen Wake Lock hook integration
-  const { isSupported: isWakeLockSupported, isActive: isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
+  const { isSupported: isWakeLockSupported, isLocked: isWakeLockActive, request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
 
   // Recipe context state
   const { servingsMultiplier, setServingsMultiplier, checkedIngredientIds, toggleIngredientCheck } = useRecipe();

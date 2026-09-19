@@ -102,7 +102,20 @@ export const RecipeProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 export const useRecipeContext = (): RecipeContextType => {
   const context = useContext(RecipeContext);
   if (!context) {
-    throw new Error('useRecipeContext must be used within a RecipeProvider');
+    // Return graceful fallback defaults if used outside provider in standalone drawer previews
+    return {
+      servingsMultiplier: 1,
+      setServingsMultiplier: () => {},
+      checkedIngredientIds: new Set(),
+      toggleIngredientCheck: () => {},
+      excludedPantryIds: new Set(),
+      togglePantryExclusion: () => {},
+      excludeDefaultPantryBasics: () => {},
+      getFilteredIngredients: (ing) => ing,
+      resetContext: () => {},
+    };
   }
   return context;
 };
+
+export const useRecipe = useRecipeContext;
