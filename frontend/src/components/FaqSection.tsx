@@ -614,8 +614,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
           </div>
         </div>
       ) : (
-      {/* Accordion FAQ Items List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {filteredFaqs.length > 0 ? (
           filteredFaqs.map((faq) => {
             const isOpen = openId === faq.id;
