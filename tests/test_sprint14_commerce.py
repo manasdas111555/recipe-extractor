@@ -7,6 +7,7 @@ category-conditional storefront display, and owner revenue shield invariants (AG
 
 import unittest
 import urllib.parse
+from pathlib import Path
 from backend.app.services.affiliate_engine import get_affiliate_engine, AffiliateEngine
 
 
@@ -65,6 +66,27 @@ class TestSprint14CommerceIntegration(unittest.TestCase):
         self.assertTrue(len(fashion_enriched["meesho_url"]) > 0)
         self.assertEqual(fashion_enriched["blinkit_url"], "")
         self.assertEqual(fashion_enriched["zepto_url"], "")
+
+    def test_four_core_document_governance_contract_and_user_manual(self):
+        """Verify 4-Core Document Governance Contract in AGENTS.md and User Manual files."""
+        root_dir = self.engine.default_amazon_tag and (Path(__file__).resolve().parent.parent)
+        agents_file = root_dir / "AGENTS.md"
+        manual_file = root_dir / "docs" / "USER_MANUAL.md"
+        faq_file = root_dir / "frontend" / "src" / "components" / "FaqSection.tsx"
+
+        self.assertTrue(manual_file.exists(), "Missing docs/USER_MANUAL.md document")
+        manual_content = manual_file.read_text(encoding="utf-8")
+        self.assertIn("Universal Pro AI — Comprehensive User Manual", manual_content)
+        self.assertIn("Hands-Free Cooking Mode", manual_content)
+        self.assertIn("10-Minute Quick Commerce", manual_content)
+
+        agents_content = agents_file.read_text(encoding="utf-8")
+        self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)
+        self.assertIn("docs/USER_MANUAL.md", agents_content)
+
+        faq_content = faq_file.read_text(encoding="utf-8")
+        self.assertIn("user_manual", faq_content)
+        self.assertIn("Full User Guide", faq_content)
 
 
 if __name__ == "__main__":

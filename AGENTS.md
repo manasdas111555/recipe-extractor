@@ -48,17 +48,18 @@
 - **Proactive Pruning of Deprecated Endpoints**: As soon as any model endpoint is marked shutdown or deprecated by Google (e.g., `gemini-2.0-flash`, `gemini-2.0-flash-lite`), agents must promptly prune it from `preferred_candidates` across `gemini_processor.py`, `ai_router.py`, and `app.py` to prevent wasted retry cycles and 404/410 latency spikes.
 - **Flagship Alignment**: The primary dispatch model should always point to Google's latest stable production Flash model (currently `gemini-3.8-flash`), followed by high-reliability fallbacks (`gemini-3.7-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`), before external provider failover.
 
-## 9. Mandatory 3-Core Document Governance Contract (Immutable Rule)
-- **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following 3 core living documents without exception:
+## 9. Mandatory 4-Core Document Governance Contract (Immutable Rule)
+- **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following 4 core living documents without exception:
   1. **`docs/TROUBLESHOOTING.md`**: Log every encountered error/bug, root cause, exact code resolution diffs, and verification steps.
   2. **`docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`** (and sprint showcases under `docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md`): Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
   3. **`docs/architecture/DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
+  4. **`docs/USER_MANUAL.md`**: Maintain end-to-end user manual and feature guide explaining how to use all features (AI video extraction, cooking mode, wake lock, timers, voice navigation, recipe scaling, quick commerce, and chatbots).
 - **Canonical Folder Hierarchy**:
   - `docs/architecture/`: Infrastructure, cloud deployment specs (`ENVIRONMENTS.md`, `ORACLE_CLOUD_DEPLOYMENT.md`, `ROADMAP_AND_STRATEGY.md`).
   - `docs/po-governance/`: Product directives, backlogs (`JIRA_BACKLOG.md`), test specs (`TEST_CASES.md`), and sprint showcases (`showcases/`).
   - `docs/qa-reports/` & `docs/ui-ux-audits/`: Automated E2E QA reports and visual inspection logs.
   - `backend/database/`: Supabase SQL schemas and migration scripts.
-- **Verification Rule**: No feature implementation or bug fix is considered complete until all 3 living documents reflect the updated state of the codebase.
+- **Verification Rule**: No feature implementation or bug fix is considered complete until all 4 living documents reflect the updated state of the codebase.
 
 ## 10. Multi-LLM Council Consensus & Latency SLA Guardrail
 - **Single-Pass Sub-3s Default**: The default extraction pipeline for all web, Telegram, WhatsApp, and API requests MUST remain the fast, single-pass `gemini-3.8-flash` engine to satisfy our core turnaround SLA (<2.4s).
