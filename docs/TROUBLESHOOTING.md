@@ -1242,6 +1242,35 @@ Outbound quick-commerce links for Blinkit, Zepto, Swiggy Instamart, and JioMart 
 #### 3. Testing & Verification:
 - Pytest test suite (`tests/test_sprint14_commerce.py`): **191 / 191 PASSED**.
 
+### 🚨 ISSUE-042: Telemetry Noise — Repeated Outbound Telegram Admin Alert Spam During Unit Tests
+- **Date**: 2026-09-19
+- **Affected Files**: `backend/app/services/telemetry_service.py`, `tests/test_sprint9_beta_telemetry.py`, `docs/TROUBLESHOOTING.md`
+
+#### 1. What Happened (Symptom):
+Developer Telegram admin chat received repeated stream of `🚨 FAILURE` (URL: `https://instagram.com/reel/123`, Detail: `Test error detail`) and `⚠️ NEGATIVE FEEDBACK` (`🧪 Verification Test Alert`) notifications without active production failures.
+
+#### 2. Root Cause:
+`send_admin_telemetry_alert` in `telemetry_service.py` was directly invoked by `test_sprint9_beta_telemetry.py` during unit test runs (`pytest` and `verify_promotion.py`). When `TELEGRAM_BOT_TOKEN` and `ADMIN_TELEGRAM_CHAT_ID` were loaded from `.env`, every test run made live outbound HTTP POST requests to `https://api.telegram.org/bot<token>/sendMessage`.
+
+#### 3. Resolution (Code Changes):
+Added an environment test guard in `backend/app/services/telemetry_service.py` to suppress real HTTP calls during test execution:
+```python
+# Defensive Guard: Suppress live Telegram HTTP calls during unit test runs
+import sys
+is_testing = (
+    os.getenv("TESTING") == "true"
+    or "pytest" in sys.modules
+    or "unittest" in sys.modules
+    or any("pytest" in arg or "unittest" in arg for arg in sys.argv)
+)
+if is_testing:
+    logger.info(f"[Telemetry Test Guard] Suppressed live Telegram admin alert in test mode for {event_type}")
+    return True
+```
+
+#### 4. Testing & Verification:
+- Unit test suite run (`pytest`): **192 / 192 PASSED** with 0 outbound Telegram API alerts.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
