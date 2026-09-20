@@ -203,12 +203,19 @@ const FAQ_DATA: FaqItem[] = [
 interface FaqSectionProps {
   isOpen?: boolean;
   onClose?: () => void;
+  initialCategory?: string;
 }
 
-export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }: FaqSectionProps = {}) {
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openId, setOpenId] = useState<string | null>('how-to-extract');
+
+  React.useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory, isOpen]);
 
   const toggleAccordion = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
@@ -230,16 +237,14 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
       id="faq-section"
       style={{
         width: '100%',
-        maxWidth: '900px',
+        maxWidth: '920px',
         maxHeight: '90vh',
         overflowY: 'auto',
         padding: '2.5rem 1.5rem',
-        background: 'var(--bg-surface-elevated)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'var(--bg-surface-solid)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-card)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         position: 'relative'
       }}
     >
@@ -270,7 +275,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
       )}
 
       {/* Header Badge & Title */}
-      <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+      <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
         <div
           className="badge-pill badge-emerald"
           style={{ marginBottom: '0.75rem', padding: '0.35rem 0.85rem', fontSize: '0.75rem' }}
@@ -285,15 +290,61 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
             fontWeight: 800,
             letterSpacing: '-0.02em',
             color: 'var(--text-primary)',
-            marginBottom: '0.75rem'
+            marginBottom: '0.5rem'
           }}
         >
           How to Use <span className="gradient-text">Universal Pro AI</span>
         </h2>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px', margin: '0 auto 1.25rem' }}>
           Everything you need to know about extracting cooking recipes, workout plans, product finds, and quick-commerce shopping links from social media videos.
         </p>
+
+        {/* Prominent Primary Mode Switcher Bar (FAQ vs User Manual) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveCategory('all')}
+            style={{
+              padding: '0.65rem 1.35rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              border: activeCategory !== 'user_manual' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
+              background: activeCategory !== 'user_manual' ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-card-solid)',
+              color: activeCategory !== 'user_manual' ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease',
+              boxShadow: activeCategory !== 'user_manual' ? '0 4px 14px rgba(16, 185, 129, 0.2)' : 'none'
+            }}
+          >
+            <HelpCircle size={18} />
+            <span>❓ Frequently Asked Questions</span>
+          </button>
+          <button
+            onClick={() => setActiveCategory('user_manual')}
+            style={{
+              padding: '0.65rem 1.35rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              border: activeCategory === 'user_manual' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
+              background: activeCategory === 'user_manual' ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-card-solid)',
+              color: activeCategory === 'user_manual' ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease',
+              boxShadow: activeCategory === 'user_manual' ? '0 4px 14px rgba(16, 185, 129, 0.2)' : 'none'
+            }}
+          >
+            <BookOpen size={18} />
+            <span>📘 Full User Manual & Guide</span>
+          </button>
+        </div>
       </div>
 
       {/* Visual 4-Step Quick Start Grid */}
@@ -691,6 +742,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
   );
 
   if (onClose) {
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
     return (
       <div
         style={{
@@ -699,7 +751,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backgroundColor: isDark ? 'rgba(4, 7, 17, 0.85)' : 'rgba(241, 245, 249, 0.88)',
           backdropFilter: 'blur(12px)',
           zIndex: 1000,
           display: 'flex',
@@ -709,7 +761,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
         }}
         onClick={onClose}
       >
-        <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '900px' }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '920px' }}>
           {contentNode}
         </div>
       </div>
