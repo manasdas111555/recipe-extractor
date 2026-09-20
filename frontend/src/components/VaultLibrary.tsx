@@ -243,7 +243,7 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
                   'Untitled Extraction';
                 
                 // Multi-genre badge determination
-                const catStr = (rData.category || rData.domain || item.platform || '').toUpperCase();
+                const catStr = ((rData as any).category || (rData as any).domain || item.platform || '').toUpperCase();
                 const titleUpper = title.toUpperCase();
                 let badgeLabel = '⚡ SAVED EXTRACTION';
                 let badgeClass = 'badge-emerald';
@@ -276,19 +276,19 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
                 let actionText = `Open in Chef View`;
 
                 if (badgeLabel.includes('TRAVEL')) {
-                  const mapsCount = rData.google_maps_locations?.length || 0;
+                  const mapsCount = (rData as any).google_maps_locations?.length || 0;
                   metaText = mapsCount > 0 ? `📍 ${mapsCount} locations mapped` : `✈️ Travel Itinerary & Spots`;
                   actionText = `Open Travel Guide`;
                 } else if (badgeLabel.includes('WORKOUT')) {
-                  const stepsCount = rData.instructions?.length || rData.steps?.length || 0;
+                  const stepsCount = rData.instructions?.length || (rData as any).steps?.length || 0;
                   metaText = stepsCount > 0 ? `🏋️ ${stepsCount} exercises / steps` : `🏋️ Fitness Workout Plan`;
                   actionText = `Open Workout View`;
                 } else if (badgeLabel.includes('PRODUCT')) {
-                  const productsCount = rData.products?.length || 0;
+                  const productsCount = (rData as any).products?.length || 0;
                   metaText = productsCount > 0 ? `🛒 ${productsCount} shoppable products` : `📦 Product Finds`;
                   actionText = `Open Product Finds`;
                 } else if (badgeLabel.includes('TUTORIAL') || badgeLabel.includes('EDUCATIONAL')) {
-                  const stepsCount = rData.instructions?.length || rData.steps?.length || 0;
+                  const stepsCount = rData.instructions?.length || (rData as any).steps?.length || 0;
                   metaText = stepsCount > 0 ? `💡 ${stepsCount} guide steps` : `💻 Tutorial Guide`;
                   actionText = `Open Tutorial View`;
                 }

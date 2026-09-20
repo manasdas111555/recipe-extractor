@@ -961,19 +961,6 @@ function UniversalDashboard() {
               <span>FAQ & Guide</span>
             </button>
 
-            {/* Dedicated User Manual Button */}
-            <button
-              onClick={() => {
-                setFaqCategory('user_manual');
-                setIsFaqModalOpen(true);
-              }}
-              className="btn-ghost"
-              style={{ padding: '0.45rem 0.85rem' }}
-            >
-              <BookOpen size={16} color="#10B981" />
-              <span>User Manual</span>
-            </button>
-
             {/* Intelligence Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
