@@ -82,6 +82,7 @@ function UniversalDashboard() {
   const [waPhoneNumber, setWaPhoneNumber] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isCookingDrawerOpen, setIsCookingDrawerOpen] = useState<boolean>(false);
+  const [faqCategory, setFaqCategory] = useState<string>('all');
 
   const toggleSaveToVault = () => {
     if (!result) return;
@@ -949,12 +950,28 @@ function UniversalDashboard() {
 
             {/* FAQ & How It Works Guide Button */}
             <button
-              onClick={() => setIsFaqModalOpen(true)}
+              onClick={() => {
+                setFaqCategory('all');
+                setIsFaqModalOpen(true);
+              }}
               className="btn-ghost"
               style={{ padding: '0.45rem 0.85rem' }}
             >
               <HelpCircle size={16} color="#34D399" />
               <span>FAQ & Guide</span>
+            </button>
+
+            {/* Dedicated User Manual Button */}
+            <button
+              onClick={() => {
+                setFaqCategory('user_manual');
+                setIsFaqModalOpen(true);
+              }}
+              className="btn-ghost"
+              style={{ padding: '0.45rem 0.85rem' }}
+            >
+              <BookOpen size={16} color="#10B981" />
+              <span>User Manual</span>
             </button>
 
             {/* Intelligence Vault Library Button */}
@@ -2192,7 +2209,7 @@ function UniversalDashboard() {
         })()}
 
         {/* Interactive FAQ & User Guide Modal Drawer */}
-        <FaqSection isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
+        <FaqSection isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} initialCategory={faqCategory} />
       </main>
 
       {/* Slide-out Intelligence Vault Library Drawer */}
