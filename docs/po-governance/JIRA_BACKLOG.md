@@ -22,6 +22,7 @@
 | **Sprint 8** | **Impeccable UI/UX Refinement, Accessibility & Motion Engine** (Contrast + Ghost-Card Cleanup + Reduced Motion) | 24 pts | 🎉 **COMPLETED (100%)** | Weeks 15–16 |
 | **Sprint 9** | **Friends & Family Beta Rollout, Hinglish Culinary Engine & Observability** (Phase 0 - Phase 5) | 38 pts | 🎉 **COMPLETED (100%)** | Weeks 17–18 |
 | **Sprint 10** | **Beta Testing Feedback, Resilient Ingestion & Multilingual AI Engine** (Downloader Fallback + Song ID + Language Toggle + Travel Maps + Vault Fix + Mobile UX + Recipe Formatting) | 46 pts | 🎉 **COMPLETED (100%)** | Weeks 19–20 |
+| **Sprint 11** | **Security, Accessibility & Governance Hardening** (TRUSTED_PROXY + Egress Firewall + IP Pinning SNI + Vault Re-hydration Rate Limit + Rule 17 Contract) | 42 pts | 🧪 **Ready for PO Review** | Weeks 21–22 |
 
 ---
 
@@ -61,6 +62,53 @@ The following 9 items are currently staged or pending final implementation. Per 
 7. **Rule 11 (Schema Versioning)**: Insertion of top-level `schema_version: 1` field in all newly generated `structured_data` payloads.
 8. **Rule 13 (Hinglish Prompt Snapshot Test)**: Dedicated snapshot unit test asserting that Hinglish prompt rules and culinary mappings exist in system prompt templates.
 9. **Rule 15 (Lighthouse & Axe Accessibility Audits)**: Automated Lighthouse mobile performance numbers and axe-core accessibility audit reports to be attached to documentation.
+
+---
+
+## 📋 Sprint Planning & Backlog Template (Rule 17)
+
+Every sprint MUST be structured using the following standard template:
+
+### Sprint Overview Header
+| Sprint Metadata | Details |
+| :--- | :--- |
+| **Sprint Number** | Sprint X |
+| **Sprint Goal** | 1-2 sentence primary goal of the sprint. |
+| **Target Timeline** | Weeks X–Y |
+| **Total Story Points** | XX pts |
+| **Sprint Status** | Planned / In Progress / Verified on Dev / On Staging / Ready for PO Review |
+| **Showcase Document** | `docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md` |
+
+### Ticket Table Schema
+| ID | Title | Type | Priority | Acceptance criteria | Status | Commits | Evidence | PO verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **UPA-XXXX** | Ticket Title | Feature / Bug / Security / Tech-debt / Docs | P0 / P1 / P2 / P3 | Testable acceptance criteria | Planned / In Progress / Verified on Dev / On Staging / Ready for PO Review | Commit hashes | Quoted test outputs | Pending PO (Only owner sets PO Approved) |
+
+---
+
+## 📌 Sprint 11: Security, Accessibility & Governance Hardening (Ready for PO Review)
+
+> **Sprint Goal:** Execute comprehensive system hardening across SSRF/IP DNS validation, host egress firewall, IP pinning TLS SNI preservation, Redis-backed Vault re-hydration rate limiting, WCAG 2.2 accessibility, admin telemetry authorization, exact dependency pinning, and AGENTS.md Rule 17 Sprint Planning Contract.
+
+| Sprint Metadata | Details |
+| :--- | :--- |
+| **Sprint Number** | Sprint 11 |
+| **Target Timeline** | Weeks 21–22 |
+| **Total Story Points** | 42 pts |
+| **Sprint Status** | 🧪 **Ready for PO Review** |
+| **Showcase Document** | `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md` |
+
+### 🎫 Sprint 11 Ticket Backlog
+
+| ID | Title | Type | Priority | Acceptance criteria | Status | Commits | Evidence | PO verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **UPA-1101** | Group C Security Hardening (TRUSTED_PROXY, Egress Firewall, IP Pinning SNI) | Security | P0 | `TRUSTED_PROXY=False` default ignores spoofed XFF; `url_validator.py` rejects host if ANY resolved IP is non-global; `fetch_pinned_ip_url` connects to pinned IP with `Host` header & `_server_hostname` preserved; `deploy/setup_egress_firewall.sh` created. | 🟠 Verified on Dev / NOT VERIFIED (Container Execution) | `b97a2c9`<br>`6ae5a76`<br>`4382109` | `pytest tests/test_backend_security_hardening.py` (22/22 passed in 30.18s); `scripts/verify_egress.py` created | Pending PO |
+| **UPA-1102** | Group B Frontend Utilities & Scaling Engine Unit Tests | Tech-debt | P1 | `recipeUtils.ts` pure functions decoupled; `scalingEngine.ts` handles 2x yield scaling for `"1 bowl (~150 ml, approx)"` per Rule 13; Vitest test suites clean green. | 🟢 Verified on Dev | `b97a2c9`<br>`6ae5a76` | `npm test` (12/12 passed in 147ms across 3 test files) | Pending PO |
+| **UPA-1103** | Group A Design System, WCAG 2.2 Accessibility & Minimalist UI | UX / Feature | P1 | `OverflowBottomSheet.tsx` implements WCAG modal focus trap, `role="dialog"`, `aria-modal="true"`, Escape listener; input fields enforce `>=16px` font size & `min-height 44px`; contrast standard $\ge 4.5:1$ in both light & dark themes. | 🟢 Verified on Dev | `4382109`<br>`6ae5a76` | `npx tsc --noEmit` (0 errors), `npm run build` (success in 908ms) | Pending PO |
+| **UPA-1104** | Group D Admin Telemetry Authorization & Metric Privacy | Security | P1 | Admin telemetry routes require `X-Admin-Api-Key` or `role == 'admin'`; raw user URLs & full video URLs stripped from metric payloads; secret hygiene enforced. | 🟢 Verified on Dev | `4382109`<br>`b97a2c9` | `pytest tests/test_backend_telemetry_admin.py` (6/6 passed) | Pending PO |
+| **UPA-1105** | Group E Config, Rule 17 Governance Amendments & Document Contract | Docs / Governance | P0 | `AGENTS.md` Rule 9 amended and Rule 17 Sprint Planning & Backlog Contract added; `.env.example` created with per-env settings; exact `==` pins in `requirements.txt`; `pip-audit` zero vulnerabilities. | 🟢 Verified on Dev | `c5bf809`<br>`b97a2c9` | `python -m pip_audit -r requirements.txt` (0 vulnerabilities), 4 living docs + backlog updated | Pending PO |
+| **UPA-1106** | Vault Item Re-hydration & Redis Rate Limiting | Security / Feature | P1 | `/api/v1/library/rehydrate` uses `QuotaManager.check_generic_rate_limit` with Redis & memory fallback (30 req/min limit); 31st request returns 429; `VaultLibrary.tsx` auto-rehydrates legacy items upon selection and shows buy buttons. | 🟢 Verified on Dev | `6ae5a76`<br>`b97a2c9` | `pytest tests/test_vault_rehydration.py` (2/2 passed), `npm test` (`vaultRehydration.test.ts` passed) | Pending PO |
+| **UPA-1107** | Streamlit Deployment Audit & Query Parameter Removal | Security | P1 | Audited Streamlit Cloud deployments (`manas-recipe-extractor.streamlit.app`); disabled legacy `?admin=1` query parameter gating (`streamlit_app.py:1246`); zero URL-gated admin surfaces remain. | 🟢 Verified on Dev | `6ae5a76`<br>`b97a2c9` | Repo grep (`query_params`) returning 0 active gating lines | Pending PO |
 
 ---
 

@@ -61,7 +61,7 @@
   3. **`docs/architecture/DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
   4. **`docs/USER_MANUAL.md`**: Maintain end-to-end user manual and feature guide explaining how to use all features.
 - **Automated & Measured Metrics**: Metrics (test counts, latency, throughput) must be generated directly from CI outputs or telemetry data, never typed manually by agents. Every numerical figure in documentation must be explicitly labeled as **[MEASURED]** or **[ESTIMATED]**.
-- **Verification Rule**: No feature implementation or bug fix is considered complete until all 4 living documents reflect the updated state of the codebase.
+- **Verification Rule**: No feature implementation or bug fix is considered complete until the 4 core living documents plus the sprint backlog (Rule 17) reflect the updated state of the codebase.
 
 ## 10. Multi-LLM Council Consensus Engine Invariants
 - **Council Mode Invariant**: The 3-Stage Multi-LLM Council Consensus Engine (Gemini + Groq Llama 3.3 + Mistral) must NEVER be configured as the default execution pipeline. It must strictly remain an explicit opt-in selection or an internal fallback retry mechanism.
@@ -110,3 +110,13 @@
 - **Empirical Evidence Requirement**: Every "verified", "passing", or "score" claim in pull requests, commits, and documentation MUST include exact command execution output or measured values. Unmeasured scores or speculative benchmarks in docs are forbidden.
 - **Complete Verification Pipeline**: Every code change requires executing `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, and `pytest tests/`, with all checks clean green and output attached. Any known test failure BLOCKS promotion to `staging` unless the repository owner explicitly accepts it in writing.
 - **Governance Contract**: Agents must NEVER modify `AGENTS.md` without explicit, prior approval from the repository owner.
+
+## 17. Sprint Planning & Backlog Governance (Jira Backlog Contract)
+- **Every change is a sprint item.** No feature, enhancement, bug fix, refactor, security fix, dependency upgrade or docs-affecting change may start without a ticket in docs/po-governance/JIRA_BACKLOG.md. Each ticket belongs to a sprint: the open sprint or a newly created one. Small fixes are tickets inside the open sprint, not new sprints. Hotfixes: create the ticket first (label HOTFIX); they still follow the Rule 2 gate.
+- **Plan before code.** Before editing code, add or update the sprint entry with: sprint number and name; goal (1-2 sentences); and for each ticket: ID (UPA-####, continuing from the highest existing ID), title, type (Feature/Bug/Security/Tech-debt/Docs), priority (P0-P3), description, testable acceptance criteria, affected files, applicable AGENTS.md rules, risks and rollback notes, test plan.
+- **Owner checkpoint for protected areas.** If a ticket touches tests (Rule 1), affiliate logic (Rule 3), ingestion caps (Rule 4), secrets or security (Rules 6, 14) or AGENTS.md itself, stop after writing the plan and wait for owner approval before coding. Otherwise proceed and report.
+- **Status flow.** Planned -> In Progress -> Verified on Dev -> On Staging -> Ready for PO Review. Agents may set a ticket up to "Ready for PO Review". Only the owner sets "PO Approved" and "Released". Agents never fill PO verdicts (Rule 2).
+- **Traceability.** Every commit message starts with the ticket ID(s), e.g. "[UPA-1101] fix(...)". Each ticket records commit hash(es), files changed and the quoted Rule 16 verification output. Metrics are MEASURED (Rule 9).
+- **No silent scope.** Work discovered mid-sprint becomes a new ticket labelled "Discovered" before it is done. Unfinished tickets carry over with a stated reason.
+- **Sprint close (before promotion to staging).** Every ticket has a status and evidence; known gaps are listed under "Known non-compliant items on staging"; the compliance matrix is updated; the sprint showcase (docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md) is prepared with all PO fields set to "Pending PO".
+
