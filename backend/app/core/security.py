@@ -18,6 +18,32 @@ from backend.app.core.supabase_client import get_supabase_client
 settings = get_settings()
 security = HTTPBearer(auto_error=False)
 
+def get_client_ip(request: Request) -> str:
+    """
+    Extracts the true client IP safely from trusted proxy headers or socket remote host.
+    Prioritizes single-value trusted headers ('cf-connecting-ip', 'x-real-ip').
+    If using 'x-forwarded-for', parses entries and counts trusted hops from the rightmost edge,
+    preventing X-Forwarded-For header spoofing attacks.
+    """
+    for header_name in ["cf-connecting-ip", "x-real-ip"]:
+        val = request.headers.get(header_name)
+        if val and val.strip():
+            client_ip = val.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+
+    xff = request.headers.get("x-forwarded-for")
+    if xff and xff.strip():
+        ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+        if ips:
+            return ips[-1] # Trusted hop from the rightmost edge
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "127.0.0.1"
+
+
 # Sliding window IP timestamp tracker for anonymous clients
 _ANONYMOUS_IP_TIMESTAMPS = defaultdict(list)
 
@@ -51,6 +77,7 @@ async def get_current_user(
         - HTTP 401 if token is expired, malformed, or signature invalid.
     """
     supabase = get_supabase_client()
+    client_ip = get_client_ip(request)
 
     # 1. Check if Bearer token was provided in Authorization header
     if auth_credentials:
@@ -78,7 +105,7 @@ async def get_current_user(
                 "custom_amazon_tag": db_profile.get("custom_amazon_tag") if db_profile else None,
                 "custom_earnkaro_id": db_profile.get("custom_earnkaro_id") if db_profile else None,
                 "is_anonymous": False,
-                "client_ip": request.client.host if request.client else "127.0.0.1"
+                "client_ip": client_ip
             }
 
         except jwt.PyJWTError as e:
@@ -88,7 +115,6 @@ async def get_current_user(
             )
 
     # 2. No token provided: Provision Anonymous Guest User Session
-    client_ip = request.client.host if request.client else "127.0.0.1"
     guest_hash = hashlib.sha256(client_ip.encode("utf-8")).hexdigest()[:12]
     guest_id = f"guest_{guest_hash}"
 

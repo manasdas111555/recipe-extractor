@@ -183,9 +183,15 @@ function UniversalDashboard() {
     // 2. Instagram Reel or Post: /reel/{id} or /p/{id}
     const igMatch = target.match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/i);
     if (igMatch && igMatch[1]) {
+      const token = (result as any)?.stream_token || (result as any)?.data?.stream_token || '';
+      const extId = (result as any)?.job_id || (result as any)?.id || igMatch[1];
+      const streamSrc = token
+        ? `/api/v1/extract/stream-video?token=${encodeURIComponent(token)}&id=${encodeURIComponent(extId)}&url=${encodeURIComponent(target)}`
+        : `/api/v1/extract/stream-video?url=${encodeURIComponent(target)}`;
+
       return {
         type: 'instagram' as const,
-        streamSrc: `/api/v1/extract/stream-video?url=${encodeURIComponent(target)}`,
+        streamSrc,
         embedSrc: `https://www.instagram.com/reel/${igMatch[1]}/embed/`,
         externalUrl: `https://www.instagram.com/reel/${igMatch[1]}/`,
         id: igMatch[1],
