@@ -37,7 +37,8 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-029** | 2026-09-14 | Multi-LLM AI | Multi-LLM Council 3-Stage Consensus Engine (`karpathy/llm-council` Adaptation) | ✅ Resolved |
 | **ISSUE-030** | 2026-09-14 | UI/UX & Design | Light Mode WCAG AA Contrast, 3D Feathered Radial Mask, and Streamlined Hero | ✅ Resolved |
 | **ISSUE-031** | 2026-09-14 | Skills & Customizations | Global Agent Skills Installation from Downloads/Skill Files (Total 53 Skills) | ✅ Resolved |
-| **ISSUE-032** | 2026-09-15 | UI/UX & AI | Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation | ✅ Resolved |
+| **ISSUE-032** | 2026-09-15 | UI/UX & Design | Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation | ✅ Resolved |
+| **ISSUE-045** | 2026-09-20 | Security & Architecture | Security Hardening, Pure Function Refactoring, WCAG Accessibility, Admin Telemetry & Vault Rehydration | ✅ Resolved |
 
 ---
 
@@ -1308,6 +1309,32 @@ The top navbar contained a redundant standalone `"User Manual"` button, and insi
 #### 4. Testing & Verification:
 - Next.js build (`npm run build`): **100% SUCCESSFUL**.
 - Browser E2E Staging Verification: Verified live on Staging preview deployment.
+
+### 🚨 ISSUE-045: Comprehensive Hardening (Groups C -> B -> A -> D -> E)
+- **Date**: 2026-09-20
+- **Affected Files**: `backend/app/services/url_validator.py`, `backend/app/core/security.py`, `backend/app/api/v1/telemetry.py`, `backend/app/api/v1/library.py`, `frontend/src/lib/recipeUtils.ts`, `frontend/src/components/OverflowBottomSheet.tsx`, `frontend/src/app/page.tsx`
+
+#### 1. What Happened (Symptom):
+Need to execute multi-domain system hardening across SSRF/IP redirect validation, stream proxy security, pure function refactoring, WCAG 2.2 accessibility, explicit admin telemetry authorization, and vault re-hydration without client-side affiliate tags.
+
+#### 2. Root Cause:
+1. **SSRF & IP Validation**: URLs required re-validation after redirects (max 3 hops) with `ipaddress.is_global` check on all DNS resolved addresses.
+2. **Stream Proxy & Token**: IG video preview required short-lived signed HMAC tokens instead of unauthenticated `?url=` queries.
+3. **Frontend Refactoring**: Pure functions in `recipeUtils.ts` with explicit parameters (`resolveMediaPreview`, `generateStructuredText`, `parseIngredients`) decoupled logic from closure state.
+4. **WCAG Accessibility & Telemetry**: Bottom sheet required ARIA attributes (`role="dialog"`, `aria-modal="true"`, focus trap, Escape key handler), input fields required `>=16px` font size and `min-height 44px`, and telemetry endpoints required `ADMIN_API_KEY` authentication without storing raw URLs in metrics.
+5. **Vault Re-hydration**: Saved vault items without server-built affiliate links needed re-hydration via `/api/v1/library/rehydrate` so buy buttons appear without hardcoded client-side tags.
+
+#### 3. Resolution (Code Changes):
+- `url_validator.py`: Added `validate_url_and_follow_redirects` with max 3 hops, `resolve_and_validate_hostname` with `ipaddress.is_global`, HMAC stream token generation/verification, and `validate_merchant_redirect_url`.
+- `recipeUtils.ts`: Extracted pure functions with explicit state parameters and unit test coverage (`recipeUtils.test.ts`).
+- `OverflowBottomSheet.tsx`: Implemented WCAG-compliant bottom sheet modal with focus trap and keyboard listeners.
+- `security.py` & `telemetry.py`: Added `require_admin_user` checking `X-Admin-Api-Key` or `role == 'admin'`, and stripped raw URLs from telemetry event payloads.
+- `library.py` & `test_vault_rehydration.py`: Implemented `/api/v1/library/rehydrate` endpoint and added dedicated test suite.
+
+#### 4. Testing & Verification:
+- Next.js Build (`npm run build`): **SUCCESSFUL (0 errors)**.
+- Vitest Suite (`npm test`): **9 / 9 PASSED**.
+- Backend Pytest Suite (`pytest tests/`): **211 / 211 PASSED**.
 
 ---
 
