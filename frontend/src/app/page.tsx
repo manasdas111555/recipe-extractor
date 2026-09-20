@@ -40,7 +40,6 @@ import ServingAdjuster from '../components/ServingAdjuster';
 import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
 import FaqSection from '../components/FaqSection';
-import ParticleBackground from '../components/ParticleBackground';
 import CookingModeDrawer from '../components/CookingModeDrawer';
 import { ProductItem, ResourceItem, ExtractionResult } from '../types/recipe';
 
@@ -73,10 +72,7 @@ function UniversalDashboard() {
   const [langMode, setLangMode] = useState<'english' | 'native'>('english');
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState<boolean>(false);
   const [upgradeReason, setUpgradeReason] = useState<string>('');
-  const [isCreatorVaultOpen, setIsCreatorVaultOpen] = useState<boolean>(false);
-  const [quotaRemaining, setQuotaRemaining] = useState<number>(10);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
-  const [copiedNotes, setCopiedNotes] = useState<boolean>(false);
   const [downloadedTxt, setDownloadedTxt] = useState<boolean>(false);
   const [waCountryCode, setWaCountryCode] = useState<string>('+91');
   const [waPhoneNumber, setWaPhoneNumber] = useState<string>('');
@@ -113,6 +109,27 @@ function UniversalDashboard() {
       console.error(e);
     }
   };
+
+  // Synchronize isSavedInVault derived state whenever result changes
+  useEffect(() => {
+    if (!result) {
+      setIsSavedInVault(false);
+      return;
+    }
+    try {
+      const rawLocal = localStorage.getItem('upa_vault_items');
+      if (rawLocal) {
+        const currentItems = JSON.parse(rawLocal);
+        if (Array.isArray(currentItems)) {
+          const currentUrl = result.source_url || url;
+          const found = currentItems.some((i: any) => (i.source_url || i.url) === currentUrl);
+          setIsSavedInVault(found);
+          return;
+        }
+      }
+    } catch (e) {}
+    setIsSavedInVault(false);
+  }, [result]);
 
   // Synchronize initial theme from localStorage (default: light mode)
   useEffect(() => {
@@ -227,12 +244,6 @@ function UniversalDashboard() {
     if (c.includes('GAMING') || c.includes('GAME')) return 'Game Settings, Keybinds & Gear Setup';
     if (c.includes('LIFE_HACK') || c.includes('HACK')) return 'Productivity Hacks & Actionable Tips';
     return 'Detailed Steps & Intelligence Notes';
-  };
-
-  const handleCopyNotes = (notes: string) => {
-    navigator.clipboard.writeText(notes);
-    setCopiedNotes(true);
-    setTimeout(() => setCopiedNotes(false), 2000);
   };
 
   const mediaPreview = resolveMediaPreview();
@@ -398,9 +409,10 @@ function UniversalDashboard() {
     return clean;
   };
 
-  const handleExtract = async (targetUrl?: any) => {
+  const handleExtract = async (targetUrl?: any, domainOverride?: string) => {
     const rawUrl = typeof targetUrl === 'string' ? targetUrl : url;
     const finalUrl = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+    const targetDomain = domainOverride || selectedDomain;
 
     if (!finalUrl) {
       setError('Please paste a valid video URL from Instagram, TikTok, or YouTube.');
@@ -423,7 +435,7 @@ function UniversalDashboard() {
         body: JSON.stringify({
           video_url: finalUrl,
           url: finalUrl,
-          domain_hint: selectedDomain,
+          domain_hint: targetDomain,
         }),
       });
 
@@ -472,7 +484,6 @@ function UniversalDashboard() {
       } catch (saveErr) {
         console.warn('Vault auto-save error:', saveErr);
       }
-      setQuotaRemaining((prev) => Math.max(0, prev - 1));
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Unable to complete intelligence extraction.');
@@ -522,13 +533,13 @@ function UniversalDashboard() {
           return;
         }
 
-        const clean = trimmed.replace(/^[I|V|X\d\.\-\*\•\+a-zA-Z]\s*/, '').replace(/^\*\*\s*/, '').replace(/\s*\*\*$/, '').trim();
+        const clean = trimmed.replace(/^(?:[-*•+]|\d+[.)]|[IVX]+\.|[a-z][.)])\s+/i, '').replace(/^\*\*\s*/, '').replace(/\s*\*\*$/, '').trim();
         if (!clean) return;
 
         if (currSec === 'EQUIPMENT') {
           eqAcc.push(clean);
         } else if (currSec === 'INGREDIENTS') {
-          const parts = clean.split(/\s*[\(\-\:]\s*/);
+          const parts = clean.split(/\s+-\s+|\s*:\s*|\s*\(\s*/);
           if (parts.length >= 2 && !clean.startsWith('(')) {
             ingAcc.push({ name: parts[0].trim(), quantity: parts.slice(1).join(' ').replace(/[\(\)]/g, '').trim() });
           } else {
@@ -582,6 +593,7 @@ function UniversalDashboard() {
 
       let cleanAct = trimmed
         .replace(/^(?:Activity\s*\d+[:\-]?|[\-\*•\d\.]+\s*)/i, '')
+        .replace(/^(?:[-*•+]|\d+[.)]|[IVX]+\.|[a-z][.)])\s+/i, '')
         .replace(/^\*\*\s*/, '')
         .replace(/\s*\*\*$/, '')
         .trim();
@@ -863,25 +875,25 @@ function UniversalDashboard() {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    const shareUrl = (result as any)?.slug ? `${window.location.origin}/r/${(result as any).slug}` : (result?.source_url || window.location.href);
+    try {
+      navigator.clipboard.writeText(shareUrl);
+    } catch (err) {
+      const textarea = document.createElement('textarea');
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-      {/* Interactive Constellation Particle Canvas & Ambient Aura Layers */}
-      <ParticleBackground theme={theme} />
-      {theme === 'dark' ? (
-        <>
-          <div className="bg-hero-texture" />
-          <div className="bg-ambient-layer" />
-          <div className="bg-glass-artwork" />
-        </>
-      ) : (
-        <div className="bg-light-aura" />
-      )}
-
       {/* Top Navigation Bar */}
       <header
         style={{
@@ -931,19 +943,20 @@ function UniversalDashboard() {
             {/* Theme Toggle Button (Light / Dark Mode) */}
             <button
               onClick={toggleTheme}
-              className="btn-ghost"
+              className="btn-ghost nav-btn-icon-only"
               style={{ padding: '0.45rem 0.85rem' }}
+              aria-label={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
               title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
             >
               {theme === 'light' ? (
                 <>
                   <Moon size={16} color="#06B6D4" />
-                  <span>Dark Mode</span>
+                  <span className="nav-btn-text">Dark Mode</span>
                 </>
               ) : (
                 <>
                   <Sun size={16} color="#F59E0B" />
-                  <span>Light Mode</span>
+                  <span className="nav-btn-text">Light Mode</span>
                 </>
               )}
             </button>
@@ -954,21 +967,25 @@ function UniversalDashboard() {
                 setFaqCategory('all');
                 setIsFaqModalOpen(true);
               }}
-              className="btn-ghost"
+              className="btn-ghost nav-btn-icon-only"
               style={{ padding: '0.45rem 0.85rem' }}
+              aria-label="FAQ & Guide"
+              title="FAQ & Guide"
             >
-              <HelpCircle size={16} color="#34D399" />
-              <span>FAQ & Guide</span>
+              <HelpCircle size={16} color="var(--color-success)" />
+              <span className="nav-btn-text">FAQ & Guide</span>
             </button>
 
             {/* Intelligence Vault Library Button */}
             <button
               onClick={() => setIsVaultOpen(true)}
-              className="btn-ghost"
+              className="btn-ghost nav-btn-icon-only"
               style={{ padding: '0.45rem 0.85rem' }}
+              aria-label="Intelligence Vault"
+              title="Intelligence Vault"
             >
               <BookOpen size={16} color="var(--accent-emerald)" />
-              <span>Intelligence Vault</span>
+              <span className="nav-btn-text">Intelligence Vault</span>
             </button>
           </div>
         </div>
@@ -978,18 +995,18 @@ function UniversalDashboard() {
       <main style={{ flex: 1, maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '2rem 1.5rem', position: 'relative', zIndex: 1 }}>
           <h1
             style={{
-              fontSize: '2.65rem',
+              fontSize: '2.5rem',
               fontWeight: 800,
-              lineHeight: 1.15,
+              lineHeight: 1.2,
               marginBottom: '0.75rem',
               letterSpacing: '-0.03em',
             }}
           >
-            Universal Reel & Shorts <br />
-            <span className="gradient-text-animated">AI Intelligence Extractor</span>
+            Turn any reel into a{' '}
+            <span style={{ color: 'var(--accent-emerald)' }}>recipe, plan or shopping list</span>
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', maxWidth: '640px', margin: '0 auto 1.25rem', lineHeight: '1.5' }}>
-            Instant AI extraction for recipes, tutorials, travel guides, gadgets & shorts.
+            Paste any Instagram Reel, TikTok, or YouTube Short link to instantly extract structured recipes, travel itineraries, product links, and step-by-step guides.
           </p>
 
         {/* Input Bar Card - Undisputed Streamlined Focal Point */}
@@ -1001,7 +1018,7 @@ function UniversalDashboard() {
             padding: '0.85rem 1rem',
           }}
         >
-          <div className="main-search-input-container" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap' }}>
+          <div className="main-search-input-container search-input-focus" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'nowrap' }}>
             {platformInfo && (
               <span
                 style={{
@@ -1017,8 +1034,11 @@ function UniversalDashboard() {
                 {platformInfo.name}
               </span>
             )}
+            <label htmlFor="main-video-url-input" className="sr-only">Video URL</label>
             <input
+              id="main-video-url-input"
               type="text"
+              aria-label="Video URL"
               placeholder="Paste Instagram Reel, TikTok, or YouTube Short link (e.g. https://...)"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -1040,6 +1060,7 @@ function UniversalDashboard() {
               onChange={(e) => setSelectedDomain(e.target.value)}
               className="chip-tactile"
               title="Content Domain Classifier"
+              aria-label="Content Domain Classifier"
               style={{
                 background: 'var(--bg-surface-elevated)',
                 border: '1px solid var(--border-subtle)',
@@ -1065,6 +1086,7 @@ function UniversalDashboard() {
               onClick={() => handleExtract()}
               disabled={isLoading || !url}
               className="btn-emerald btn-tactile"
+              aria-label="Get video intelligence"
               style={{ padding: '0.75rem 1.4rem', fontWeight: 700, whiteSpace: 'nowrap' }}
             >
               {isLoading ? (
@@ -1074,8 +1096,8 @@ function UniversalDashboard() {
                 </>
               ) : (
                 <>
-                  <span>Extract Intelligence</span>
-                  <ArrowRight size={16} />
+                  <Sparkles size={18} />
+                  <span>Get it</span>
                 </>
               )}
             </button>
@@ -1100,7 +1122,7 @@ function UniversalDashboard() {
                 onClick={() => {
                   setUrl(s.url);
                   setSelectedDomain(s.domain);
-                  handleExtract(s.url);
+                  handleExtract(s.url, s.domain);
                 }}
                 className="btn-ghost chip-tactile"
                 style={{ padding: '0.25rem 0.6rem', fontSize: '0.72rem' }}
@@ -1219,19 +1241,30 @@ function UniversalDashboard() {
         {error && (
           <div
             className="glass-panel"
+            role="alert"
             style={{
               maxWidth: '820px',
               margin: '0 auto 2rem',
               padding: '1rem 1.25rem',
-              border: '1px solid rgba(255, 65, 108, 0.4)',
-              background: 'rgba(255, 65, 108, 0.1)',
+              border: '1px solid var(--color-danger)',
+              background: 'var(--bg-subtle)',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
               gap: '0.75rem',
             }}
           >
-            <AlertCircle size={20} color="var(--accent-rose)" />
-            <span style={{ fontSize: '0.875rem', color: '#FDA4AF' }}>{error}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <AlertCircle size={20} color="var(--color-danger)" />
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 600 }}>{error}</span>
+            </div>
+            <button
+              onClick={() => handleExtract()}
+              className="btn-ghost"
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: 700 }}
+            >
+              Try again
+            </button>
           </div>
         )}
 
@@ -1428,31 +1461,7 @@ function UniversalDashboard() {
                   </div>
                 )}
 
-                {/* Telemetry Metrics */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '0.5rem',
-                    marginTop: '1rem',
-                  }}
-                >
-                  <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
-                    <Clock size={16} color="var(--accent-emerald)" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Duration</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                      {result.cooking_time || result.prep_time || 'Short Form'}
-                    </div>
-                  </div>
-
-                  <div className="glass-card" style={{ textAlign: 'center', padding: '0.65rem' }}>
-                    <Flame size={16} color="var(--accent-amber)" style={{ margin: '0 auto 0.25rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Domain</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                      {result.category || result.dish_type || 'Intelligence'}
-                    </div>
-                  </div>
-                </div>
+                {/* Forward, Export & Download Hub */}
 
                 {/* Forward, Export & Download Hub */}
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -1563,15 +1572,15 @@ function UniversalDashboard() {
                   <div
                     style={{
                       marginTop: '0.25rem',
-                      padding: '0.55rem 0.65rem',
-                      background: 'rgba(15, 23, 42, 0.65)',
-                      border: '1px solid rgba(56, 189, 248, 0.22)',
+                      padding: '0.65rem',
+                      background: 'var(--bg-card-solid)',
+                      border: '1px solid var(--border-subtle)',
                       borderRadius: '8px',
                     }}
                   >
                     <div style={{ marginBottom: '0.35rem' }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Smartphone size={11} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-info)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Smartphone size={13} />
                         <span>Send directly to WhatsApp Number:</span>
                       </span>
                     </div>
@@ -1582,14 +1591,16 @@ function UniversalDashboard() {
                         value={waCountryCode}
                         onChange={(e) => setWaCountryCode(e.target.value)}
                         placeholder="+91"
+                        aria-label="Country Code"
                         style={{
-                          width: '46px',
+                          width: '52px',
+                          minHeight: '44px',
                           padding: '0.32rem 0.4rem',
-                          background: 'rgba(0,0,0,0.3)',
+                          background: 'var(--bg-surface-solid)',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: '6px',
-                          color: '#FFFFFF',
-                          fontSize: '0.72rem',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.875rem',
                           textAlign: 'center',
                         }}
                       />
@@ -1597,34 +1608,37 @@ function UniversalDashboard() {
                         type="tel"
                         value={waPhoneNumber}
                         onChange={(e) => setWaPhoneNumber(e.target.value)}
-                        placeholder="Mobile (e.g. 9876543210)"
+                        placeholder="Mobile number"
+                        aria-label="WhatsApp Mobile Number"
                         style={{
                           flex: 1,
-                          padding: '0.32rem 0.5rem',
-                          background: 'rgba(0,0,0,0.3)',
+                          minHeight: '44px',
+                          padding: '0.32rem 0.6rem',
+                          background: 'var(--bg-surface-solid)',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: '6px',
-                          color: '#FFFFFF',
-                          fontSize: '0.72rem',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.875rem',
                         }}
                       />
                       <button
                         onClick={() => handleShareWhatsApp(waPhoneNumber)}
                         style={{
-                          background: '#10B981',
+                          minHeight: '44px',
+                          background: 'var(--accent-emerald)',
                           color: '#FFFFFF',
                           border: 'none',
                           borderRadius: '6px',
-                          padding: '0.32rem 0.65rem',
-                          fontSize: '0.72rem',
+                          padding: '0.32rem 0.85rem',
+                          fontSize: '0.825rem',
                           fontWeight: 700,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '3px',
+                          gap: '4px',
                         }}
                       >
-                        <Send size={11} />
+                        <Send size={13} />
                         <span>Send</span>
                       </button>
                     </div>
@@ -1676,8 +1690,14 @@ function UniversalDashboard() {
                   </button>
                 </div>
 
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                  {formatCleanTitle(result.title || result.recipe_title) || 'Extracted Social Intelligence'}
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span>{formatCleanTitle(result.title || result.recipe_title) || 'Extracted Social Intelligence'}</span>
+                  {(result.cooking_time || result.prep_time) && (
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-success)', background: 'var(--bg-subtle)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={13} color="var(--color-success)" />
+                      <span>{result.cooking_time || result.prep_time}</span>
+                    </span>
+                  )}
                 </h2>
 
                 {result.summary && (
@@ -1769,8 +1789,8 @@ function UniversalDashboard() {
                   </div>
                 )}
 
-                {/* Recipe-Specific: Serving Scaler if Ingredients exist */}
-                {result.ingredients && result.ingredients.length > 0 && (
+                {/* Recipe-Specific: Serving Scaler if Ingredients exist for non-recipe domains */}
+                {!((result.category || '').toUpperCase().includes('RECIPE') || (result.category_name || '').toUpperCase().includes('RECIPE')) && result.ingredients && result.ingredients.length > 0 && (
                   <div style={{ marginBottom: '1.5rem' }}>
                     <ServingAdjuster
                       initialServings={result.servings || 2}
@@ -1877,11 +1897,11 @@ function UniversalDashboard() {
                                 </h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
                                   {equipProds.map((p, idx) => (
-                                    <div key={idx} style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
+                                    <div key={idx} style={{ padding: '0.65rem', background: 'var(--bg-surface-solid)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
                                       <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.45rem' }}>
-                                        {p.amazon_url && <a href={p.amazon_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', padding: '0.28rem', background: 'rgba(255, 153, 0, 0.15)', color: '#FF9900', border: '1px solid rgba(255, 153, 0, 0.3)', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>Amazon</a>}
-                                        {p.flipkart_url && <a href={p.flipkart_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: 'center', padding: '0.28rem', background: 'rgba(40, 116, 240, 0.15)', color: '#60A5FA', border: '1px solid rgba(40, 116, 240, 0.3)', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>Flipkart</a>}
+                                        {p.amazon_url && <a href={p.amazon_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ flex: 1, textAlign: 'center', padding: '0.35rem', fontSize: '0.78rem', fontWeight: 600 }}>Amazon</a>}
+                                        {p.flipkart_url && <a href={p.flipkart_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ flex: 1, textAlign: 'center', padding: '0.35rem', fontSize: '0.78rem', fontWeight: 600 }}>Flipkart</a>}
                                       </div>
                                     </div>
                                   ))}
@@ -1891,24 +1911,27 @@ function UniversalDashboard() {
 
                             {ingProds.length > 0 && (
                               <div>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#34D399', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <ShoppingBag size={15} color="#34D399" />
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-success)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <ShoppingBag size={15} color="var(--color-success)" />
                                   <span>2. Purchase Ingredients (Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon Fresh)</span>
                                 </h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
                                   {ingProds.map((p, idx) => (
-                                    <div key={idx} style={{ padding: '0.65rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
+                                    <div key={idx} style={{ padding: '0.65rem', background: 'var(--bg-surface-solid)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</span>
                                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.45rem' }}>
-                                        {p.blinkit_url && <a href={p.blinkit_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(244, 196, 48, 0.15)', color: '#F4C430', border: '1px solid rgba(244, 196, 48, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Blinkit</a>}
-                                        {p.zepto_url && <a href={p.zepto_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(167, 139, 250, 0.15)', color: '#A78BFA', border: '1px solid rgba(167, 139, 250, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Zepto</a>}
-                                        {p.instamart_url && <a href={p.instamart_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(252, 128, 25, 0.15)', color: '#FC8019', border: '1px solid rgba(252, 128, 25, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Instamart</a>}
-                                        {p.bigbasket_url && <a href={p.bigbasket_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(132, 204, 22, 0.15)', color: '#84CC16', border: '1px solid rgba(132, 204, 22, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>BigBasket</a>}
-                                        {p.amazon_url && <a href={p.amazon_url} target="_blank" rel="noopener noreferrer" style={{ padding: '0.25rem 0.45rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, textDecoration: 'none' }}>Amazon Fresh</a>}
+                                        {p.blinkit_url && <a href={p.blinkit_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', fontWeight: 600 }}>Blinkit</a>}
+                                        {p.zepto_url && <a href={p.zepto_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', fontWeight: 600 }}>Zepto</a>}
+                                        {p.instamart_url && <a href={p.instamart_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', fontWeight: 600 }}>Instamart</a>}
+                                        {p.bigbasket_url && <a href={p.bigbasket_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', fontWeight: 600 }}>BigBasket</a>}
+                                        {p.amazon_url && <a href={p.amazon_url} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ padding: '0.3rem 0.55rem', fontSize: '0.75rem', fontWeight: 600 }}>Amazon Fresh</a>}
                                       </div>
                                     </div>
                                   ))}
                                 </div>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.85rem', fontStyle: 'italic' }}>
+                                  * As an Amazon Associate and affiliate partner, we may earn from qualifying purchases.
+                                </p>
                               </div>
                             )}
                           </div>
@@ -2013,8 +2036,8 @@ function UniversalDashboard() {
                   );
                 })()}
 
-                {/* Shoppable Products & Gadgets Section */}
-                {result.products && result.products.length > 0 && (
+                {/* Shoppable Products & Gadgets Section (Non-Recipe Only to Prevent Duplication) */}
+                {!((result.category || '').toUpperCase().includes('RECIPE') || (result.category_name || '').toUpperCase().includes('RECIPE')) && result.products && result.products.length > 0 && (
                   <div style={{ marginTop: '1.5rem' }}>
                     <h3
                       style={{
@@ -2103,6 +2126,9 @@ function UniversalDashboard() {
                         </div>
                       ))}
                     </div>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.85rem', fontStyle: 'italic' }}>
+                      * As an Amazon Associate and affiliate partner, we may earn from qualifying purchases.
+                    </p>
                   </div>
                 )}
 
@@ -2194,6 +2220,36 @@ function UniversalDashboard() {
           </div>
           );
         })()}
+
+        {/* Mobile Sticky Action Bar */}
+        {result && (
+          <div className="mobile-only-action-bar" style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: '0.65rem 1rem',
+            background: 'var(--bg-surface-elevated)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderTop: '1px solid var(--border-subtle)',
+            zIndex: 99,
+            gap: '0.5rem',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 -4px 20px rgba(0,0,0,0.15)'
+          }}>
+            <button onClick={() => handleShareWhatsApp()} className="btn-emerald" style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 700 }}>
+              <Share2 size={15} /> WhatsApp
+            </button>
+            <button onClick={handleCopyLink} className="btn-ghost" style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
+              <Copy size={15} /> {copiedLink ? 'Copied!' : 'Copy Link'}
+            </button>
+            <button onClick={handleDownloadTxt} className="btn-ghost" style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
+              <Download size={15} /> .txt
+            </button>
+          </div>
+        )}
 
         {/* Interactive FAQ & User Guide Modal Drawer */}
         <FaqSection isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} initialCategory={faqCategory} />

@@ -20,6 +20,14 @@
   --accent-cyan: #0284C7;
   --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
   --shadow-hover: 0 20px 45px -10px rgba(16, 185, 129, 0.16);
+  --bg-subtle: rgba(15, 23, 42, 0.04);
+  --bg-inset: rgba(15, 23, 42, 0.06);
+  --border-strong: rgba(15, 23, 42, 0.18);
+  --text-on-accent: #FFFFFF;
+  --color-info: #0284C7;
+  --color-success: #059669;
+  --color-warning: #D97706;
+  --color-danger: #E11D48;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -49,6 +57,14 @@ html.dark, body.dark {
   --accent-cyan: #06B6D4;
   --shadow-card: 0 20px 45px -10px rgba(0, 0, 0, 0.6);
   --shadow-hover: 0 20px 45px -10px rgba(16, 185, 129, 0.22);
+  --bg-subtle: rgba(255, 255, 255, 0.04);
+  --bg-inset: rgba(0, 0, 0, 0.35);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text-on-accent: #FFFFFF;
+  --color-info: #38BDF8;
+  --color-success: #34D399;
+  --color-warning: #FBBF24;
+  --color-danger: #FB7185;
 }
 
 .font-heading {
@@ -224,6 +240,53 @@ html.dark .badge-rose {
 
 html.dark .badge-amber {
   color: #FCD34D;
+}
+
+.badge-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #7E22CE;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+html.dark .badge-purple {
+  background: rgba(168, 85, 247, 0.22);
+  color: #C084FC;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+/* Accessibility Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--accent-emerald) !important;
+  outline-offset: 2px !important;
+}
+
+.search-input-focus:focus-within {
+  border-color: var(--accent-emerald) !important;
+  box-shadow: 0 0 0 3px var(--accent-emerald-glow) !important;
+}
+
+/* Responsive Nav & Minimum Font Safety (P2) */
+@media (max-width: 639px) {
+  .nav-btn-text {
+    display: none !important;
+  }
+  .nav-btn-icon-only {
+    padding: 0.55rem !important;
+  }
+}
+
+.min-text-size {
+  font-size: max(0.8rem, 13px) !important;
+}
+
+.mobile-only-action-bar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-only-action-bar {
+    display: flex !important;
+  }
 }
 
 /* Animations */
@@ -453,39 +516,9 @@ noscript .sc-reveal {
 
 .bg-hero-texture,
 .bg-ambient-layer,
-.bg-glass-artwork {
-  display: none;
-}
-
-html.dark .bg-hero-texture, body.dark .bg-hero-texture {
-  display: block;
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: url('/hero_neural_bg.jpg');
-  background-size: cover;
-  background-position: center;
-  opacity: 0.22;
-  mix-blend-mode: screen;
-  z-index: 0;
-}
-
-html.dark .bg-ambient-layer, body.dark .bg-ambient-layer {
-  display: block;
-  position: absolute;
-  top: -150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1000px;
-  height: 600px;
-  background-image: url('/hero_ambient_glow.jpg');
-  background-size: cover;
-  background-position: center;
-  filter: blur(40px);
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 0;
-  animation: floatAurora 12s infinite ease-in-out;
+.bg-glass-artwork,
+.bg-light-aura {
+  display: none !important;
 }
 
 .awwwards-card {
@@ -554,38 +587,6 @@ html:not(.dark) .gradient-text-animated {
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-}
-
-html.dark .bg-glass-artwork, body.dark .bg-glass-artwork {
-  display: block;
-  position: absolute;
-  top: 40px;
-  right: -100px;
-  width: 650px;
-  height: 480px;
-  background-image: url('/hero_glass_artwork.jpg');
-  background-size: cover;
-  background-position: center;
-  opacity: 0.14;
-  filter: blur(4px);
-  mix-blend-mode: screen;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 50%;
-  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
-  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);
-}
-
-/* Light Mode Background Engine - Pure Emerald Radial Aura */
-.bg-light-aura {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 600px;
-  background: radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.14) 0%, rgba(6, 182, 212, 0.06) 45%, transparent 75%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 /* Mobile Responsive Adaptive Form & Touch Controls (UPA-1003) */
