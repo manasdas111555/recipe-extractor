@@ -670,9 +670,24 @@ Please review each module deliverable and provide your official sign-off status 
 
 ---
 
+## Module 21: Streamlined FAQ Modal & Isolated Full User Manual View
+
+### Key Features & UI Layout Enhancements Delivered:
+1. **Navbar Header Cleanup (`page.tsx`)**:
+   - Removed redundant standalone `"User Manual"` button from top header navigation bar.
+   - User Manual is accessed cleanly inside the `"FAQ & Guide"` modal overlay drawer.
+2. **Strict FAQ vs User Manual View Isolation (`FaqSection.tsx`)**:
+   - **FAQ Mode (`❓ Frequently Asked Questions` active)**: Displays 4-step Quick Start cards (`01`–`04`), FAQ category filter pills (`All Questions`, `Getting Started`, `Features & Shopping`, `Platforms`, `Troubleshooting`), FAQ search bar, and accordion questions list. Excludes `Full User Guide` pill from near search bar.
+   - **User Manual Mode (`📘 Full User Manual & Guide` active)**: Hides 4-step Quick Start cards, category filter pills, and search bar; renders ONLY the complete User Manual & Feature Guide deck panel.
+3. **Automated Unit & Frontend Build Verification**:
+   - Next.js build: **100% SUCCESSFUL**.
+   - Backend pytest suite: **191 / 191 PASSED**.
+
+---
+
 ### 🚀 Production Promotion Final Status
 
-With **191 / 191 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ modal guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, Sprint 9 Friends & Family Beta Rollout, **Sprint 10 Beta Testing Feedback & Multilingual Engine**, **Ultra-Minimalist UI Overhaul & E2E Validation**, and **Module 20 Universal Intelligence Vault & Multi-Genre Classification Resilience**:
+With **191 / 191 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ modal guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, Sprint 9 Friends & Family Beta Rollout, **Sprint 10 Beta Testing Feedback & Multilingual Engine**, **Ultra-Minimalist UI Overhaul & E2E Validation**, **Module 20 Universal Intelligence Vault**, and **Module 21 Streamlined FAQ Modal & Isolated User Manual View**:
 
 **PO Status**: **FULL UNCONDITIONAL APPROVAL FOR STAGING PROMOTION & PRODUCTION RELEASE (`main` branch)**.
 

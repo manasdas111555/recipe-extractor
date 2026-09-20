@@ -1290,6 +1290,25 @@ A travel Reel titled *"3-Day Varkala Travel Itinerary Guide"* was classified as 
 - Backend Unit Test Suite (`pytest tests/`): **191 / 191 PASSED**.
 - Browser E2E Staging Verification: Verified live on Staging preview deployment.
 
+### 🚨 ISSUE-044: FAQ Modal & Full User Manual View Isolation Cleanup
+- **Date**: 2026-09-20
+- **Affected Files**: `frontend/src/app/page.tsx`, `frontend/src/components/FaqSection.tsx`, `docs/TROUBLESHOOTING.md`
+
+#### 1. What Happened (Symptom):
+The top navbar contained a redundant standalone `"User Manual"` button, and inside the FAQ modal drawer, the 4-step Quick Start cards and search bar category pills overlapped when switching to the Full User Manual view.
+
+#### 2. Root Cause:
+1. `page.tsx` rendered duplicate buttons for `FAQ & Guide` and `User Manual` in the navbar.
+2. `FaqSection.tsx` rendered 4-step Quick Start cards and search bar category pills outside the `activeCategory !== 'user_manual'` conditional wrapper.
+
+#### 3. Resolution (Code Changes):
+1. **Navbar Cleanup (`page.tsx`)**: Removed the separate `User Manual` button from top navigation bar.
+2. **Strict View Isolation (`FaqSection.tsx`)**: Wrapped 4-step Quick Start cards, FAQ category pills, and search bar inside `activeCategory !== 'user_manual'` branch. Removed `user_manual` pill from the search bar row.
+
+#### 4. Testing & Verification:
+- Next.js build (`npm run build`): **100% SUCCESSFUL**.
+- Browser E2E Staging Verification: Verified live on Staging preview deployment.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
