@@ -393,7 +393,7 @@ export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }:
                 3. 📊 Smart Recipe Yield Scaling (1–12x)
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
-                Scale recipes from 1 to 12 servings with clean fraction formatting (½, ¾, ⅓) and native metric unit preservation (Rule 13: 1 katori → 2 katori).
+                Scale recipes from 1 to 12 servings with clean fraction formatting (½, ¾, ⅓) and native metric unit preservation (e.g. 1 katori → 2 katori).
               </p>
             </div>
 
@@ -402,7 +402,7 @@ export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }:
                 4. 🛒 10-Minute Grocery Delivery & E-Commerce
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
-                1-click cart links for Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon India (tag=manasdas11155-21), and EarnKaro (r=5608766).
+                1-click cart links for Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon India, and EarnKaro partners.
               </p>
             </div>
 
@@ -411,7 +411,7 @@ export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }:
                 5. 💬 WhatsApp & Telegram Bots
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
-                Send clean formatted notes to WhatsApp or chat with Telegram bot (@UniversalProAIBot) with interactive deep-link routing (?mode=cook).
+                Send clean formatted notes to WhatsApp or chat with our Telegram bot (@UniversalProAIBot) with 1-click interactive cooking mode launch.
               </p>
             </div>
 
@@ -420,7 +420,7 @@ export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }:
                 6. 📚 Intelligence Vault
               </h4>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
-                Auto-saves extractions locally in browser storage (upa_vault_items) for offline viewing, bookmarking, and instant searching.
+                Auto-saves extractions locally in browser storage for offline viewing, bookmarking, and instant searching.
               </p>
             </div>
           </div>

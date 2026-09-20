@@ -74,7 +74,7 @@ Scale ingredient quantities dynamically for 1 to 12 servings.
 ### Key Capabilities:
 - **Yield Servings Adjuster**: Click `+` or `-` to scale servings from **1 to 12 people** with instant automatic quantity recalculation.
 - **Smart Fraction Formatting**: Displays exact kitchen measurements as clean unicode fractions (`½`, `¼`, `¾`, `⅓`, `⅔`).
-- **Native Term Protection (Rule 13)**: Preserves native ingredient names and parenthetical metrics (e.g. `1 katori (~150g)` scaled 2x $\rightarrow$ `2 katori (~300g)`).
+- **Native Term Protection**: Preserves native ingredient names and parenthetical metrics (e.g. `1 katori (~150g)` scaled 2x $\rightarrow$ `2 katori (~300g)`).
 - **Pantry Staples Exclusion**: Click to exclude common pantry items (Salt, Water, Oil) from scaled shopping lists.
 - **1-Click Copy**: Copy formatted scaled ingredient lists directly to your clipboard.
 
@@ -101,7 +101,7 @@ Instantly purchase missing ingredients or featured cookware.
 
 - **Multi-Genre Reel Support**: The Vault stores extractions across all categories — **Recipes**, **Travel Guides**, **Workouts**, **Product Finds**, and **Tech Tutorials**.
 - **Genre Badges & Custom CTAs**: Each item displays a dynamic domain badge (`✈️ TRAVEL GUIDE`, `🏋️ WORKOUT ROUTINE`, `📦 PRODUCT FINDS`, `💻 TUTORIAL`, `🍳 RECIPE`), category-tailored count metrics (e.g., *"📍 3 locations mapped"*), and 1-click action buttons (*"Open Travel Guide ↗"*, *"Open Workout View ↗"*, *"Open Tutorial ↗"*).
-- **Auto-Save & Offline Access**: Extracted reels auto-save locally in your browser's **Universal Intelligence Vault** (`upa_vault_items`) for instant offline viewing.
+- **Auto-Save & Offline Access**: Extracted reels auto-save locally in your browser's **Universal Intelligence Vault** for instant offline viewing.
 - **Bookmark Toggle**: Click **"Save to Vault"** on any extraction card to bookmark or manage stored extractions.
 
 ---
