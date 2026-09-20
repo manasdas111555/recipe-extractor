@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     ADMIN_API_KEY: Optional[str] = None
-    TRUSTED_PROXY: bool = True
+    TRUSTED_PROXY: bool = False
     TRUSTED_PROXY_HOPS: int = 1
 
     # Supabase Data Layer

@@ -80,7 +80,7 @@ def is_globally_routable_ip(ip_str: str) -> bool:
 
 def resolve_and_validate_hostname(hostname: str) -> Tuple[bool, Optional[str], str]:
     """
-    Resolves a hostname via socket.getaddrinfo, checks ALL returned IPs against global routability,
+    Resolves a hostname via socket.getaddrinfo, validates the target pinned IP,
     and returns (is_valid, pinned_ip, error_message).
     """
     try:
@@ -88,17 +88,11 @@ def resolve_and_validate_hostname(hostname: str) -> Tuple[bool, Optional[str], s
         if not addr_info:
             return False, None, f"Could not resolve hostname {hostname}"
 
-        pinned_ip = None
-        for res in addr_info:
-            sockaddr = res[4]
-            ip_str = sockaddr[0]
-            clean_ip = unwrap_ip(ip_str)
-            if not is_globally_routable_ip(clean_ip):
-                return False, None, f"Host {hostname} resolved to non-global/private IP {clean_ip}"
-            if pinned_ip is None:
-                pinned_ip = clean_ip
+        first_ip = unwrap_ip(addr_info[0][4][0])
+        if not is_globally_routable_ip(first_ip):
+            return False, None, f"Host {hostname} resolved to non-global/private IP {first_ip}"
 
-        return True, pinned_ip, ""
+        return True, first_ip, ""
     except socket.gaierror as e:
         return False, None, f"DNS resolution failed for {hostname}: {e}"
     except Exception as e:

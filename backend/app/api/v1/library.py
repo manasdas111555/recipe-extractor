@@ -27,28 +27,60 @@ class RehydrateRequest(BaseModel):
     item: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Saved vault item payload without affiliate links")
 
 
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
+from backend.app.core.security import get_current_user, get_client_ip
+from backend.app.services.url_validator import (
+    validate_social_url,
+    generate_stream_token,
+)
+from backend.app.core.config import get_settings
+import time
+from collections import defaultdict
+
+_REHYDRATE_IP_TIMESTAMPS = defaultdict(list)
+
 @router.post("/rehydrate", summary="Re-hydrate Vault Item with Monetized Affiliate & Quick-Commerce Links")
-async def rehydrate_vault_item(body: RehydrateRequest):
+async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
     """
     When a saved item in the user's local vault is missing server-built affiliate URLs,
     this endpoint re-hydrates it by checking the server cache by canonical URL SHA-256 key,
     or using the backend AffiliateEngine to attach monetized buy & quick-commerce links.
+    Enforces IP rate limiting and shared URL validation without triggering LLM inference.
     """
+    client_ip = get_client_ip(request)
+    now = time.time()
+    cutoff = now - 60
+    _REHYDRATE_IP_TIMESTAMPS[client_ip] = [t for t in _REHYDRATE_IP_TIMESTAMPS[client_ip] if t > cutoff]
+    if len(_REHYDRATE_IP_TIMESTAMPS[client_ip]) >= 30:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded for vault item re-hydration (max 30 requests per minute)."
+        )
+    _REHYDRATE_IP_TIMESTAMPS[client_ip].append(now)
+
     supabase = get_supabase_client()
     affiliate_engine = get_affiliate_engine()
 
     item_data = dict(body.item or {})
     target_url = body.canonical_url or item_data.get("source_url") or item_data.get("url")
 
-    cached_record = None
     if target_url:
-        url_hash = hashlib.sha256(target_url.strip().encode("utf-8")).hexdigest()
-        cached_record = supabase.get_cached_extraction(url_hash)
+        is_valid, err, host, pinned_ip = validate_social_url(target_url)
+        if is_valid:
+            url_hash = hashlib.sha256(target_url.strip().encode("utf-8")).hexdigest()
+            cached_record = supabase.get_cached_extraction(url_hash)
 
-    if cached_record and cached_record.get("structured_data"):
-        item_data = cached_record["structured_data"]
-        if "source_url" not in item_data:
-            item_data["source_url"] = target_url
+            if cached_record and cached_record.get("structured_data"):
+                item_data = cached_record["structured_data"]
+                if "source_url" not in item_data:
+                    item_data["source_url"] = target_url
+
+    # Mint fresh signed stream token for media playback
+    settings = get_settings()
+    ext_id = body.extraction_id or item_data.get("id") or "rehydrated_item"
+    secret = getattr(settings, "SECRET_KEY", "universal_pro_default_secret_key_2026")
+    fresh_stream_token = generate_stream_token(ext_id, secret)
+    item_data["stream_token"] = fresh_stream_token
 
     domain = item_data.get("classified_domain") or item_data.get("domain") or "RECIPE"
     

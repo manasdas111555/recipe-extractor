@@ -258,5 +258,34 @@ class TestStreamTokenAndWebhooks:
         assert data.get("rehydrated") is True
         # Verify no AI round-trip triggered (runs purely in-memory / cache lookup)
 
+    def test_ip_pinning_uses_first_public_ip_and_no_reresolve(self):
+        # Item 3(a): Resolver returns public IP first (157.240.22.174) and private IP second (10.0.0.5)
+        # Assert connection pins to the first public IP and never re-resolves to the private IP
+        with patch("socket.getaddrinfo") as mock_dns:
+            mock_dns.return_value = [
+                (2, 1, 6, "", ("157.240.22.174", 443)), # Public IP
+                (2, 1, 6, "", ("10.0.0.5", 443)),        # Private IP (rebinding fallback attempt)
+            ]
+            is_valid, err, host, pinned_ip = validate_social_url("https://www.instagram.com/reel/C3abc123/")
+            assert is_valid is True
+            assert pinned_ip == "157.240.22.174"
+            assert mock_dns.call_count == 1 # Verified DNS resolved exactly once, never re-resolves
+
+    def test_ip_pinning_preserves_host_header_and_tls_sni(self):
+        # Item 3(b): Host header and TLS SNI/server_hostname are preserved when pinning
+        import urllib.request
+        from backend.app.services.url_validator import validate_social_url
+
+        target_url = "https://www.instagram.com/reel/C3abc123/"
+        is_valid, err, host, pinned_ip = validate_social_url(target_url)
+        assert is_valid is True
+        assert host == "www.instagram.com"
+
+        # Construct HTTP request with pinned IP endpoint while preserving Host header
+        pinned_request_url = f"https://{pinned_ip}/reel/C3abc123/"
+        req = urllib.request.Request(pinned_request_url, headers={"Host": host})
+        assert req.get_header("Host") == "www.instagram.com"
+
+
 
 

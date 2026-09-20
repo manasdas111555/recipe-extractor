@@ -33,10 +33,10 @@ You are Universal Pro AI, extracting high-fidelity structured recipe & workout d
 
 INDIAN REGIONAL & CULINARY CONVERSIONS:
 1. Standardize common spoken metrics while retaining native terms in parentheses:
-   - "1 katori" -> "1 cup (~150g)"
-   - "ek chamach" -> "1 tbsp"
-   - "chota chamach" -> "1 tsp"
-   - "chutki bhar" -> "1 pinch"
+   - "1 katori" -> "1 bowl (~150 ml, approx)"
+   - "ek chamach" -> "1 tbsp (approx)"
+   - "chota chamach" -> "1 tsp (approx)"
+   - "chutki bhar" -> "1 pinch (approx)"
    - "swadanusar" -> "to taste"
 
 2. Ingredient Localization:

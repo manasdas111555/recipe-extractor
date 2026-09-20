@@ -84,7 +84,7 @@
 ## 13. Regional & Hinglish Culinary Prompt Invariants
 - **Prompt Preservation**: System prompts in `backend/app/services/gemini_processor.py` and `multimodal.py` contain tuned culinary rules for South Asian and Hinglish terminology. Agents must NEVER delete, overwrite, or simplify these rules during prompt refactoring.
 - **Mandatory Linguistic Mappings & Approximate Conversions**:
-  - Spoken metrics must always translate to standardized units labeled as approximate while preserving native terms in parentheses: e.g., *1 katori* $\rightarrow$ *1 bowl (~150g, approx)* (do NOT label a katori as "1 cup"), *1 chamach* $\rightarrow$ *1 tbsp (approx)*, *chutki bhar* $\rightarrow$ *pinch*.
+  - Spoken metrics must always translate to standardized units labeled as approximate while preserving native terms in parentheses: e.g., *1 katori* $\rightarrow$ *1 bowl (~150 ml, approx)* (do NOT label a katori as "1 cup"), *1 chamach* $\rightarrow$ *1 tbsp (approx)*, *chutki bhar* $\rightarrow$ *1 pinch (approx)*.
   - Native ingredient names must be preserved in parentheses: e.g., *Cumin seeds (Jeera)*, *Asafoetida (Hing)*, *Dried Fenugreek (Kasuri Methi)*.
   - Quick-commerce link builders must prioritize the colloquial Indian spice name to ensure accurate search indexing on Blinkit and Zepto.
 - **Snapshot Test Requirement**: A dedicated snapshot unit test MUST assert that Hinglish prompt rules and culinary mappings exist in system prompt templates.

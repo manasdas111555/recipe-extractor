@@ -830,9 +830,8 @@ nvidia_key = get_nvidia_api_key()
 aionlabs_key = get_aionlabs_api_key()
 has_any_key = bool(gemini_key or mistral_key or groq_key or nvidia_key or aionlabs_key)
 
-# Admin Mode (Only visible if owner visits with ?admin=1)
-query_params = getattr(st, "query_params", {})
-is_admin = query_params.get("admin") == "1"
+# Admin Mode disabled via URL parameter (Rule 6/14 compliance: server-side auth required)
+is_admin = False
 
 if is_admin:
     with st.sidebar.expander("🛠️ Admin / Server Key Vault", expanded=False):

@@ -102,8 +102,8 @@ This document details:
   - `SECRET_KEY`: HMAC signing secret for minting short-lived `/stream-video` tokens and Telegram/WhatsApp webhooks.
   - `TELEGRAM_BOT_SECRET_TOKEN`: Inbound header token verified on Telegram webhook (`X-Telegram-Bot-Api-Secret-Token`).
   - `WHATSAPP_APP_SECRET`: App secret used to compute HMAC SHA-256 over raw body for WhatsApp webhook (`X-Hub-Signature-256`).
-  - `TRUSTED_PROXY`: `True` in production behind Vercel/Cloudflare edge proxies.
-  - `TRUSTED_PROXY_HOPS`: Number of trusted proxy hops from right edge of `X-Forwarded-For` (default `1`).
+  - `TRUSTED_PROXY`: Set to `False` for local development (ignores spoofed proxy headers); set to `True` in production/staging behind Vercel or Cloudflare edge proxies.
+  - `TRUSTED_PROXY_HOPS`: Number of trusted proxy hops counted from right edge of `X-Forwarded-For` (default `1`).
 - **Telegram Webhook Secret Token Registration**:
   ```bash
   curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
@@ -111,8 +111,9 @@ This document details:
     -d "secret_token=${TELEGRAM_BOT_SECRET_TOKEN}"
   ```
 - **Worker & API Container Egress Firewall Rules**:
-  - Outbound traffic restricted to port **443 HTTPS** only.
-  - Hard egress drop rules applied on container network bridge blocking cloud metadata IP `169.254.169.254` and RFC1918 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`).
+  - Outbound traffic restricted to verified required service ports: **Port 443** (HTTPS for Gemini/Groq/Mistral AI, Supabase REST, Telegram/WhatsApp APIs, e-commerce hosts), **Port 6379/33816** (Celery + Upstash Redis broker), and **Port 5432/6543** (Supabase Direct PostgreSQL).
+  - Hard egress drop rules applied on container network bridge (`iptables` / Docker network driver) blocking cloud metadata IP `169.254.169.254` and RFC1918 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`).
+  - *Verification Distinction*: Backend unit tests (`tests/test_backend_security_hardening.py`) validate the application `url_validator` logic, while `scripts/verify_egress.py` (or `scripts/verify_egress.sh`) verifies the active container network firewall.
 
 
 ### 5. Multi-Environment & CI/CD Pipeline (`scripts/`, `.github/`)
