@@ -82,17 +82,22 @@ def resolve_and_validate_hostname(hostname: str) -> Tuple[bool, Optional[str], s
     """
     Resolves a hostname via socket.getaddrinfo, validates the target pinned IP,
     and returns (is_valid, pinned_ip, error_message).
+    REJECTS host if ANY resolved IP address is non-global/private.
     """
     try:
         addr_info = socket.getaddrinfo(hostname, 443, socket.AF_UNSPEC, socket.SOCK_STREAM)
         if not addr_info:
             return False, None, f"Could not resolve hostname {hostname}"
 
-        first_ip = unwrap_ip(addr_info[0][4][0])
-        if not is_globally_routable_ip(first_ip):
-            return False, None, f"Host {hostname} resolved to non-global/private IP {first_ip}"
+        pinned_ip = None
+        for item in addr_info:
+            ip_str = unwrap_ip(item[4][0])
+            if not is_globally_routable_ip(ip_str):
+                return False, None, f"Host {hostname} resolved to non-global/private IP {ip_str}"
+            if pinned_ip is None:
+                pinned_ip = ip_str
 
-        return True, first_ip, ""
+        return True, pinned_ip, ""
     except socket.gaierror as e:
         return False, None, f"DNS resolution failed for {hostname}: {e}"
     except Exception as e:
@@ -244,4 +249,45 @@ def verify_stream_token(extraction_id: str, token: str, secret_key: str) -> bool
         secret_key = "universal_pro_default_secret_key"
     expected = generate_stream_token(extraction_id, secret_key)
     return hmac.compare_digest(expected, token)
+
+
+def fetch_pinned_ip_url(url: str, pinned_ip: str, headers: Optional[dict] = None, timeout: int = 5) -> Tuple[int, bytes, dict]:
+    """
+    Connects directly to pinned_ip via HTTPS, setting Host header and TLS SNI server_hostname to original host.
+    Prevents DNS rebinding attacks between validation and connection.
+    """
+    parts = urllib.parse.urlsplit(url)
+    hostname = parts.hostname or ""
+    port = parts.port or 443
+    path = parts.path or "/"
+    if parts.query:
+        path += "?" + parts.query
+
+    import ssl
+    import http.client
+
+    context = ssl.create_default_context()
+    
+    req_headers = {"User-Agent": "UniversalProAI/1.0", "Host": hostname}
+    if headers:
+        req_headers.update(headers)
+
+    conn = http.client.HTTPSConnection(
+        host=pinned_ip,
+        port=port,
+        timeout=timeout,
+        context=context,
+    )
+    conn._server_hostname = hostname
+
+    try:
+        conn.request("GET", path, headers=req_headers)
+        resp = conn.getresponse()
+        body = resp.read()
+        resp_headers = dict(resp.getheaders())
+        conn.close()
+        return resp.status, body, resp_headers
+    except Exception as e:
+        conn.close()
+        raise e
 

@@ -1243,7 +1243,7 @@ if active_res:
     """, unsafe_allow_html=True)
 
     # Detailed Pipeline Telemetry demoted to expandable developer drawer (P0 PO Directive)
-    is_admin_mode = bool(st.query_params.get("admin") == "1")
+    is_admin_mode = False  # AGENTS.md Rule 6/14: URL query parameter admin gating strictly forbidden
     with st.expander("🛠️ Pipeline Telemetry & Latency Breakdown (Developer View)", expanded=is_admin_mode):
         b1, b2, b3, b4 = st.columns(4)
         b1.metric("⏱️ Total Turnaround", f"{total_elapsed:.1f}s")

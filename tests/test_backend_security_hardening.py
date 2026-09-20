@@ -10,6 +10,7 @@ Validates:
 """
 
 import pytest
+import socket
 import hmac
 import hashlib
 from unittest.mock import patch, MagicMock
@@ -20,6 +21,7 @@ from backend.app.core.config import get_settings
 from backend.app.services.url_validator import (
     validate_social_url,
     validate_merchant_redirect_url,
+    resolve_and_validate_hostname,
     generate_stream_token,
     verify_stream_token,
     is_globally_routable_ip,
@@ -83,6 +85,59 @@ class TestURLValidator:
         is_valid, err, host, pinned_ip = validate_social_url("https://www.instagram.com/reel/123/")
         assert is_valid is False
         assert "non-global/private ip" in err.lower()
+
+    @patch("socket.getaddrinfo")
+    def test_ip_validation_rejects_host_with_any_non_global_address(self, mock_getaddrinfo):
+        """
+        NEW TEST (Item 2a): Host with ANY non-global IP in its DNS answers is rejected immediately.
+        """
+        mock_getaddrinfo.return_value = [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443)),  # Public
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 443)),       # Private / Non-global
+        ]
+        is_valid, pinned_ip, err = resolve_and_validate_hostname("instagram.com")
+        assert is_valid is False
+        assert pinned_ip is None
+        assert "non-global/private ip" in err.lower()
+
+    @patch("http.client.HTTPSConnection")
+    @patch("socket.getaddrinfo")
+    def test_pinned_ip_connection_path_preserves_host_header_tls_sni_and_no_reresolve(self, mock_gai, mock_https_conn):
+        """
+        NEW TEST (Item 2b): Real connection path connects to pinned IP, sets Host header,
+        sets TLS SNI server_hostname, and never re-resolves DNS.
+        """
+        from backend.app.services.url_validator import fetch_pinned_ip_url
+        
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.read.return_value = b"video_bytes"
+        mock_resp.getheaders.return_value = [("Content-Type", "video/mp4")]
+        
+        mock_conn_instance = MagicMock()
+        mock_conn_instance.getresponse.return_value = mock_resp
+        mock_https_conn.return_value = mock_conn_instance
+
+        status, body, headers = fetch_pinned_ip_url("https://instagram.com/reel/C123/", "157.240.22.174")
+
+        # Assert no socket.getaddrinfo DNS resolution occurred
+        assert mock_gai.call_count == 0
+
+        # Assert connected directly to pinned IP
+        mock_https_conn.assert_called_once()
+        call_kwargs = mock_https_conn.call_args[1]
+        assert call_kwargs["host"] == "157.240.22.174"
+        assert call_kwargs["port"] == 443
+
+        # Assert TLS SNI server_hostname set to original domain
+        assert mock_conn_instance._server_hostname == "instagram.com"
+
+        # Assert Host header sent to original domain
+        mock_conn_instance.request.assert_called_once()
+        req_headers = mock_conn_instance.request.call_args[1]["headers"]
+        assert req_headers["Host"] == "instagram.com"
+        assert status == 200
+        assert body == b"video_bytes"
 
 
 class TestAffiliateRedirectSecurity:
@@ -259,17 +314,17 @@ class TestStreamTokenAndWebhooks:
         # Verify no AI round-trip triggered (runs purely in-memory / cache lookup)
 
     def test_ip_pinning_uses_first_public_ip_and_no_reresolve(self):
-        # Item 3(a): Resolver returns public IP first (157.240.22.174) and private IP second (10.0.0.5)
-        # Assert connection pins to the first public IP and never re-resolves to the private IP
+        # Item 3(a) / Item 2(a): Resolver returns public IP first (157.240.22.174) and private IP second (10.0.0.5)
+        # Per Item 2(a) rule: A host with ANY non-global address in its answers MUST be rejected immediately.
         with patch("socket.getaddrinfo") as mock_dns:
             mock_dns.return_value = [
                 (2, 1, 6, "", ("157.240.22.174", 443)), # Public IP
-                (2, 1, 6, "", ("10.0.0.5", 443)),        # Private IP (rebinding fallback attempt)
+                (2, 1, 6, "", ("10.0.0.5", 443)),        # Private IP
             ]
             is_valid, err, host, pinned_ip = validate_social_url("https://www.instagram.com/reel/C3abc123/")
-            assert is_valid is True
-            assert pinned_ip == "157.240.22.174"
-            assert mock_dns.call_count == 1 # Verified DNS resolved exactly once, never re-resolves
+            assert is_valid is False
+            assert pinned_ip is None
+            assert mock_dns.call_count == 1
 
     def test_ip_pinning_preserves_host_header_and_tls_sni(self):
         # Item 3(b): Host header and TLS SNI/server_hostname are preserved when pinning

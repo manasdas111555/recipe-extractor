@@ -1,0 +1,19 @@
+# docker-compose.override.yml
+# Universal Pro AI - Deployment Container Egress & Security Configurations
+
+version: '3.8'
+
+services:
+  api:
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+  worker:
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

@@ -48,15 +48,13 @@ async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
     Enforces IP rate limiting and shared URL validation without triggering LLM inference.
     """
     client_ip = get_client_ip(request)
-    now = time.time()
-    cutoff = now - 60
-    _REHYDRATE_IP_TIMESTAMPS[client_ip] = [t for t in _REHYDRATE_IP_TIMESTAMPS[client_ip] if t > cutoff]
-    if len(_REHYDRATE_IP_TIMESTAMPS[client_ip]) >= 30:
+    from backend.app.services.quota_service import get_quota_manager
+    allowed, count = get_quota_manager().check_generic_rate_limit(f"rehydrate:{client_ip}", limit=30, window_seconds=60)
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Rate limit exceeded for vault item re-hydration (max 30 requests per minute)."
         )
-    _REHYDRATE_IP_TIMESTAMPS[client_ip].append(now)
 
     supabase = get_supabase_client()
     affiliate_engine = get_affiliate_engine()
