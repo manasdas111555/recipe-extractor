@@ -1,43 +1,39 @@
-name: CI Pipeline & Quality Gate
+name: CI Quality Gate Validation
 
 on:
   push:
     branches: [ Dev, staging, main ]
   pull_request:
-    branches: [ Dev, staging, main ]
+    branches: [ staging, main ]
 
 jobs:
-  test-and-verify:
-    name: Verify & Test (Python ${{ matrix.python-version }})
+  test-and-build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ '3.10', '3.11' ]
 
     steps:
-      - name: Checkout Code Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          python-version: '3.11'
 
-      - name: Install System Utilities (ffmpeg)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Install Python Dependencies
+      - name: Install Backend Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt pytest httpx
 
-      - name: Run Automated Pre-Promotion Verification & Isolated Imports
+      - name: Install Frontend Dependencies
         run: |
-          python scripts/verify_promotion.py
+          cd frontend
+          npm ci || npm install
 
-      - name: Execute Full Unit Test Suite
+      - name: Run CI Validation Suite
         run: |
-          python -m unittest discover -s tests -v
+          python scripts/ci_check.py

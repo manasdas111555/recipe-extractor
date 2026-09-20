@@ -42,6 +42,12 @@ import UpgradeModal from '../components/UpgradeModal';
 import FaqSection from '../components/FaqSection';
 import CookingModeDrawer from '../components/CookingModeDrawer';
 import { ProductItem, ResourceItem, ExtractionResult } from '../types/recipe';
+import {
+  resolveMediaPreview as resolveMediaPreviewUtil,
+  generateStructuredText as generateStructuredTextUtil,
+  formatTurnaroundTime,
+  cleanLineLeadingNumerics,
+} from '../lib/recipeUtils';
 
 
 const DOMAIN_OPTIONS = [
@@ -168,60 +174,7 @@ function UniversalDashboard() {
   const platformInfo = detectPlatform(url);
 
   // Resolve media preview: Direct video, Instagram Reel iframe embed, or YouTube Short iframe embed
-  const resolveMediaPreview = () => {
-    const target = result?.source_url || (result as any)?.media_url || url;
-    if (!target) return null;
-
-    // 1. Direct video link (mp4, webm, etc.)
-    if (result?.media_url && (result.media_url.endsWith('.mp4') || result.media_url.endsWith('.webm') || result.media_url.includes('/video/'))) {
-      return {
-        type: 'video' as const,
-        src: result.media_url,
-      };
-    }
-
-    // 2. Instagram Reel or Post: /reel/{id} or /p/{id}
-    const igMatch = target.match(/instagram\.com\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)/i);
-    if (igMatch && igMatch[1]) {
-      const token = (result as any)?.stream_token || (result as any)?.data?.stream_token || '';
-      const extId = (result as any)?.job_id || (result as any)?.id || igMatch[1];
-      const streamSrc = token
-        ? `/api/v1/extract/stream-video?token=${encodeURIComponent(token)}&id=${encodeURIComponent(extId)}&url=${encodeURIComponent(target)}`
-        : `/api/v1/extract/stream-video?url=${encodeURIComponent(target)}`;
-
-      return {
-        type: 'instagram' as const,
-        streamSrc,
-        embedSrc: `https://www.instagram.com/reel/${igMatch[1]}/embed/`,
-        externalUrl: `https://www.instagram.com/reel/${igMatch[1]}/`,
-        id: igMatch[1],
-      };
-    }
-
-    // 3. YouTube Shorts or standard YouTube video
-    const ytMatch = target.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([A-Za-z0-9_-]{11})/i);
-    if (ytMatch && ytMatch[1]) {
-      return {
-        type: 'youtube' as const,
-        src: `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=0&rel=0&modestbranding=1`,
-        externalUrl: `https://www.youtube.com/shorts/${ytMatch[1]}`,
-        id: ytMatch[1],
-      };
-    }
-
-    // 4. TikTok Video
-    const ttMatch = target.match(/tiktok\.com\/(?:@[^/]+\/video\/|v\/)(\d+)/i);
-    if (ttMatch && ttMatch[1]) {
-      return {
-        type: 'tiktok' as const,
-        src: `https://www.tiktok.com/embed/v2/${ttMatch[1]}`,
-        externalUrl: target,
-        id: ttMatch[1],
-      };
-    }
-
-    return null;
-  };
+  const resolveMediaPreview = () => resolveMediaPreviewUtil(result, url);
 
   // Helper to extract clean details if not explicitly present in cached payload
   const getResolvedDetails = (): string => {
