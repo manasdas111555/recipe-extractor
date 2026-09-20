@@ -17,6 +17,7 @@ export interface ProductItem {
   name: string;
   price?: string;
   search_query?: string;
+  amazon_url?: string;
   links?: {
     amazon?: string;
     flipkart?: string;

@@ -2042,8 +2042,7 @@ function UniversalDashboard() {
                           <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.65rem' }}>
                             <a
                               href={
-                                p.links?.amazon ||
-                                `https://www.amazon.in/s?k=${encodeURIComponent(p.search_query || p.name)}&tag=manasdas11155-21`
+                                p.amazon_url || p.links?.amazon || `/api/v1/affiliate/redirect?merchant=amazon.in&query=${encodeURIComponent(p.search_query || p.name)}`
                               }
                               target="_blank"
                               rel="noopener noreferrer"
