@@ -23,22 +23,28 @@ security = HTTPBearer(auto_error=False)
 def get_client_ip(request: Request) -> str:
     """
     Extracts the true client IP safely from trusted proxy headers or socket remote host.
-    Prioritizes single-value trusted headers ('cf-connecting-ip', 'x-real-ip').
-    If using 'x-forwarded-for', parses entries and counts trusted hops from the rightmost edge,
-    preventing X-Forwarded-For header spoofing attacks.
+    Prioritizes single-value trusted headers ('cf-connecting-ip', 'x-real-ip') when TRUSTED_PROXY is True.
+    If using 'x-forwarded-for', parses entries and counts trusted hops from the rightmost edge
+    using TRUSTED_PROXY_HOPS, preventing X-Forwarded-For header spoofing attacks.
     """
-    for header_name in ["cf-connecting-ip", "x-real-ip"]:
-        val = request.headers.get(header_name)
-        if val and val.strip():
-            client_ip = val.split(",")[0].strip()
-            if client_ip:
-                return client_ip
+    settings = get_settings()
+    trusted_proxy = getattr(settings, "TRUSTED_PROXY", True)
+    trusted_hops = max(1, getattr(settings, "TRUSTED_PROXY_HOPS", 1))
+
+    if trusted_proxy:
+        for header_name in ["cf-connecting-ip", "x-real-ip"]:
+            val = request.headers.get(header_name)
+            if val and val.strip():
+                client_ip = val.split(",")[0].strip()
+                if client_ip:
+                    return client_ip
 
     xff = request.headers.get("x-forwarded-for")
     if xff and xff.strip():
         ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
         if ips:
-            return ips[-1] # Trusted hop from the rightmost edge
+            idx = max(0, len(ips) - trusted_hops)
+            return ips[idx]
 
     if request.client and request.client.host:
         return request.client.host

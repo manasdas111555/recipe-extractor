@@ -27,24 +27,40 @@
 
 ## 🛡️ AGENTS.md Engineering Rules Compliance Matrix
 
-| Rule ID | Rule Title | Compliance Status | Verification Evidence & File Reference |
+| Rule ID | Rule Title | Compliance Status | Verification Evidence (Exact File:Line / Command Output) |
 | :--- | :--- | :--- | :--- |
-| **Rule 1** | Test Suite Integrity & Regression Protection | 🟢 **COMPLIANT** | `.github/CODEOWNERS:4` (`tests/` & `frontend/src/**/__tests__/`); 211 pytest + 9 vitest tests passing in CI |
+| **Rule 1** | Test Suite Integrity & Regression Protection | 🟠 **PARTIAL** | `.github/CODEOWNERS:4` created; 211 pytest + 9 vitest tests passing; GitHub branch protection pending owner setup |
 | **Rule 2** | Sprint Governance, 3-Layered Architecture & PO Gate | 🟡 **NOT YET** | PO sign-off log `docs/po-governance/SIGN_OFF.md` pending creation by repository owner |
-| **Rule 3** | Monetization Invariants & Affiliate Parameter Protection | 🟢 **COMPLIANT** | `affiliate_engine.py:31` (`tag=manasdas11155-21`); `affiliate_engine.py:37` (`r=5608766`); Creator Tag Vault hidden |
-| **Rule 4** | Ingestion Guardrails & Cloud Cost Protection | 🟡 **NOT YET** | Format string unit test, missing duration fail-closed, and SHA-256 canonical `(platform, video_id)` cache key to be appended |
-| **Rule 5** | Architectural Invariants & Cross-Platform Compatibility | 🟢 **COMPLIANT** | `backend/app/workers/tasks.py:15` (Celery + BackgroundTasks); `scripts/run_worker.py` (`--pool=solo` Windows) |
-| **Rule 6** | Secret Hygiene & Security Isolation | 🟢 **COMPLIANT** | `backend/app/core/config.py:35` (`Settings` env resolution); `security.py:151` (`X-Admin-Api-Key` server auth) |
-| **Rule 7** | Unified Measurable SLA & Performance Benchmark | 🟡 **NOT YET** | Telemetry p50/p95 benchmarks by cached vs non-cached and platform (IG, YT, TikTok) being aggregated |
-| **Rule 8** | Gemini Model Lifecycle & Deprecation Governance | 🟡 **NOT YET** | Model IDs in `Settings`, startup list-models check, thinking level (`start with low`), and golden-set suite to be finalized |
-| **Rule 9** | Mandatory 4-Core Document Governance Contract | 🟢 **COMPLIANT** | 4 living docs updated (`TROUBLESHOOTING.md`, `PRODUCT_OWNER_UX_SHOWCASE.md`, `DISASTER_RECOVERY.md`, `USER_MANUAL.md`) |
+| **Rule 3** | Monetization Invariants & Affiliate Parameter Protection | 🟡 **NOT YET** | Statutory disclosure text implementation & owner review of affiliate terms for chat/export pending |
+| **Rule 4** | Ingestion Guardrails & Cloud Cost Protection | 🟡 **NOT YET** | Exact `bestvideo[height<=360]+bestaudio/best[height<=360]` format test, missing duration fail-closed, and SHA-256 canonical `(platform, video_id)` cache key pending |
+| **Rule 5** | Architectural Invariants & Cross-Platform Compatibility | 🟢 **COMPLIANT** | `backend/app/workers/tasks.py:15` (`@celery_app.task`); `scripts/run_worker.py:22` (`--pool=solo` Windows detection) |
+| **Rule 6** | Secret Hygiene & Security Isolation | 🟢 **COMPLIANT** | `backend/app/core/config.py:35` (`Settings` Pydantic env loader); `backend/app/core/security.py:162` (`X-Admin-Api-Key` server auth) |
+| **Rule 7** | Unified Measurable SLA & Performance Benchmark | 🟡 **NOT YET** | Backend telemetry p50/p95 benchmarks by cached vs non-cached and platform (IG, YT, TikTok) being aggregated |
+| **Rule 8** | Gemini Model Lifecycle & Deprecation Governance | 🟡 **NOT YET** | Model IDs in `Settings`, startup list-models check, thinking level (`start with low`), and golden-set transition suite pending |
+| **Rule 9** | Mandatory 4-Core Document Governance Contract | 🟢 **COMPLIANT** | 4 living docs updated: `docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md` |
 | **Rule 10** | Multi-LLM Council Consensus Engine Invariants | 🟢 **COMPLIANT** | `backend/app/services/llm_council.py:22` (opt-in selection / fallback retry, missing secondary key graceful degradation) |
 | **Rule 11** | Schema Versioning & Cache Defense | 🟡 **NOT YET** | Top-level `schema_version` field in `structured_data` to be populated across Gemini JSON schema prompts |
-| **Rule 12** | Mobile In-App Browser & Progressive Enhancement | 🟢 **COMPLIANT** | `frontend/src/app/page.tsx:145` (`wakeLock` try/catch, target epoch timestamp deltas, audio gesture pre-unlock) |
-| **Rule 13** | Regional & Hinglish Culinary Prompt Invariants | 🟡 **NOT YET** | Hinglish prompt mappings preserved in `gemini_processor.py:210`; dedicated snapshot unit test to be added |
-| **Rule 14** | Security Invariants | 🟢 **COMPLIANT** | `url_validator.py:42` (HTTPS-only, host allowlist, SSRF/IP checks, max 3 redirects); `extract.py:58` (signed stream tokens) |
-| **Rule 15** | Frontend Design System & Accessibility | 🟡 **NOT YET** | CSS design tokens & ARIA bottom sheet active; Lighthouse & axe automated accessibility audit outputs to be attached |
-| **Rule 16** | Evidence and Definition of Done | 🟢 **COMPLIANT** | 5-step verification pipeline executed (`npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/`) |
+| **Rule 12** | Mobile In-App Browser & Progressive Enhancement | 🟢 **COMPLIANT** | `useWakeLock.ts:32` (`navigator.wakeLock.request('screen')` try/catch); `useStepTimer.ts:94` (`targetEndTimeRef.current - Date.now()`); `useStepTimer.ts:42` (Web Audio API pre-unlock); `CopyShoppingChecklist.tsx:62` (`execCommand('copy')` fallback) |
+| **Rule 13** | Regional & Hinglish Culinary Prompt Invariants | 🟡 **NOT YET** | Hinglish prompt mappings preserved in `gemini_processor.py:210`; dedicated snapshot unit test asserting prompt mappings pending |
+| **Rule 14** | Security Invariants | 🟢 **COMPLIANT** | `url_validator.py:42` (HTTPS-only, host allowlist, SSRF/IP checks, max 3 redirects); `extract.py:58` (signed stream tokens); `security.py:23` (`TRUSTED_PROXY` & `TRUSTED_PROXY_HOPS` anti-spoofing) |
+| **Rule 15** | Frontend Design System & Accessibility | 🟡 **NOT YET** | CSS design tokens & ARIA bottom sheet (`OverflowBottomSheet.tsx`) active; Lighthouse & axe automated accessibility audit outputs to be attached |
+| **Rule 16** | Evidence and Definition of Done | 🟢 **COMPLIANT** | 5-step verification pipeline output attached: `npx tsc --noEmit` (0 errors), `npm run lint` (0 errors), `npm test` (9/9 passed), `npm run build` (success), `pytest tests/` (211/211 passed) |
+
+---
+
+### ⚠️ Known Non-Compliant Items Currently on Staging (For Owner Review & Written Sign-Off)
+
+The following 9 items are currently staged or pending final implementation. Per Rule 2 & Rule 16, the repository owner must review and accept or reject these items in writing before promotion to `main`:
+
+1. **Rule 1 (Branch Protection)**: GitHub branch protection rules on `main` and `staging` require manual configuration by the repository owner in GitHub repository settings.
+2. **Rule 2 (PO Sign-Off Log)**: PO Sign-off documentation `docs/po-governance/SIGN_OFF.md` pending creation and explicit sign-off entry by the owner.
+3. **Rule 3 (Affiliate Terms & Disclosure)**: Affiliate link statutory disclosure text and owner review of affiliate program terms for chat/export features pending owner confirmation.
+4. **Rule 4 (Ingestion Guardrails Unit Tests)**: Dedicated unit tests asserting exact `bestvideo[height<=360]+bestaudio/best[height<=360]` format string, fail-closed missing duration metadata, and SHA-256 canonical `(platform, video_id)` cache key enforcement.
+5. **Rules 7 & 10 (Telemetry SLA Benchmarks)**: Empirical p50 and p95 telemetry turnaround benchmarks split by cached vs non-cached requests and by platform.
+6. **Rule 8 (Model Configuration & Thinking Level)**: Centralized model ID resolution in `Settings`, warn-only `list-models` startup check, explicit thinking level (`start with low`), and golden-set transition benchmark run.
+7. **Rule 11 (Schema Versioning)**: Insertion of top-level `schema_version: 1` field in all newly generated `structured_data` payloads.
+8. **Rule 13 (Hinglish Prompt Snapshot Test)**: Dedicated snapshot unit test asserting that Hinglish prompt rules and culinary mappings exist in system prompt templates.
+9. **Rule 15 (Lighthouse & Axe Accessibility Audits)**: Automated Lighthouse mobile performance numbers and axe-core accessibility audit reports to be attached to documentation.
 
 ---
 

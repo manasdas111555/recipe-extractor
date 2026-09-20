@@ -45,6 +45,9 @@ Once extracted, your result card provides the following interactive sections:
   - **Section III**: Step-by-Step Cooking Instructions.
 - **Dual-Language Toggle**: Switch between English translation and native spoken language notes.
 - **Interactive Travel Maps**: Open interactive directions for featured travel locations on Google Maps.
+- **Domain Primary Action Hierarchy**: Render exactly 1 primary call-to-action tailored to the result domain (*"Shop ingredients"* for Recipes, *"Open in Google Maps"* for Travel, *"Buy"* for Products, *"Open resources"* for Tutorials).
+- **Accessible Mobile Overflow Bottom Sheet**: On mobile viewports (<768px), secondary actions and utilities (Export Markdown, Export Text, Copy Link, Save to Vault) are cleanly grouped inside a WCAG 2.2 compliant bottom sheet modal (`role="dialog"`, `aria-modal="true"`, focus trapping, `Escape` key close).
+- **Vault Re-hydration**: Opening saved items from local storage automatically re-hydrates missing store links via `/api/v1/library/rehydrate` so buy buttons and quick commerce links appear instantly without client-side affiliate tags.
 
 ---
 

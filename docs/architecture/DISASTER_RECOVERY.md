@@ -96,6 +96,25 @@ This document details:
   - `GET /api/v1/extract/status/{job_id}`: Real-time polling endpoint tracking progress percentage, stage lifecycle (`enqueued`, `downloading_media`, `multimodal_ai_inference`, `completed`, `failed`), and output payload.
 - **Job Manager (`backend/app/services/job_manager.py`)**: Thread-safe in-memory job registry and background execution pipeline with automatic Supabase persistence.
 
+### 4b. Mandatory Security Environment Variables & Network Egress Firewall Rules
+- **Required Security Environment Variables**:
+  - `ADMIN_API_KEY`: Secret token for accessing admin metrics and system telemetry (`X-Admin-Api-Key`).
+  - `SECRET_KEY`: HMAC signing secret for minting short-lived `/stream-video` tokens and Telegram/WhatsApp webhooks.
+  - `TELEGRAM_BOT_SECRET_TOKEN`: Inbound header token verified on Telegram webhook (`X-Telegram-Bot-Api-Secret-Token`).
+  - `WHATSAPP_APP_SECRET`: App secret used to compute HMAC SHA-256 over raw body for WhatsApp webhook (`X-Hub-Signature-256`).
+  - `TRUSTED_PROXY`: `True` in production behind Vercel/Cloudflare edge proxies.
+  - `TRUSTED_PROXY_HOPS`: Number of trusted proxy hops from right edge of `X-Forwarded-For` (default `1`).
+- **Telegram Webhook Secret Token Registration**:
+  ```bash
+  curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+    -d "url=https://universal-pro-ai.vercel.app/api/v1/webhooks/telegram" \
+    -d "secret_token=${TELEGRAM_BOT_SECRET_TOKEN}"
+  ```
+- **Worker & API Container Egress Firewall Rules**:
+  - Outbound traffic restricted to port **443 HTTPS** only.
+  - Hard egress drop rules applied on container network bridge blocking cloud metadata IP `169.254.169.254` and RFC1918 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`).
+
+
 ### 5. Multi-Environment & CI/CD Pipeline (`scripts/`, `.github/`)
 - **`scripts/verify_promotion.py`**: Executes syntax validation, isolated clean-process module imports, and the 45-test unit suite.
 - **`scripts/promote.py`**: Enforces automated promotion gates:

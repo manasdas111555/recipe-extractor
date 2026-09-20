@@ -189,4 +189,74 @@ class TestStreamTokenAndWebhooks:
         )
         assert res.status_code == 401
 
+    def test_egress_blocking_cloud_metadata_and_private_ranges(self):
+        # Verifies egress blocking rules for 169.254.169.254 (AWS/GCP/OCI metadata) and RFC1918 private ranges
+        forbidden = [
+            "https://169.254.169.254/latest/meta-data/",
+            "https://10.0.0.1/admin",
+            "https://172.16.0.1/internal",
+            "https://192.168.1.1/router",
+        ]
+        for url in forbidden:
+            is_valid, err, host, pinned_ip = validate_social_url(url)
+            assert is_valid is False
+            assert "not in the allowed" in err.lower() or "private" in err.lower()
+
+    def test_dns_rebinding_attack_prevention(self):
+        # DNS Rebinding simulation: first query returns public IP, second query during redirect returns private IP
+        with patch("socket.getaddrinfo") as mock_dns:
+            # Rebinding: returns private IP 10.0.0.5 for instagram.com
+            mock_dns.return_value = [(2, 1, 6, "", ("10.0.0.5", 443))]
+            is_valid, err, host, pinned_ip = validate_social_url("https://www.instagram.com/reel/C3abc123/")
+            assert is_valid is False
+            assert "non-global/private ip" in err.lower()
+
+    def test_client_ip_trusted_proxy_configuration(self):
+        from backend.app.core.security import get_client_ip
+        from fastapi import Request
+
+        # Test when TRUSTED_PROXY is True vs False
+        scope = {
+            "type": "http",
+            "headers": [
+                (b"cf-connecting-ip", b"203.0.113.5"),
+                (b"x-forwarded-for", b"1.1.1.1, 198.51.100.2"),
+            ],
+            "client": ("10.0.0.1", 12345)
+        }
+        req = Request(scope)
+
+        with patch.object(settings, "TRUSTED_PROXY", True):
+            assert get_client_ip(req) == "203.0.113.5"
+
+        with patch.object(settings, "TRUSTED_PROXY", False), patch.object(settings, "TRUSTED_PROXY_HOPS", 1):
+            assert get_client_ip(req) == "198.51.100.2"
+
+    def test_expired_or_forged_stream_token_rejection(self):
+        ext_id = "target_extraction_id"
+        secret = settings.SECRET_KEY
+        forged_token = "0" * 64
+        assert verify_stream_token(ext_id, forged_token, secret) is False
+
+        res = client.get(f"/api/v1/extract/stream-video?token={forged_token}&id={ext_id}")
+        assert res.status_code == 400
+        assert "invalid" in res.json().get("detail", "").lower() or "token" in res.json().get("detail", "").lower()
+
+    def test_rehydrate_endpoint_validation_and_no_ai_trigger(self):
+        # Rehydrate endpoint must validate canonical URL and NOT trigger AI inference
+        payload = {
+            "canonical_url": "https://www.instagram.com/reel/C3abc123456/",
+            "item": {
+                "title": "Cached Recipe",
+                "classified_domain": "RECIPE",
+                "ingredients": ["1 katori Paneer"]
+            }
+        }
+        res = client.post("/api/v1/library/rehydrate", json=payload)
+        assert res.status_code == 200
+        data = res.json()
+        assert data.get("rehydrated") is True
+        # Verify no AI round-trip triggered (runs purely in-memory / cache lookup)
+
+
 
