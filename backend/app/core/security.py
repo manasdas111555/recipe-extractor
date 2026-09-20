@@ -8,6 +8,8 @@ and enforces strict sliding-window rate limiting on unauthenticated IP traffic.
 import time
 import jwt
 import hashlib
+import hmac
+import os
 from collections import defaultdict
 from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, status, Request
@@ -17,6 +19,32 @@ from backend.app.core.supabase_client import get_supabase_client
 
 settings = get_settings()
 security = HTTPBearer(auto_error=False)
+
+def get_client_ip(request: Request) -> str:
+    """
+    Extracts the true client IP safely from trusted proxy headers or socket remote host.
+    Prioritizes single-value trusted headers ('cf-connecting-ip', 'x-real-ip').
+    If using 'x-forwarded-for', parses entries and counts trusted hops from the rightmost edge,
+    preventing X-Forwarded-For header spoofing attacks.
+    """
+    for header_name in ["cf-connecting-ip", "x-real-ip"]:
+        val = request.headers.get(header_name)
+        if val and val.strip():
+            client_ip = val.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+
+    xff = request.headers.get("x-forwarded-for")
+    if xff and xff.strip():
+        ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+        if ips:
+            return ips[-1] # Trusted hop from the rightmost edge
+
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "127.0.0.1"
+
 
 # Sliding window IP timestamp tracker for anonymous clients
 _ANONYMOUS_IP_TIMESTAMPS = defaultdict(list)
@@ -51,6 +79,7 @@ async def get_current_user(
         - HTTP 401 if token is expired, malformed, or signature invalid.
     """
     supabase = get_supabase_client()
+    client_ip = get_client_ip(request)
 
     # 1. Check if Bearer token was provided in Authorization header
     if auth_credentials:
@@ -78,7 +107,7 @@ async def get_current_user(
                 "custom_amazon_tag": db_profile.get("custom_amazon_tag") if db_profile else None,
                 "custom_earnkaro_id": db_profile.get("custom_earnkaro_id") if db_profile else None,
                 "is_anonymous": False,
-                "client_ip": request.client.host if request.client else "127.0.0.1"
+                "client_ip": client_ip
             }
 
         except jwt.PyJWTError as e:
@@ -88,7 +117,6 @@ async def get_current_user(
             )
 
     # 2. No token provided: Provision Anonymous Guest User Session
-    client_ip = request.client.host if request.client else "127.0.0.1"
     guest_hash = hashlib.sha256(client_ip.encode("utf-8")).hexdigest()[:12]
     guest_id = f"guest_{guest_hash}"
 
@@ -120,4 +148,49 @@ def get_user_quota_limits(user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         return {"tier": "pro", "daily_quota_limit": -1}
     
     return {"tier": "free", "daily_quota_limit": 10}
+
+
+def require_admin_user(
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Enforces strict Admin authorization for telemetry, metrics, and system administration endpoints.
+    Requirement D.1: Define 'admin' explicitly (ADMIN_API_KEY header or explicit role == 'admin').
+    Fails closed (401/403) if ADMIN_API_KEY is unset or invalid.
+    Does NOT accept plan_tier == 'pro' as admin.
+    """
+    settings = get_settings()
+    admin_key_header = request.headers.get("X-Admin-Api-Key") or request.headers.get("x-admin-api-key")
+    expected_admin_key = getattr(settings, "ADMIN_API_KEY", None) or os.environ.get("ADMIN_API_KEY")
+
+    if admin_key_header:
+        if not expected_admin_key:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin authentication failed: ADMIN_API_KEY is not configured on the server."
+            )
+        if not hmac.compare_digest(admin_key_header, expected_admin_key):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid Admin API Key"
+            )
+        return {"id": "admin_service", "role": "admin"}
+
+    # Explicit role == 'admin' check (NOT plan_tier == 'pro')
+    user_role = current_user.get("role")
+    if user_role == "admin":
+        return current_user
+
+    if current_user.get("is_anonymous"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required for admin access."
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Forbidden: Admin credentials or admin role required."
+    )
+
 

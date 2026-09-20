@@ -235,6 +235,13 @@ def handle_whatsapp_incoming(payload: Dict[str, Any], background_tasks = None) -
 
     video_url = match.group(1)
 
+    # Security URL Allowlist & SSRF Check
+    from backend.app.services.url_validator import validate_social_url
+    valid, url_err, _, _ = validate_social_url(video_url)
+    if not valid:
+        send_whatsapp_cloud_message(sender_phone, f"❌ *Invalid URL:* {url_err}")
+        return {"status": "ignored", "reason": "url_validation_failed", "error": url_err}
+
     # Dispatch extraction asynchronously
     if background_tasks:
         background_tasks.add_task(process_whatsapp_video_extraction, sender_phone, video_url)

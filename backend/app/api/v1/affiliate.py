@@ -42,16 +42,18 @@ def affiliate_redirect(
     Validates outbound affiliate link, asynchronously records click telemetry,
     and issues an instant HTTP 307 Temporary Redirect to the merchant store.
     """
-    # 1. URL Safety Validation
-    parsed = urlparse(url)
-    if parsed.scheme not in ["http", "https"] or not parsed.netloc:
+    # 1. URL Safety & Open-Redirect Validation
+    from backend.app.services.url_validator import validate_merchant_redirect_url
+    valid_merchant, merchant_err = validate_merchant_redirect_url(url)
+    if not valid_merchant:
         raise HTTPException(
             status_code=400,
-            detail="Invalid redirect URL. Must be an absolute HTTP/HTTPS URL."
+            detail=f"Invalid redirect URL. Prohibited merchant host: {merchant_err}"
         )
 
     # 2. Extract Client Metadata
-    client_ip = request.client.host if request.client else "unknown"
+    from backend.app.core.security import get_client_ip
+    client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
 
     # 3. Prepare Telemetry Payload

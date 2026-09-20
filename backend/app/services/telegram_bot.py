@@ -290,6 +290,13 @@ def handle_telegram_update(update: Dict[str, Any], background_tasks = None) -> D
         logger.info(f"[Telegram Non-URL] Dispatch to chat {chat_id} result: {send_ok}")
         return {"status": "ignored", "reason": "no_valid_url", "send_ok": send_ok}
 
+    # Security URL Allowlist & SSRF Check
+    from backend.app.services.url_validator import validate_social_url
+    valid, url_err, _, _ = validate_social_url(video_url)
+    if not valid:
+        send_telegram_message(chat_id, f"❌ *Invalid URL:* {url_err}")
+        return {"status": "ignored", "reason": "url_validation_failed", "error": url_err}
+
     # Dispatch extraction asynchronously
     if background_tasks:
         background_tasks.add_task(process_telegram_video_extraction, chat_id, video_url)

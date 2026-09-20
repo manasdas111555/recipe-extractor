@@ -14,12 +14,13 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 ENV_FILE = ROOT_DIR / ".env"
 
 class Settings(BaseSettings):
-    # Service Information
+    # Service Information & Admin Security
     PROJECT_NAME: str = "Universal Pro AI - API Gateway"
     VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
+    ADMIN_API_KEY: Optional[str] = None
 
     # Supabase Data Layer
     SUPABASE_URL: Optional[str] = None
@@ -46,11 +47,13 @@ class Settings(BaseSettings):
     MEDIA_DOWNLOAD_RESOLUTION: str = "360"
 
     # Chat Ingestion & Webhook Settings (Sprint 3)
+    SECRET_KEY: str = "universal_pro_default_secret_key_2026"
     TELEGRAM_BOT_TOKEN: Optional[str] = None
-    TELEGRAM_WEBHOOK_SECRET: Optional[str] = "universal_pro_telegram_secret_999"
+    TELEGRAM_WEBHOOK_SECRET: Optional[str] = None
     WHATSAPP_VERIFY_TOKEN: Optional[str] = "universal_pro_verify_token"
     WHATSAPP_ACCESS_TOKEN: Optional[str] = None
     WHATSAPP_PHONE_NUMBER_ID: Optional[str] = "1280483961819200"
+    WHATSAPP_APP_SECRET: Optional[str] = None
 
     # Quota & Rate Limiting (Sprint 3 & 5)
     DAILY_GUEST_QUOTA_LIMIT: int = 3

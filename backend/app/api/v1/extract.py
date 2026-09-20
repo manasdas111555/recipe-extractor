@@ -13,7 +13,7 @@ import time
 import tempfile
 from pathlib import Path
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Request
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, Request, Query
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -123,6 +123,15 @@ async def enqueue_extraction(
                 detail=f"Daily extraction quota limit reached for free tier. Upgrade to Pro for unlimited extractions."
             )
 
+    # Validate URL against Allowlist & SSRF rules
+    from backend.app.services.url_validator import validate_social_url, generate_stream_token
+    is_valid_url, url_err, _, _ = validate_social_url(payload.video_url)
+    if not is_valid_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid video URL: {url_err}"
+        )
+
     # Compute URL Hash for viral 0-cost caching
     canonical_url = payload.video_url.strip()
     url_hash = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()
@@ -132,15 +141,22 @@ async def enqueue_extraction(
 
     if cached and cached.get("content_payload"):
         # Instant cache hit (0-cost)
+        cache_id = cached.get("id", "cached")
+        data_payload = cached.get("content_payload") or {}
+        if isinstance(data_payload, dict):
+            from backend.app.core.config import get_settings
+            secret_key = get_settings().SECRET_KEY or "universal_pro_default_secret_key"
+            data_payload["stream_token"] = generate_stream_token(cache_id, secret_key)
+
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
-                "job_id": cached.get("id", "cached"),
+                "job_id": cache_id,
                 "status": "completed",
                 "is_cached": True,
                 "message": "Viral cache hit! Intelligence retrieved in 0ms from PostgreSQL cache.",
                 "poll_url": None,
-                "data": cached.get("content_payload")
+                "data": data_payload
             }
         )
 
@@ -338,27 +354,54 @@ def cleanup_ephemeral_media_cache(max_age_seconds: int = 1800):
 
 
 @router.get("/stream-video", summary="Stream Media File for In-Page Playback")
-async def stream_video(url: str, request: Request):
+async def stream_video(
+    request: Request,
+    url: Optional[str] = Query(None),
+    token: Optional[str] = Query(None),
+    id: Optional[str] = Query(None)
+):
     """
-    Streams media content directly as HTML5 video to allow in-page playback
-    and prevent third-party redirect gates (like Instagram's 'Watch on Instagram' button).
-    Supports HTTP Range requests for video scrubbing, pause, and play.
+    Streams media content directly as HTML5 video to allow in-page playback.
+    Requires signed token and extraction ID (or url + token).
+    Old ?url= form without token returns 400 Bad Request.
+    Enforces strict 50MB byte counter limit during file streaming.
     """
-    if not url or not url.strip():
-        raise HTTPException(status_code=400, detail="Missing video URL parameter.")
+    if not token or not (id or url):
+        raise HTTPException(
+            status_code=400,
+            detail="Direct url streaming without signed token is prohibited. Provide token and id parameters."
+        )
+
+    from backend.app.core.config import get_settings
+    from backend.app.services.url_validator import verify_stream_token, validate_social_url
+
+    secret_key = get_settings().SECRET_KEY or "universal_pro_default_secret_key"
+    target_id = id or url
+    if not verify_stream_token(target_id, token, secret_key):
+        raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
+
+    target_url = url
+    if not target_url and id:
+        job_manager = get_job_manager()
+        job = job_manager.get_job(id)
+        if job and job.get("video_url"):
+            target_url = job["video_url"]
+
+    if not target_url:
+        raise HTTPException(status_code=404, detail="Media target URL not found for stream token.")
+
+    valid, err_msg, _, _ = validate_social_url(target_url)
+    if not valid:
+        raise HTTPException(status_code=400, detail=f"Target URL validation failed: {err_msg}")
 
     cleanup_ephemeral_media_cache()
 
-    target_url = url.strip()
     url_hash = hashlib.sha256(target_url.encode("utf-8")).hexdigest()[:16]
-
-    # Look for cached file
     cached_candidates = list(MEDIA_CACHE_DIR.glob(f"stream_{url_hash}.*"))
     video_file = None
     if cached_candidates and cached_candidates[0].exists():
         video_file = str(cached_candidates[0])
     else:
-        # Ingest media via media downloader
         try:
             from backend.app.workers.media_downloader import download_worker_media
             success, result_path = download_worker_media(
@@ -382,9 +425,32 @@ async def stream_video(url: str, request: Request):
     if not video_file or not os.path.exists(video_file):
         raise HTTPException(status_code=404, detail="Unable to stream media content.")
 
-    return FileResponse(
-        path=video_file,
+    file_size = os.path.getsize(video_file)
+    max_stream_bytes = 50 * 1024 * 1024 # 50MB Cap
+
+    if file_size > max_stream_bytes:
+        raise HTTPException(status_code=400, detail=f"Media file size ({file_size} bytes) exceeds maximum 50MB stream limit.")
+
+    from fastapi.responses import StreamingResponse
+
+    def iterfile():
+        total_bytes = 0
+        chunk_size = 64 * 1024
+        with open(video_file, "rb") as f:
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                if total_bytes > max_stream_bytes:
+                    logger.warning("Streaming byte count (%d) exceeded 50MB limit. Terminating stream.", total_bytes)
+                    break
+                yield chunk
+
+    return StreamingResponse(
+        iterfile(),
         media_type="video/mp4",
-        filename=f"video_{url_hash}.mp4"
+        headers={"Content-Length": str(min(file_size, max_stream_bytes))}
     )
+
 

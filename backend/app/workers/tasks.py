@@ -63,6 +63,15 @@ def execute_extraction_pipeline(
             except Exception:
                 pass
 
+    # Re-validate video URL against allowlist and SSRF rules before download
+    from backend.app.services.url_validator import validate_social_url
+    valid_url, url_err, _, _ = validate_social_url(video_url)
+    if not valid_url:
+        err_msg = f"URL validation failed in worker: {url_err}"
+        logger.error("[%s] %s", job_id, err_msg)
+        update_progress("failed", 100, error=err_msg)
+        return {"status": "failed", "error": err_msg}
+
     update_progress("downloading_media", 20)
 
     # Context manager guarantees file is unlinked from disk upon exit
