@@ -157,18 +157,28 @@ def process_whatsapp_video_extraction(sender_phone: str, video_url: str):
     )
 
     try:
+        import hashlib, uuid
+        url_hash = hashlib.sha256(video_url.encode("utf-8")).hexdigest()
+        job_id = f"wa-{uuid.uuid4().hex[:8]}"
+        user_id = f"wa-{sender_phone}"
+
         job = run_extraction_worker_sync(
+            job_id=job_id,
             video_url=video_url,
+            url_hash=url_hash,
+            user_id=user_id,
             preferred_language="en",
             domain_hint="auto"
         )
 
-        if job.get("status") == "completed" and job.get("result_data"):
-            result_data = job["result_data"]
+        result_data = job.get("data") or job.get("result_data") if isinstance(job, dict) else None
+        job_status = job.get("status") if isinstance(job, dict) else None
+
+        if job_status == "completed" and result_data:
             title = result_data.get("title", "Structured Notes")
             summary = result_data.get("summary", "")
-            ingredients = result_data.get("ingredients", [])
-            steps = result_data.get("steps", [])
+            ingredients = result_data.get("ingredients") or ([p.get("name") for p in result_data.get("products", []) if p.get("name")] if result_data.get("products") else [])
+            steps = result_data.get("steps") or result_data.get("instructions") or []
             products = result_data.get("products", [])
 
             # Use our self-contained WhatsApp Cloud formatter
@@ -186,7 +196,7 @@ def process_whatsapp_video_extraction(sender_phone: str, video_url: str):
                 text=formatted_text
             )
         else:
-            err_msg = job.get("error_message") or "Could not extract video content."
+            err_msg = (job.get("error") or job.get("error_message") or "Could not extract video content.") if isinstance(job, dict) else "Extraction failed."
             send_whatsapp_cloud_message(
                 to_phone=sender_phone,
                 text=f"❌ *Extraction Failed:*\n{err_msg}\nPlease verify the video is public."

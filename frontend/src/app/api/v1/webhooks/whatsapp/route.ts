@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || 'EAAhmXgENiGwBSbLtZClZBUOwVXAFhaFCmvUAFRSgQzUwZBBR3TUqGZAb2T4et9XJ5KpZAFRl9hZAq9gJh6YblDjBLhUxv5OeNJfiGdRbrAEigsDEwXW3nM4CrfukSekgYQeZA2CZCZCWwuvSZCrhkGQrZA4Kkp1S3LpjL8TuQZA62toqYnSBrFSXBNV5XNsQqncZAZBgZDZD';
+const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || '';
 const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '1280483961819200';
 const WHATSAPP_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || 'universal_pro_verify_token';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';

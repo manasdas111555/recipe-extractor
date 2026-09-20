@@ -43,9 +43,24 @@ def format_telegram_markdown(result: Dict[str, Any], canonical_url: str) -> Tupl
     title = result.get("recipe_title") or result.get("title", "Extracted Intelligence")
     category = result.get("category_name", "Content Summary")
     summary = result.get("summary", "").strip()
-    ingredients = result.get("ingredients", [])
-    steps = result.get("steps") or result.get("instructions", [])
-    products = result.get("products", [])
+    ingredients = result.get("ingredients") or []
+    steps = result.get("steps") or result.get("instructions") or []
+    products = result.get("products") or []
+    details = result.get("details") or ""
+
+    if not ingredients and products:
+        ingredients = [p.get("name") for p in products if p.get("name")]
+
+    if not steps and details:
+        parsed_steps = []
+        for line in details.splitlines():
+            line_clean = line.strip()
+            if line_clean.startswith(("- ", "* ", "• ")) or re.match(r'^\d+\.\s+', line_clean):
+                clean_step = re.sub(r'^[-*•\d\.]+\s*', '', line_clean).strip()
+                if clean_step and not clean_step.startswith("**"):
+                    parsed_steps.append(clean_step)
+        if parsed_steps:
+            steps = parsed_steps
 
     msg_lines = [
         f"⚡ *{title}*",
@@ -184,14 +199,24 @@ def process_telegram_video_extraction(chat_id: int, video_url: str):
     )
 
     try:
+        import hashlib, uuid
+        url_hash = hashlib.sha256(video_url.encode("utf-8")).hexdigest()
+        job_id = f"tg-{uuid.uuid4().hex[:8]}"
+        user_id = f"tg-{chat_id}"
+
         job = run_extraction_worker_sync(
+            job_id=job_id,
             video_url=video_url,
+            url_hash=url_hash,
+            user_id=user_id,
             preferred_language="en",
             domain_hint="auto"
         )
 
-        if job.get("status") == "completed" and job.get("result_data"):
-            result_data = job["result_data"]
+        result_data = job.get("data") or job.get("result_data") if isinstance(job, dict) else None
+        job_status = job.get("status") if isinstance(job, dict) else None
+
+        if job_status == "completed" and result_data:
             markdown_text, inline_keyboard = format_telegram_markdown(result_data, video_url)
             reply_markup = {"inline_keyboard": inline_keyboard} if inline_keyboard else None
 
@@ -201,7 +226,7 @@ def process_telegram_video_extraction(chat_id: int, video_url: str):
                 reply_markup=reply_markup
             )
         else:
-            err_msg = job.get("error_message") or "Extraction could not be completed. Please check if the video is public and accessible."
+            err_msg = (job.get("error") or job.get("error_message") or "Extraction could not be completed. Please check if the video is public and accessible.") if isinstance(job, dict) else "Extraction failed."
             send_telegram_message(
                 chat_id=chat_id,
                 text=f"❌ *Extraction Failed:*\n{err_msg}"
@@ -240,8 +265,9 @@ def handle_telegram_update(update: Dict[str, Any], background_tasks = None) -> D
             "• 1-Click Amazon, Blinkit, and Flipkart buy links\n"
             "• Complete actionable notes"
         )
-        send_telegram_message(chat_id, welcome_text)
-        return {"status": "ok", "action": "welcome"}
+        send_ok = send_telegram_message(chat_id, welcome_text)
+        logger.info(f"[Telegram /start] Dispatch to chat {chat_id} result: {send_ok}")
+        return {"status": "ok", "action": "welcome", "send_ok": send_ok}
 
     # Handle /help command
     if text.startswith("/help"):
@@ -257,11 +283,12 @@ def handle_telegram_update(update: Dict[str, Any], background_tasks = None) -> D
     # Detect video link
     video_url = extract_url_from_text(text)
     if not video_url:
-        send_telegram_message(
+        send_ok = send_telegram_message(
             chat_id,
             "💡 Please send a valid *Instagram Reel*, *YouTube Short*, or *TikTok* link."
         )
-        return {"status": "ignored", "reason": "no_valid_url"}
+        logger.info(f"[Telegram Non-URL] Dispatch to chat {chat_id} result: {send_ok}")
+        return {"status": "ignored", "reason": "no_valid_url", "send_ok": send_ok}
 
     # Dispatch extraction asynchronously
     if background_tasks:
