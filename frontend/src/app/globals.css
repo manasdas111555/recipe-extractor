@@ -1,13 +1,13 @@
 :root {
   /* Light Mode Defaults - Ceramic Architectural Glass */
   --bg-base: #F8FAFC;
-  --bg-surface: rgba(255, 255, 255, 0.82);
-  --bg-surface-elevated: rgba(255, 255, 255, 0.94);
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #F8FAFC;
   --bg-surface-solid: #FFFFFF;
-  --bg-card: rgba(255, 255, 255, 0.88);
+  --bg-card: #FFFFFF;
   --bg-card-solid: #F1F5F9;
-  --border-subtle: rgba(226, 232, 240, 0.95);
-  --border-active: rgba(16, 185, 129, 0.5);
+  --border-subtle: #E2E8F0;
+  --border-active: #10B981;
   --text-primary: #0F172A;
   --text-secondary: #475569;
   --text-muted: #64748B;
@@ -16,11 +16,18 @@
   --accent-rose: #E11D48;
   --accent-amber: #D97706;
   --accent-cyan: #0284C7;
-  --shadow-card: 0 20px 40px -15px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-hover: 0 20px 45px -10px rgba(16, 185, 129, 0.16);
-  --bg-subtle: rgba(15, 23, 42, 0.04);
-  --bg-inset: rgba(15, 23, 42, 0.06);
-  --border-strong: rgba(15, 23, 42, 0.18);
+  --color-sky: #0284C7;
+  --color-emerald-light: #059669;
+  --color-amber-light: #D97706;
+  --color-yellow: #D97706;
+  --color-purple: #7E22CE;
+  --color-orange: #EA580C;
+  --color-rose-light: #E11D48;
+  --shadow-card: 0 4px 16px rgba(15, 23, 42, 0.05);
+  --shadow-hover: 0 10px 25px -5px rgba(16, 185, 129, 0.16);
+  --bg-subtle: #F1F5F9;
+  --bg-inset: #E2E8F0;
+  --border-strong: #CBD5E1;
   --text-on-accent: #FFFFFF;
   --color-info: #0284C7;
   --color-success: #059669;
@@ -38,10 +45,10 @@
 html.dark, body.dark {
   /* Dark Mode Overrides - Obsidian Cyber-Glass */
   --bg-base: #040711;
-  --bg-surface: rgba(14, 20, 36, 0.78);
-  --bg-surface-elevated: rgba(22, 30, 54, 0.88);
+  --bg-surface: #0D1322;
+  --bg-surface-elevated: #161E36;
   --bg-surface-solid: #0D1322;
-  --bg-card: rgba(12, 18, 32, 0.75);
+  --bg-card: #0D1322;
   --bg-card-solid: #161E36;
   --border-subtle: rgba(255, 255, 255, 0.09);
   --border-active: rgba(16, 185, 129, 0.45);
@@ -53,6 +60,13 @@ html.dark, body.dark {
   --accent-rose: #FF416C;
   --accent-amber: #F59E0B;
   --accent-cyan: #06B6D4;
+  --color-sky: #38BDF8;
+  --color-emerald-light: #34D399;
+  --color-amber-light: #FCD34D;
+  --color-yellow: #F4C430;
+  --color-purple: #A78BFA;
+  --color-orange: #FF9900;
+  --color-rose-light: #FDA4AF;
   --shadow-card: 0 20px 45px -10px rgba(0, 0, 0, 0.6);
   --shadow-hover: 0 20px 45px -10px rgba(16, 185, 129, 0.22);
   --bg-subtle: rgba(255, 255, 255, 0.04);
@@ -100,15 +114,24 @@ p {
   text-wrap: pretty;
 }
 
+/* Restrict backdrop-filter ONLY to sticky header for maximum mobile rendering performance */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--bg-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 /* Glassmorphic Panel Utility - Clean Surface Separation (No Ghost-Card) */
 .glass-panel {
   background: var(--bg-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   transition: all 0.2s ease-in-out;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--shadow-card);
 }
 
 html.dark .glass-panel, body.dark .glass-panel {
@@ -121,8 +144,6 @@ html.dark .glass-panel, body.dark .glass-panel {
 
 .glass-card {
   background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 1rem;
@@ -146,6 +167,8 @@ html.dark .glass-panel, body.dark .glass-panel {
   background: linear-gradient(135deg, #10B981, #059669);
   color: #FFFFFF;
   font-weight: 600;
+  min-height: 44px;
+  font-size: 16px;
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-sm);
   border: none;
@@ -174,8 +197,9 @@ html.dark .glass-panel, body.dark .glass-panel {
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
+  min-height: 44px;
+  font-size: 16px;
   padding: 0.5rem 1rem;
-  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
@@ -212,7 +236,7 @@ html.dark .btn-ghost:hover, body.dark .btn-ghost:hover {
 
 .badge-emerald {
   background: rgba(16, 185, 129, 0.15);
-  color: #047857;
+  color: var(--color-emerald-light);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
@@ -222,7 +246,7 @@ html.dark .badge-emerald {
 
 .badge-rose {
   background: rgba(255, 65, 108, 0.15);
-  color: #E11D48;
+  color: var(--color-rose-light);
   border: 1px solid rgba(255, 65, 108, 0.3);
 }
 
@@ -232,7 +256,7 @@ html.dark .badge-rose {
 
 .badge-amber {
   background: rgba(245, 158, 11, 0.15);
-  color: #D97706;
+  color: var(--color-amber-light);
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
@@ -242,7 +266,7 @@ html.dark .badge-amber {
 
 .badge-purple {
   background: rgba(168, 85, 247, 0.15);
-  color: #7E22CE;
+  color: var(--color-purple);
   border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
@@ -284,6 +308,16 @@ html.dark .badge-purple {
 @media (max-width: 767px) {
   .mobile-only-action-bar {
     display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    background: var(--bg-surface-solid);
+    border-top: 1px solid var(--border-subtle);
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px)) 1rem;
+    gap: 0.5rem;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   }
 }
 
@@ -366,17 +400,11 @@ noscript .sc-reveal {
 
 /* Accessibility Reduced Motion Safeguard */
 @media (prefers-reduced-motion: reduce) {
-  .sc-reveal,
-  .plane-far,
-  .plane-mid,
-  .animate-pulse-subtle,
-  .gradient-text-animated,
-  .shimmer-block,
-  .live-dot {
-    animation: none !important;
-    transition: none !important;
-    transform: none !important;
-    opacity: 1 !important;
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

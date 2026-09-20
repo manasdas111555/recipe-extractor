@@ -41,6 +41,7 @@ import VaultLibrary from '../components/VaultLibrary';
 import UpgradeModal from '../components/UpgradeModal';
 import FaqSection from '../components/FaqSection';
 import CookingModeDrawer from '../components/CookingModeDrawer';
+import OverflowBottomSheet from '../components/OverflowBottomSheet';
 import { ProductItem, ResourceItem, ExtractionResult } from '../types/recipe';
 import {
   resolveMediaPreview as resolveMediaPreviewUtil,
@@ -85,6 +86,8 @@ function UniversalDashboard() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isCookingDrawerOpen, setIsCookingDrawerOpen] = useState<boolean>(false);
   const [faqCategory, setFaqCategory] = useState<string>('all');
+  const [isOverflowOpen, setIsOverflowOpen] = useState<boolean>(false);
+  const moreButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const toggleSaveToVault = () => {
     if (!result) return;
@@ -2180,32 +2183,33 @@ function UniversalDashboard() {
           );
         })()}
 
-        {/* Mobile Sticky Action Bar */}
+        {/* Mobile Sticky Bar (< 768px) (UPA-Group-A Requirement 2) */}
         {result && (
-          <div className="mobile-only-action-bar" style={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '0.65rem 1rem',
-            background: 'var(--bg-surface-elevated)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            borderTop: '1px solid var(--border-subtle)',
-            zIndex: 99,
-            gap: '0.5rem',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 -4px 20px rgba(0,0,0,0.15)'
-          }}>
-            <button onClick={() => handleShareWhatsApp()} className="btn-emerald" style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 700 }}>
-              <Share2 size={15} /> WhatsApp
+          <div className="mobile-only-action-bar flex items-center justify-between gap-2 p-3 bg-[var(--bg-surface-solid)] border-t border-[var(--border-subtle)] fixed bottom-0 left-0 right-0 z-40 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:hidden shadow-lg">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="btn-emerald flex-1 min-h-[44px] text-[16px] font-semibold py-2 px-3 rounded-lg flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-5 h-5" />
+              <span>Share</span>
             </button>
-            <button onClick={handleCopyLink} className="btn-ghost" style={{ flex: 1, padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
-              <Copy size={15} /> {copiedLink ? 'Copied!' : 'Copy Link'}
+            <button
+              type="button"
+              onClick={toggleSaveToVault}
+              className="btn-ghost min-h-[44px] min-w-[44px] p-2 rounded-lg flex items-center justify-center"
+              aria-label="Save to Vault"
+            >
+              <Bookmark className={`w-5 h-5 ${isSavedInVault ? 'fill-current text-[var(--accent-emerald)]' : ''}`} />
             </button>
-            <button onClick={handleDownloadTxt} className="btn-ghost" style={{ padding: '0.55rem 0.75rem', fontSize: '0.82rem', fontWeight: 600 }}>
-              <Download size={15} /> .txt
+            <button
+              type="button"
+              ref={moreButtonRef}
+              onClick={() => setIsOverflowOpen(true)}
+              className="btn-ghost min-h-[44px] min-w-[44px] p-2 rounded-lg flex items-center justify-center"
+              aria-label="More options"
+            >
+              <Layers className="w-5 h-5" />
             </button>
           </div>
         )}
@@ -2236,6 +2240,39 @@ function UniversalDashboard() {
         onClose={() => setIsCookingDrawerOpen(false)}
         recipe={result}
       />
+
+      {/* Accessible Overflow Bottom Sheet (UPA-Group-A Requirement 5) */}
+      <OverflowBottomSheet
+        isOpen={isOverflowOpen}
+        onClose={() => setIsOverflowOpen(false)}
+        triggerRef={moreButtonRef}
+        title="More Extraction Options"
+      >
+        <button
+          type="button"
+          onClick={() => { handleCopyLink(); setIsOverflowOpen(false); }}
+          className="w-full min-h-[44px] text-[16px] p-3 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-subtle)] flex items-center gap-3 text-[var(--text-primary)] font-medium transition-colors"
+        >
+          <Copy className="w-5 h-5 text-[var(--accent-emerald)]" />
+          <span>{copiedLink ? 'Copied Share Link!' : 'Copy Share Link'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { handleDownloadTxt(); setIsOverflowOpen(false); }}
+          className="w-full min-h-[44px] text-[16px] p-3 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-subtle)] flex items-center gap-3 text-[var(--text-primary)] font-medium transition-colors"
+        >
+          <Download className="w-5 h-5 text-[var(--accent-cyan)]" />
+          <span>{downloadedTxt ? 'Downloaded (.txt)' : 'Download Notes (.txt)'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setIsCookingDrawerOpen(true); setIsOverflowOpen(false); }}
+          className="w-full min-h-[44px] text-[16px] p-3 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--border-subtle)] flex items-center gap-3 text-[var(--text-primary)] font-medium transition-colors"
+        >
+          <ChefHat className="w-5 h-5 text-[var(--accent-amber)]" />
+          <span>Start Cooking Mode</span>
+        </button>
+      </OverflowBottomSheet>
     </div>
   );
 }
