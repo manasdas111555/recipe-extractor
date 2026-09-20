@@ -58,7 +58,7 @@ const FAQ_DATA: FaqItem[] = [
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
             <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>4</span>
             <div>
-              <strong style={{ color: 'var(--text-primary)' }}>Click "Extract Anything":</strong> Universal Pro AI processes video keyframes & audio transcripts in sub-3s to produce interactive recipe cards, ingredient lists, or product find links!
+              <strong style={{ color: 'var(--text-primary)' }}>Click "Extract Anything":</strong> Universal Pro AI extracts structured recipe cards, ingredient lists, or product find links instantly!
             </div>
           </div>
         </div>
@@ -102,7 +102,7 @@ const FAQ_DATA: FaqItem[] = [
           </div>
         </div>
         <p style={{ marginTop: '0.25rem', fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>
-          Clicking any store badge opens the exact pre-filled search query so you can add ingredients or products straight to your cart in seconds!
+          Clicking any store badge opens the pre-filled search query so you can add ingredients or products straight to your cart in seconds!
         </p>
       </div>
     ),
@@ -118,7 +118,7 @@ const FAQ_DATA: FaqItem[] = [
           Every extracted cooking recipe includes an interactive <strong style={{ color: '#34D399' }}>Serving Adjuster</strong> card.
         </p>
         <p>
-          Click the <strong>+</strong> or <strong>-</strong> buttons to increase or decrease the portion size. The AI dynamically recalculates ingredient quantities (grams, cups, tablespoons, teaspoons, pieces) in real-time without losing formatting!
+          Click the <strong>+</strong> or <strong>-</strong> buttons to increase or decrease the portion size. The ingredient quantities recalculate automatically in real-time for your chosen portion!
         </p>
       </div>
     ),
@@ -150,7 +150,7 @@ const FAQ_DATA: FaqItem[] = [
           All your extractions are saved in your local browser's <strong style={{ color: '#34D399' }}>Intelligence Vault Library</strong>.
         </p>
         <p>
-          Click the <strong style={{ color: 'var(--accent-emerald)' }}>Intelligence Vault</strong> button in the top navigation bar at any time to browse, search, or reload past recipe cards and product extractions—even without internet connection!
+          Click the <strong style={{ color: 'var(--accent-emerald)' }}>Intelligence Vault</strong> button in the top navigation bar at any time to browse, search, or reload past recipe cards and product extractions.
         </p>
       </div>
     ),
@@ -159,23 +159,20 @@ const FAQ_DATA: FaqItem[] = [
   {
     id: 'troubleshooting-bot-check',
     category: 'troubleshooting',
-    question: 'What should I do if a YouTube Short or Instagram Reel fails to load?',
+    question: 'What should I do if a video link fails to load?',
     answer: (
       <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <p>
-          Universal Pro AI includes an automated <strong>Resilient Dual-Fallback Engine</strong>:
+          If a video link does not load properly, follow these user checks:
         </p>
         <ol style={{ paddingLeft: '1.25rem', lineHeight: '1.6' }}>
-          <li>If YouTube or Instagram temporarily restricts cloud datacenter IP downloads with a bot sign-in prompt, our fallback engine automatically detects the restriction within milliseconds.</li>
-          <li>It instantly switches to pulling high-resolution keyframe snapshots and oEmbed metadata.</li>
-          <li>The AI model processes visual frames and description context to generate complete extraction cards without failing.</li>
+          <li>Ensure the video is <strong>Public</strong> (not set to Private or Unlisted on YouTube/Instagram).</li>
+          <li>Copy the direct URL from your browser address bar or the official Share button in the app.</li>
+          <li>Paste the link back into the input bar and click <strong>Extract Anything</strong> again.</li>
         </ol>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-          If a URL fails twice, ensure the video is <strong>Public</strong> (not Private or Unlisted) and try re-submitting.
-        </p>
       </div>
     ),
-    tags: ['error', 'bot check', 'youtube shorts error', 'instagram reel fail', 'fallback']
+    tags: ['error', 'troubleshooting', 'youtube shorts error', 'instagram reel fail', 'link help']
   },
   {
     id: 'mobile-chat-bots',
@@ -508,10 +505,10 @@ export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }:
               </div>
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                  Sub-3s AI Analysis
+                  Instant AI Extraction
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                  Our multimodal neural engine samples video frames and transcribes audio narration.
+                  AI automatically extracts ingredients, cookware, steps, and shopping links from your video link.
                 </p>
               </div>
             </div>

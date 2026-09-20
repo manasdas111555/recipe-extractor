@@ -1,116 +1,114 @@
 # 📘 Universal Pro AI — Comprehensive User Manual & Feature Guide
 
-Welcome to the **Universal Pro AI** User Manual. This living guide explains how to use all end-to-end features of the application, including AI video extraction, interactive hands-free cooking mode, dynamic recipe yield scaling, 10-minute quick commerce delivery, and omnichannel chatbot integration.
+Welcome to the **Universal Pro AI** User Manual. This guide explains what features the app provides and how to use them step-by-step.
 
 ---
 
 ## 📋 Table of Contents
 
 1. [Quick Start & Video Ingestion](#1-quick-start--video-ingestion)
-2. [Multimodal Intelligence Output & Dual-Language Notes](#2-multimodal-intelligence-output--dual-language-notes)
+2. [Extraction Card Output & Dual-Language Notes](#2-extraction-card-output--dual-language-notes)
 3. [Interactive Hands-Free Cooking Mode](#3-interactive-hands-free-cooking-mode)
-4. [Dynamic Smart Recipe Scaling Engine](#4-dynamic-smart-recipe-scaling-engine)
+4. [Dynamic Recipe Servings Adjuster](#4-dynamic-recipe-servings-adjuster)
 5. [10-Minute Quick Commerce & 1-Click Buying](#5-10-minute-quick-commerce--1-click-buying)
 6. [Intelligence Vault & Local Library](#6-intelligence-vault--local-library)
-7. [Omnichannel WhatsApp & Telegram Integration](#7-omnichannel-whatsapp--telegram-integration)
+7. [WhatsApp & Telegram Integration](#7-whatsapp--telegram-integration)
 
 ---
 
 ## 1. Quick Start & Video Ingestion
 
-Universal Pro AI extracts structured recipes, workout routines, product reviews, and educational notes from short-form videos in under 2.4 seconds.
+Universal Pro AI converts social media video links into structured recipe cards, workout routines, product reviews, and educational notes.
 
-### Steps to Extract:
+### How to Use:
 1. **Copy Video URL**: Copy any public link from **YouTube Shorts**, **Instagram Reels**, **TikTok**, or **Facebook Reels**.
-2. **Paste & Ingest**: Paste the URL into the main input bar at the top of the dashboard.
-3. **Select Domain (Optional)**: Leave on `Auto-Detect (Universal AI)` or select a specific domain:
+2. **Paste Link**: Paste the URL into the main search bar at the top of the app dashboard.
+3. **Select Category (Optional)**: Leave on `Auto-Detect (Universal AI)` or pick a specific category:
    - 🍳 *Cooking Recipe & Food*
    - 🛍️ *Kitchen Finds & Home Gadgets*
    - 🏋️ *Fitness & Workout Routine*
    - 💻 *Tech Tutorial & Code Guide*
    - 📦 *Product Unboxing & Amazon Finds*
    - ✈️ *Travel Guide & Itinerary*
-4. **Click "Extract Intelligence"**: The system processes video frames and audio transcripts to render structured output.
+4. **Click "Extract Anything"**: The app processes your video link and displays your interactive result card.
 
 ---
 
-## 2. Multimodal Intelligence Output & Dual-Language Notes
+## 2. Extraction Card Output & Dual-Language Notes
 
-Once processed, the extraction deck displays:
+Once extracted, your result card provides the following interactive sections:
 
-- **Single-Docked Media Player**: Watch the source reel or video directly alongside structured steps.
-- **3-Section Recipe Hierarchy**:
-  - **Section I**: Equipment Needed (e.g. `a. Non-stick skillet`, `b. Chef knife`).
-  - **Section II**: Ingredients with exact quantities.
-  - **Section III**: Chronological Step-by-Step Instructions.
-- **Dual-Language Toggle**: Switch between English translation and native reel spoken language (e.g. Hindi, Hinglish, Tamil, Spanish).
-- **Travel Maps Integration**: Interactive Google Maps directions for featured travel locations.
+- **Docked Media Player**: Watch the source reel or video side-by-side with structured steps.
+- **3-Section Recipe View**:
+  - **Section I**: Equipment & Cookware Needed.
+  - **Section II**: Ingredients with scaled quantities.
+  - **Section III**: Step-by-Step Cooking Instructions.
+- **Dual-Language Toggle**: Switch between English translation and native spoken language notes.
+- **Interactive Travel Maps**: Open interactive directions for featured travel locations on Google Maps.
 
 ---
 
 ## 3. Interactive Hands-Free Cooking Mode
 
-Designed for active cooking in the kitchen without touching mobile screens with messy hands.
+Designed for active cooking in the kitchen without needing to touch mobile screens with messy hands.
 
-### Key Capabilities:
-- **Deep-Link Auto Launch**: Open any link with `?mode=cook` (from WhatsApp or Telegram) to launch cooking mode immediately.
-- **Screen Wake Lock**: Automatically prevents mobile displays from dimming or going to sleep (`useWakeLock`).
-- **High-Contrast Text**: Large, legible step text designed for reading from a distance.
-- **Inline Audio Step Timers**: Automatic duration detection with 1-click timer controls (`Play`, `Pause`, `Reset`) and Web Audio completion chimes.
-- **Voice Command Navigation**: Toggle **Voice Mode** to navigate hands-free:
-  - Say `"Next"` or `"Forward"` $\rightarrow$ Advances to next step.
-  - Say `"Back"` or `"Previous"` $\rightarrow$ Returns to previous step.
-  - Say `"Start"` or `"Timer"` $\rightarrow$ Starts step countdown timer.
-  - Say `"Pause"` or `"Stop"` $\rightarrow$ Pauses timer.
-- **Keyboard & Swipe Gestures**: Press `→` / `Space` for next step, `←` for previous step, `Esc` to close, or swipe left/right on touchscreens.
-- **Slide-over Ingredients Checklist**: Slide open the ingredients panel to tick off items in real-time.
+### How to Use:
+- **Launch Cooking Mode**: Click **"Start Cooking Mode"** on any recipe card or tap a shared cooking mode link from WhatsApp/Telegram.
+- **Screen Wake Lock**: Automatically keeps mobile displays awake so your screen doesn't dim or turn off while cooking.
+- **High-Contrast Text**: Large typography designed for reading from a distance across the kitchen counter.
+- **Step Countdown Timers**: Timed step countdowns with 1-click controls (**Play**, **Pause**, **Reset**) and audio completion chimes.
+- **Voice Command Control**: Turn on **Voice Mode** to navigate hands-free:
+  - Say `"Next"` or `"Forward"` to advance to the next step.
+  - Say `"Back"` or `"Previous"` to return to the previous step.
+  - Say `"Start"` or `"Timer"` to start a step timer.
+  - Say `"Pause"` or `"Stop"` to pause a timer.
+- **Keyboard & Touch Navigation**: Press `→` / `Space` for next step, `←` for previous step, `Esc` to close, or swipe left/right on touchscreens.
+- **Ingredients Slide Checklist**: Slide open the ingredients checklist to tick off items as you cook.
 
 ---
 
-## 4. Dynamic Smart Recipe Scaling Engine
+## 4. Dynamic Recipe Servings Adjuster
 
-Scale ingredient quantities dynamically for 1 to 12 servings.
+Adjust ingredient quantities for different portion sizes.
 
-### Key Capabilities:
-- **Yield Servings Adjuster**: Click `+` or `-` to scale servings from **1 to 12 people** with instant automatic quantity recalculation.
-- **Smart Fraction Formatting**: Displays exact kitchen measurements as clean unicode fractions (`½`, `¼`, `¾`, `⅓`, `⅔`).
-- **Native Term Protection**: Preserves native ingredient names and parenthetical metrics (e.g. `1 katori (~150g)` scaled 2x $\rightarrow$ `2 katori (~300g)`).
-- **Pantry Staples Exclusion**: Click to exclude common pantry items (Salt, Water, Oil) from scaled shopping lists.
-- **1-Click Copy**: Copy formatted scaled ingredient lists directly to your clipboard.
+### How to Use:
+- **Adjust Servings**: Click `+` or `-` to scale servings from **1 to 12 people**. Ingredient amounts recalculate automatically.
+- **Clean Fraction Display**: Displays kitchen measurements in clean fractions (`½`, `¼`, `¾`, `⅓`, `⅔`).
+- **Native Measurement Units**: Preserves traditional unit names and metrics (e.g. `1 katori (~150g)` scaled 2x → `2 katori (~300g)`).
+- **Exclude Pantry Staples**: Check "Exclude Pantry Staples" to hide common household items (Salt, Water, Oil) from shopping lists.
+- **Copy Ingredients**: Click **"Copy Notes"** to copy the formatted ingredient list to your clipboard.
 
 ---
 
 ## 5. 10-Minute Quick Commerce & 1-Click Buying
 
-Instantly purchase missing ingredients or featured cookware.
+Order missing recipe ingredients or featured products in 1 click.
 
-### E-Commerce & Quick Commerce Partners:
-- **10-Minute Delivery (Recipes & Food)**:
-  - 🟡 **Blinkit**: Direct search cart links for instant 10-minute grocery delivery.
-  - ⚡ **Zepto**: Instant grocery delivery search deep links.
-  - 🛵 **Swiggy Instamart**: Quick grocery cart integration.
-  - 📦 **JioMart & BigBasket**: Bulk grocery shopping links.
-- **E-Commerce & Marketplaces**:
-  - 🛒 **Amazon India**: Cookware, appliances, and ingredients.
-  - ⚡ **Flipkart**: Kitchen equipment and tech gadgets.
-  - 👗 **Myntra, Meesho, AJIO, Nykaa**: Suppressed for food recipes; active for fashion & beauty extractions.
-
----
-
-## 6. Universal Intelligence Vault & Multi-Genre Library
-
-- **Multi-Genre Reel Support**: The Vault stores extractions across all categories — **Recipes**, **Travel Guides**, **Workouts**, **Product Finds**, and **Tech Tutorials**.
-- **Genre Badges & Custom CTAs**: Each item displays a dynamic domain badge (`✈️ TRAVEL GUIDE`, `🏋️ WORKOUT ROUTINE`, `📦 PRODUCT FINDS`, `💻 TUTORIAL`, `🍳 RECIPE`), category-tailored count metrics (e.g., *"📍 3 locations mapped"*), and 1-click action buttons (*"Open Travel Guide ↗"*, *"Open Workout View ↗"*, *"Open Tutorial ↗"*).
-- **Auto-Save & Offline Access**: Extracted reels auto-save locally in your browser's **Universal Intelligence Vault** for instant offline viewing.
-- **Bookmark Toggle**: Click **"Save to Vault"** on any extraction card to bookmark or manage stored extractions.
+### How to Use:
+- **10-Minute Grocery Delivery (Recipes & Food)**:
+  - 🟡 **Blinkit**: Click Blinkit badges to open pre-filled ingredient cart searches for instant delivery.
+  - ⚡ **Zepto**: Click Zepto badges for quick-commerce delivery.
+  - 🛵 **Swiggy Instamart**: Click Swiggy Instamart badges for instant grocery shopping.
+  - 📦 **BigBasket & JioMart**: Click BigBasket badges for bulk grocery ordering.
+- **Online Shopping Marketplaces**:
+  - 🛒 **Amazon India**: Click Amazon badges to purchase cookware, appliances, or ingredients.
+  - ⚡ **Flipkart**: Click Flipkart badges to find kitchen equipment or tech gadgets.
 
 ---
 
-## 7. Omnichannel WhatsApp & Telegram Integration
+## 6. Intelligence Vault & Local Library
 
-### WhatsApp Dispatch:
-- Click **"WhatsApp Notes"** or enter a mobile phone number to receive clean, formatted WhatsApp notes containing summary, top ingredients, step summary, and quick delivery links.
+Save and organize your extractions across all video categories.
 
-### Telegram Bot (`@UniversalProAIBot`):
-- Forward any reel or shorts link to the Telegram bot to receive instant structured markdown notes.
-- Click **"🧑‍🍳 Start Cooking Mode"** inline button to open the web app directly in cooking mode.
+### How to Use:
+- **Multi-Category Vault**: Browse saved extractions for **Recipes**, **Travel Guides**, **Workouts**, **Product Finds**, and **Tutorials**.
+- **Category Filters & Custom Actions**: Filter saved cards by category or click direct action buttons (*"Open Travel Guide ↗"*, *"Open Workout View ↗"*, *"Open Tutorial ↗"*).
+- **Bookmark & Save**: Click **"Save to Vault"** on any card to store it in your browser library for offline access anytime.
+
+---
+
+## 7. WhatsApp & Telegram Integration
+
+### How to Use:
+- **WhatsApp Notes**: Click **"WhatsApp Notes"** on any card or enter a mobile phone number to receive formatted notes and shopping links on WhatsApp.
+- **Telegram Bot (`@UniversalProAIBot`)**: Forward video links directly to our Telegram bot to receive structured markdown cards and tap **"Start Cooking Mode"** to launch the interactive viewer.
