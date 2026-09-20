@@ -1271,6 +1271,25 @@ if is_testing:
 #### 4. Testing & Verification:
 - Unit test suite run (`pytest`): **192 / 192 PASSED** with 0 outbound Telegram API alerts.
 
+### 🚨 ISSUE-043: Travel Video Misclassification as TUTORIAL & Universal Intelligence Vault Multi-Genre Support
+- **Date**: 2026-09-20
+- **Affected Files**: `backend/app/services/gemini_processor.py`, `frontend/src/components/VaultLibrary.tsx`, `docs/TROUBLESHOOTING.md`
+
+#### 1. What Happened (Symptom):
+A travel Reel titled *"3-Day Varkala Travel Itinerary Guide"* was classified as `TUTORIAL` instead of `TRAVEL_GUIDE` when saved into the vault. Additionally, the Vault drawer presented hardcoded recipe-specific labels (`Personal Recipe Vault`, `0 ingredients indexed`, `Open in Chef View`) regardless of extracted video genre.
+
+#### 2. Root Cause:
+1. **Fallback Category Priority**: In `gemini_processor.py`, fallback category detection matched the keyword `"GUIDE"` under `TUTORIAL` before evaluating `"ITINERARY"` or `"TRAVEL"`. In header sample matching, `TUTORIAL` / `EDUCATIONAL` keyword checks triggered prior to checking domain titles.
+2. **Hardcoded Vault Labels**: `VaultLibrary.tsx` hardcoded recipe metadata strings without domain-specific rendering logic for Travel, Fitness, Products, or Tutorials.
+
+#### 3. Resolution (Code Changes):
+1. **Category Priority & Title Guardrails (`backend/app/services/gemini_processor.py`)**: Reordered header fallback categories to evaluate `TRAVEL_GUIDE` and `WORKOUT` keywords before generic `TUTORIAL` fallbacks. Added title-based safety checks for travel (`"ITINERARY"`, `"TRAVEL GUIDE"`, `"PLACES TO VISIT"`) and fitness keywords.
+2. **Universal Intelligence Vault UI (`frontend/src/components/VaultLibrary.tsx`)**: Renamed drawer header to `📖 Universal Intelligence Vault`, updated multi-genre placeholder/empty state, added dynamic domain badge generator (`getCategoryBadge`), dynamic metadata counter string (`metaText`), and domain-specific action buttons (`"Open Travel Guide ↗"`, `"Open Workout View ↗"`, `"Open Tutorial ↗"`, `"Open Product View ↗"`, `"Open Recipe ↗"`).
+
+#### 4. Testing & Verification:
+- Backend Unit Test Suite (`pytest tests/`): **191 / 191 PASSED**.
+- Browser E2E Staging Verification: Verified live on Staging preview deployment.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues

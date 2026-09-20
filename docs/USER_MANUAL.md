@@ -97,11 +97,12 @@ Instantly purchase missing ingredients or featured cookware.
 
 ---
 
-## 6. Intelligence Vault & Local Library
+## 6. Universal Intelligence Vault & Multi-Genre Library
 
-- **Auto-Save**: Extracted recipes are saved locally in your browser's **Intelligence Vault** (`upa_vault_items`).
-- **Offline Access**: View past extractions, copy notes, or adjust servings even without an active internet connection.
-- **Bookmark Toggle**: Click **"Save to Vault"** on any extraction card to bookmark or remove items.
+- **Multi-Genre Reel Support**: The Vault stores extractions across all categories — **Recipes**, **Travel Guides**, **Workouts**, **Product Finds**, and **Tech Tutorials**.
+- **Genre Badges & Custom CTAs**: Each item displays a dynamic domain badge (`✈️ TRAVEL GUIDE`, `🏋️ WORKOUT ROUTINE`, `📦 PRODUCT FINDS`, `💻 TUTORIAL`, `🍳 RECIPE`), category-tailored count metrics (e.g., *"📍 3 locations mapped"*), and 1-click action buttons (*"Open Travel Guide ↗"*, *"Open Workout View ↗"*, *"Open Tutorial ↗"*).
+- **Auto-Save & Offline Access**: Extracted reels auto-save locally in your browser's **Universal Intelligence Vault** (`upa_vault_items`) for instant offline viewing.
+- **Bookmark Toggle**: Click **"Save to Vault"** on any extraction card to bookmark or manage stored extractions.
 
 ---
 
