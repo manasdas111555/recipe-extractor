@@ -25,6 +25,29 @@
 
 ---
 
+## 🛡️ AGENTS.md Engineering Rules Compliance Matrix
+
+| Rule ID | Rule Title | Compliance Status | Verification Evidence & File Reference |
+| :--- | :--- | :--- | :--- |
+| **Rule 1** | Test Suite Integrity & Regression Protection | 🟢 **COMPLIANT** | `.github/CODEOWNERS:4` (`tests/` & `frontend/src/**/__tests__/`); 211 pytest + 9 vitest tests passing in CI |
+| **Rule 2** | Sprint Governance, 3-Layered Architecture & PO Gate | 🟡 **NOT YET** | PO sign-off log `docs/po-governance/SIGN_OFF.md` pending creation by repository owner |
+| **Rule 3** | Monetization Invariants & Affiliate Parameter Protection | 🟢 **COMPLIANT** | `affiliate_engine.py:31` (`tag=manasdas11155-21`); `affiliate_engine.py:37` (`r=5608766`); Creator Tag Vault hidden |
+| **Rule 4** | Ingestion Guardrails & Cloud Cost Protection | 🟡 **NOT YET** | Format string unit test, missing duration fail-closed, and SHA-256 canonical `(platform, video_id)` cache key to be appended |
+| **Rule 5** | Architectural Invariants & Cross-Platform Compatibility | 🟢 **COMPLIANT** | `backend/app/workers/tasks.py:15` (Celery + BackgroundTasks); `scripts/run_worker.py` (`--pool=solo` Windows) |
+| **Rule 6** | Secret Hygiene & Security Isolation | 🟢 **COMPLIANT** | `backend/app/core/config.py:35` (`Settings` env resolution); `security.py:151` (`X-Admin-Api-Key` server auth) |
+| **Rule 7** | Unified Measurable SLA & Performance Benchmark | 🟡 **NOT YET** | Telemetry p50/p95 benchmarks by cached vs non-cached and platform (IG, YT, TikTok) being aggregated |
+| **Rule 8** | Gemini Model Lifecycle & Deprecation Governance | 🟡 **NOT YET** | Model IDs in `Settings`, startup list-models check, thinking level (`start with low`), and golden-set suite to be finalized |
+| **Rule 9** | Mandatory 4-Core Document Governance Contract | 🟢 **COMPLIANT** | 4 living docs updated (`TROUBLESHOOTING.md`, `PRODUCT_OWNER_UX_SHOWCASE.md`, `DISASTER_RECOVERY.md`, `USER_MANUAL.md`) |
+| **Rule 10** | Multi-LLM Council Consensus Engine Invariants | 🟢 **COMPLIANT** | `backend/app/services/llm_council.py:22` (opt-in selection / fallback retry, missing secondary key graceful degradation) |
+| **Rule 11** | Schema Versioning & Cache Defense | 🟡 **NOT YET** | Top-level `schema_version` field in `structured_data` to be populated across Gemini JSON schema prompts |
+| **Rule 12** | Mobile In-App Browser & Progressive Enhancement | 🟢 **COMPLIANT** | `frontend/src/app/page.tsx:145` (`wakeLock` try/catch, target epoch timestamp deltas, audio gesture pre-unlock) |
+| **Rule 13** | Regional & Hinglish Culinary Prompt Invariants | 🟡 **NOT YET** | Hinglish prompt mappings preserved in `gemini_processor.py:210`; dedicated snapshot unit test to be added |
+| **Rule 14** | Security Invariants | 🟢 **COMPLIANT** | `url_validator.py:42` (HTTPS-only, host allowlist, SSRF/IP checks, max 3 redirects); `extract.py:58` (signed stream tokens) |
+| **Rule 15** | Frontend Design System & Accessibility | 🟡 **NOT YET** | CSS design tokens & ARIA bottom sheet active; Lighthouse & axe automated accessibility audit outputs to be attached |
+| **Rule 16** | Evidence and Definition of Done | 🟢 **COMPLIANT** | 5-step verification pipeline executed (`npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/`) |
+
+---
+
 ## 📌 Sprint 10 Kanban Board (Completed)
 
 | 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (46 pts) |

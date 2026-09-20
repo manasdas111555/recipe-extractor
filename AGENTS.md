@@ -16,13 +16,13 @@
 - **Hotfix Fast Path**: Hotfixes must be owner-approved, deployed to staging, and smoke-tested first before any production promotion.
 - **PO Sign-Off & Verdict Protection**: Agents MUST NEVER fill in PO verdicts, checkboxes, or sign-off lines in documentation or PRs (leave as "Pending PO"). Product Owner sign-off is recorded exclusively by the repository owner via PR approval or explicit entries in `docs/po-governance/SIGN_OFF.md` written by the owner.
 - **Step-by-Step Staging Promotion Rule**: Upon completing and verifying any step of the UX/Architectural Enhancement Roadmap, all implemented changes MUST immediately be pushed and promoted to the `staging` branch (Layer 2) for Vercel Preview & Staging validation before moving on to subsequent roadmap steps.
-- **Vercel Staging Protection Bypass Protocol**: When running browser subagents, QA crawlers, or automated visual E2E tests against Vercel Preview/Staging deployments, prefer sending the Vercel bypass secret as an HTTP header (`x-vercel-protection-bypass`). Never commit or log the secret. When using URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`), never output the raw secret in logs.
+- **Vercel Staging Protection Bypass Protocol**: When running browser subagents, QA crawlers, or automated visual E2E tests against Vercel Preview/Staging deployments, use Option A URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`) for browser sessions to set the `_vercel_jwt` cookie on Vercel Edge for downstream script, asset, and API requests. Prefer sending the Vercel bypass secret as an HTTP header (`x-vercel-protection-bypass`) for non-browser requests. Never log or commit the secret.
 
 ## 3. Monetization Invariants & Affiliate Parameter Protection (Revenue Shield)
 - **Immutable Affiliate Identifiers**: The default monetization parameters (`tag=manasdas11155-21` for Amazon India and `r=5608766` for EarnKaro) are **immutable constants**. Under no circumstances should these be deleted, mocked, or altered in production paths.
 - **Strict URL Encoding**: All search queries passed to e-commerce and quick-commerce partners (Amazon, Flipkart, Blinkit, Zepto, Instamart, JioMart) MUST use explicit URL encoding (`urllib.parse.quote_plus`). Agents must never generate raw unencoded query strings.
 - **Domain-Affiliate Separation**: Affiliate logic must live exclusively within `backend/app/services/affiliate_engine.py`. Agents must never hardcode store links or affiliate tags inside AI prompt strings or UI presentation components.
-- **Affiliate Disclosures & Channel Governance**: All affiliate links must be accompanied by the required statutory disclosure text. The owner must review affiliate program terms for links sent via chat messages (Telegram, WhatsApp) and `.txt` exports.
+- **Affiliate Disclosures & Channel Governance**: All affiliate links must be accompanied by the disclosure required by affiliate program terms and applicable advertising rules (owner to confirm). The owner must review affiliate program terms for links sent via chat messages (Telegram, WhatsApp) and `.txt` exports.
 - **Creator Tag Vault Status**: The Creator Tag Vault feature remains hidden during initial launch.
 
 ## 4. Ingestion Guardrails & Cloud Cost Protection (Hard Ceilings)
@@ -43,17 +43,15 @@
 - **Zero Hardcoded Secrets**: Never commit, hardcode, or log API keys, proxy credentials, Supabase service roles, or webhook tokens in code or test fixtures. All secrets must resolve through `app.core.config.Settings` from environment variables.
 - **Server-Side Admin Auth & Parameter Isolation**: Admin features require server-side authentication (`X-Admin-Api-Key` header or `role == 'admin'`). NEVER gate anything with a URL parameter such as `?admin=1`. Developer telemetry must remain isolated from standard user responses. Never expose raw infrastructure metrics or admin keys in client bundles.
 
-## 7. Unified Measurable SLA & Single Video Player Contract
+## 7. Unified Measurable SLA & Performance Benchmark
 - **Unified Telemetry SLA Contract**: Extraction turnaround targets are strictly governed by p50 and p95 benchmarks tracked via backend telemetry, split by cached vs non-cached requests and by platform (Instagram, YouTube, TikTok). The repository owner sets the target benchmark numbers. UI components and documentation may cite ONLY empirically measured figures.
 - **Single Docked Video Player**: Never duplicate HTML5 `<video>` player elements on the screen. The media preview player must remain single-docked to prevent duplicate audio tracks and mobile viewport collisions.
-- **Council Mode Invariant**: The 3-Stage Multi-LLM Council Consensus Engine (Gemini + Groq Llama 3.3 + Mistral) must NEVER be configured as the default execution pipeline. It must strictly remain an explicit opt-in selection or an internal fallback retry mechanism.
-- **Provider Key Isolation**: Council execution must degrade gracefully if secondary provider keys (`GROQ_API_KEY`, `MISTRAL_API_KEY`) are missing, falling back to single-provider execution without throwing 500 errors.
 
 ## 8. Gemini Model Lifecycle & Deprecation Governance
 - **Centralized Model Configuration**: Model IDs live strictly in `app.core.config.Settings` as the single source of truth, never scattered across multiple backend files.
 - **Startup Check**: Startup catalog validation (`list-models`) must be warn-only and never block application startup.
 - **Primary Model Transition Protocol**: Switching the primary model requires running a golden-set test suite (Hinglish reels, text-overlay reels) with measured benchmark results attached.
-- **Explicit Thinking Level & Cost Governance**: Set the thinking level explicitly (start with `low`) and log inference latency and token cost per request. Note that introductory API pricing may end at year-end; continuously review cost assumptions.
+- **Explicit Thinking Level & Cost Governance**: Set the thinking level explicitly (start with low; confirm on the golden set before locking) and record latency and token cost per request. Note that introductory API pricing may end at year-end; continuously review cost assumptions.
 - **Catalog Alignment**: Continuously monitor Google Gemini's official model catalog (https://ai.google.dev/gemini-api/docs/models). As soon as any model endpoint is marked shutdown or deprecated by Google, agents must promptly prune it from `Settings` to prevent 404/410 latency spikes.
 
 ## 9. Mandatory 4-Core Document Governance Contract & Measured Metrics
@@ -65,13 +63,17 @@
 - **Automated & Measured Metrics**: Metrics (test counts, latency, throughput) must be generated directly from CI outputs or telemetry data, never typed manually by agents. Every numerical figure in documentation must be explicitly labeled as **[MEASURED]** or **[ESTIMATED]**.
 - **Verification Rule**: No feature implementation or bug fix is considered complete until all 4 living documents reflect the updated state of the codebase.
 
-## 10. Schema Backward Compatibility, Schema Versioning & Cache Defense
+## 10. Multi-LLM Council Consensus Engine Invariants
+- **Council Mode Invariant**: The 3-Stage Multi-LLM Council Consensus Engine (Gemini + Groq Llama 3.3 + Mistral) must NEVER be configured as the default execution pipeline. It must strictly remain an explicit opt-in selection or an internal fallback retry mechanism.
+- **Provider Key Isolation**: Council execution must degrade gracefully if secondary provider keys (`GROQ_API_KEY`, `MISTRAL_API_KEY`) are missing, falling back to single-provider execution without throwing 500 errors.
+
+## 11. Schema Backward Compatibility, Schema Versioning & Cache Defense
 - **Zero Breaking Assumptions on `structured_data`**: The Supabase `extractions` table contains historical records from earlier sprints that lack newer schema keys.
 - **Schema Versioning (`schema_version`)**: All newly generated `structured_data` payloads MUST include a top-level `schema_version` field (e.g., `schema_version: 1`) to enable seamless future re-hydration, cache invalidation, and data migrations.
 - **Mandatory Optional Types & Null Guards**: All newly introduced JSON fields must be defined as optional (`field?: Type`) in TypeScript interfaces. Frontend components must strictly use optional chaining (`data.nutrition?.calories`) and default fallbacks.
 - **Single-Inference Extraction Schema**: New domain properties must be incorporated directly into the primary Gemini JSON schema prompt. Agents must NEVER trigger secondary round-trip LLM calls to fetch supplementary metadata for an already extracted video.
 
-## 11. Mobile In-App Browser & Web API Progressive Enhancement
+## 12. Mobile In-App Browser & Web API Progressive Enhancement
 - **Strict Feature Detection**: Advanced browser APIs (`navigator.wakeLock`, `AudioContext`, `navigator.clipboard`, `navigator.vibrate`) are heavily restricted or unsupported inside mobile in-app webviews (Instagram WKWebView, WhatsApp browser, Telegram webview).
 - **Mandatory Defensive Wrappers**:
   - `wakeLock.request('screen')` must always be wrapped in a defensive try/catch block, catching `NotAllowedError` silently without breaking UI state.
@@ -79,15 +81,15 @@
   - Audio chimes must initialize and pre-unlock on an explicit user gesture tick before playing programmatically.
   - Clipboard operations must implement an `execCommand('copy')` textarea fallback for legacy webviews.
 
-## 12. Regional & Hinglish Culinary Prompt Invariants
-- **Prompt Preservation**: System prompts in `backend/app/services/gemini_processor.py` contain tuned culinary rules for South Asian and Hinglish terminology. Agents must NEVER delete, overwrite, or simplify these rules during prompt refactoring.
+## 13. Regional & Hinglish Culinary Prompt Invariants
+- **Prompt Preservation**: System prompts in `backend/app/services/gemini_processor.py` and `multimodal.py` contain tuned culinary rules for South Asian and Hinglish terminology. Agents must NEVER delete, overwrite, or simplify these rules during prompt refactoring.
 - **Mandatory Linguistic Mappings & Approximate Conversions**:
   - Spoken metrics must always translate to standardized units labeled as approximate while preserving native terms in parentheses: e.g., *1 katori* $\rightarrow$ *1 bowl (~150g, approx)* (do NOT label a katori as "1 cup"), *1 chamach* $\rightarrow$ *1 tbsp (approx)*, *chutki bhar* $\rightarrow$ *pinch*.
   - Native ingredient names must be preserved in parentheses: e.g., *Cumin seeds (Jeera)*, *Asafoetida (Hing)*, *Dried Fenugreek (Kasuri Methi)*.
   - Quick-commerce link builders must prioritize the colloquial Indian spice name to ensure accurate search indexing on Blinkit and Zepto.
 - **Snapshot Test Requirement**: A dedicated snapshot unit test MUST assert that Hinglish prompt rules and culinary mappings exist in system prompt templates.
 
-## 13. Security Invariants
+## 14. Security Invariants
 - **Strict URL Validation Order**: Every user-supplied or remote-derived URL MUST pass through `backend/app/services/url_validator.py` (enforcing HTTPS only, domain allowlist, SSRF/IP checks, redirect re-validation after every hop up to max 3) BEFORE cache lookup, media download, or remote fetch. Execution order MUST be: `validate` $\rightarrow$ `cache lookup` $\rightarrow$ `download` $\rightarrow$ `inference`. No entry point (Telegram/WhatsApp bots, webhooks, `/share-target`, worker tasks) may bypass this order.
 - **Signed Stream Proxy Tokens**: `/stream-video` accepts ONLY signed, short-lived HMAC tokens minted at payload serialization time. Stream tokens must NEVER be saved in Supabase cache or stored in the Vault.
 - **Fail-Closed Secrets & Signature Verification**: Webhook and admin secrets must fail closed if unset, using `hmac.compare_digest` for comparison. WhatsApp webhook signatures MUST be verified over the raw request payload body before parsing JSON.
@@ -97,14 +99,14 @@
 - **Log Privacy & Secret Hygiene**: Never log secrets, API keys, tokens, phone numbers, or full user URLs in application logs or telemetry.
 - **Dependency Audit Compliance**: Dependency changes must be declared in `requirements.txt` / `package.json` and lockfiles (`package-lock.json`), followed immediately by running `pip-audit` (against requirements) and `npm audit`.
 
-## 14. Frontend Design System and Accessibility
+## 15. Frontend Design System and Accessibility
 - **Design System Tokens & Contrast**: No hardcoded colors in UI components; all styling must use CSS design tokens from `globals.css` supporting both Light and Dark themes. Text contrast MUST achieve WCAG AA Compliance ($\ge 4.5:1$). Verify visual contrast in both themes at 375px (mobile) and 1280px (desktop) viewports.
 - **Input & Touch Accessibility**: All input fields must enforce `font-size >= 16px` (prevents iOS Safari auto-zoom), touch targets must meet `min-height: 44px` / `min-width: 44px`, visible or `sr-only` `<label>` elements must exist on all controls, and `:focus-visible` outlines must be clearly styled for keyboard navigation.
 - **Modal & Sheet Focus Management**: All modals, drawers, and bottom sheets must implement `role="dialog"`, `aria-modal="true"`, focus trapping, `Escape` key dismissal, and focus restoration to the triggering element upon closing.
 - **Motion & Visual Performance**: Parallax effects and particle canvas backgrounds are forbidden. `backdrop-filter` is permitted ONLY on the sticky header. The `@media (prefers-reduced-motion: reduce)` block must cover every remaining animation and transition in the application.
 - **Action Hierarchy**: Render exactly ONE primary action per result domain (Recipe: *"Shop ingredients"*, Travel: *"Open in Google Maps"*, Product: *"Buy"*, Tutorial: *"Open resources"*). All secondary and utility actions must be contained within the overflow bottom sheet / menu.
 
-## 15. Evidence and Definition of Done
+## 16. Evidence and Definition of Done
 - **Empirical Evidence Requirement**: Every "verified", "passing", or "score" claim in pull requests, commits, and documentation MUST include exact command execution output or measured values. Unmeasured scores or speculative benchmarks in docs are forbidden.
 - **Complete Verification Pipeline**: Every code change requires executing `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, and `pytest tests/`, with all checks clean green and output attached. Any known test failure BLOCKS promotion to `staging` unless the repository owner explicitly accepts it in writing.
 - **Governance Contract**: Agents must NEVER modify `AGENTS.md` without explicit, prior approval from the repository owner.
