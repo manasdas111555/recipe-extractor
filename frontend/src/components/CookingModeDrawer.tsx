@@ -55,13 +55,13 @@ export default function CookingModeDrawer({
   const { servingsMultiplier, setServingsMultiplier, checkedIngredientIds, toggleIngredientCheck } = useRecipe();
 
   // Instructions array extraction
-  const instructions: string[] = recipe?.instructions || recipe?.steps || [];
+  const instructions: string[] = recipe?.instructions || (recipe as any)?.steps || [];
   const totalSteps = instructions.length;
   const currentStepText = instructions[currentStepIndex] || 'No instructions available.';
 
   // Parse durations for active step
   const parsedDurations = parseInstructionDurations(currentStepText);
-  const activeDurationSeconds = parsedDurations.length > 0 ? parsedDurations[0].totalSeconds : 0;
+  const activeDurationSeconds = parsedDurations.length > 0 ? (parsedDurations[0].seconds || (parsedDurations[0] as any).totalSeconds || 0) : 0;
 
   // Active step timer hook
   const {
@@ -582,7 +582,9 @@ export default function CookingModeDrawer({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
             {ingredients.map((ing: any, idx: number) => {
               const ingId = `ing-${idx}`;
-              const isChecked = checkedIngredientIds.includes(ingId);
+              const isChecked = Array.isArray(checkedIngredientIds) 
+                ? (checkedIngredientIds as any).includes(ingId) 
+                : (checkedIngredientIds as any)?.has?.(ingId) || false;
               const name = typeof ing === 'object' ? ing.name || ing.item : String(ing);
               const qty = typeof ing === 'object' ? ing.quantity || ing.amount : '';
 

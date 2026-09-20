@@ -46,7 +46,7 @@ export default function ServingAdjuster({
 
   // Scaled ingredient items using scalingEngine
   const scaledItems: ScaledIngredientResult[] = ingredients.map((item, idx) =>
-    scaleIngredientItem(item as any, idx, baseServings, servings, excludedPantryIds)
+    scaleIngredientItem(item as any, idx, baseServings, servings, Array.isArray(excludedPantryIds) ? excludedPantryIds : Array.from(excludedPantryIds || []))
   );
 
   const handleCopyClipboard = () => {
@@ -169,12 +169,12 @@ export default function ServingAdjuster({
                   }}
                 />
                 <span>
-                  {item.displayQty && (
+                  {(item as any).displayQty && (
                     <strong style={{ color: 'var(--accent-emerald)', marginRight: '0.35rem' }} className="tabular-num">
-                      {item.displayQty}
+                      {(item as any).displayQty}
                     </strong>
                   )}
-                  <span style={{ color: 'var(--text-primary)' }}>{item.name}</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{(item as any).name || item.scaledText}</span>
                 </span>
               </div>
 
