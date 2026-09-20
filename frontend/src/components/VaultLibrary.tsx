@@ -164,9 +164,9 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <BookOpen size={22} color="var(--accent-emerald)" />
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Personal Recipe Vault</h2>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>📖 Universal Intelligence Vault</h2>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Saved extractions & synchronized pantry lists
+                Saved extractions, travel itineraries, workout plans & shoppable finds
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
             <Search size={16} color="var(--text-muted)" />
             <input
               type="text"
-              placeholder="Search by title, dish or platform..."
+              placeholder="Search by title, travel destination, dish or platform..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && fetchLibrary(search)}
@@ -214,12 +214,12 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
           </div>
         </div>
 
-        {/* Recipe Cards List */}
+        {/* Intelligence Cards List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
               <RefreshCw size={24} className="animate-pulse-subtle" style={{ margin: '0 auto 0.75rem' }} />
-              <p>Loading your recipe archive...</p>
+              <p>Loading your intelligence archive...</p>
             </div>
           ) : error ? (
             <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--accent-rose)' }}>
@@ -227,21 +227,71 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
             </div>
           ) : items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-muted)' }}>
-              <ChefHat size={40} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
-              <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>No recipes in vault yet</p>
+              <Sparkles size={40} style={{ margin: '0 auto 1rem', opacity: 0.4, color: 'var(--accent-emerald)' }} />
+              <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>No extractions saved in vault yet</p>
               <p style={{ fontSize: '0.85rem', marginTop: '0.35rem' }}>
-                Extract any Instagram Reel, TikTok, or YouTube Short to archive it here!
+                Extract any Instagram Reel, TikTok, or YouTube Short across recipes, travel guides, workouts, or product finds to archive it here!
               </p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {items.map((item) => {
+                const rData = item.recipe_data || {};
                 const title =
-                  item.recipe_data?.recipe_title ||
-                  item.recipe_data?.title ||
-                  'Untitled Recipe Extraction';
-                const ingredientsCount = item.recipe_data?.ingredients?.length || 0;
-                const platform = item.platform || 'Social Reel';
+                  rData.recipe_title ||
+                  rData.title ||
+                  'Untitled Extraction';
+                
+                // Multi-genre badge determination
+                const catStr = (rData.category || rData.domain || item.platform || '').toUpperCase();
+                const titleUpper = title.toUpperCase();
+                let badgeLabel = '⚡ SAVED EXTRACTION';
+                let badgeClass = 'badge-emerald';
+
+                if (catStr.includes('TRAVEL') || catStr.includes('ITINERARY') || titleUpper.includes('ITINERARY') || titleUpper.includes('TRAVEL') || titleUpper.includes('VARKALA') || titleUpper.includes('BALI')) {
+                  badgeLabel = '✈️ TRAVEL GUIDE';
+                  badgeClass = 'badge-emerald';
+                } else if (catStr.includes('WORKOUT') || catStr.includes('FITNESS') || titleUpper.includes('WORKOUT')) {
+                  badgeLabel = '🏋️ WORKOUT ROUTINE';
+                  badgeClass = 'badge-amber';
+                } else if (catStr.includes('PRODUCT') || catStr.includes('KITCHEN_FIND') || titleUpper.includes('FIND') || titleUpper.includes('UNBOXING')) {
+                  badgeLabel = '📦 PRODUCT FINDS';
+                  badgeClass = 'badge-rose';
+                } else if (catStr.includes('TUTORIAL') || catStr.includes('TECH') || titleUpper.includes('TUTORIAL')) {
+                  badgeLabel = '💻 TUTORIAL';
+                  badgeClass = 'badge-emerald';
+                } else if (catStr.includes('EDUCATIONAL') || catStr.includes('EXPLAINER')) {
+                  badgeLabel = '🎓 EDUCATIONAL';
+                  badgeClass = 'badge-emerald';
+                } else if (catStr.includes('BEAUTY') || catStr.includes('FASHION')) {
+                  badgeLabel = '💄 BEAUTY & FASHION';
+                  badgeClass = 'badge-rose';
+                } else if (catStr.includes('RECIPE') || catStr.includes('COOK')) {
+                  badgeLabel = '🍳 RECIPE';
+                  badgeClass = 'badge-emerald';
+                }
+
+                // Dynamic Metadata line and Action button text
+                let metaText = `🛒 ${(rData.ingredients?.length || 0)} ingredients indexed`;
+                let actionText = `Open in Chef View`;
+
+                if (badgeLabel.includes('TRAVEL')) {
+                  const mapsCount = rData.google_maps_locations?.length || 0;
+                  metaText = mapsCount > 0 ? `📍 ${mapsCount} locations mapped` : `✈️ Travel Itinerary & Spots`;
+                  actionText = `Open Travel Guide`;
+                } else if (badgeLabel.includes('WORKOUT')) {
+                  const stepsCount = rData.instructions?.length || rData.steps?.length || 0;
+                  metaText = stepsCount > 0 ? `🏋️ ${stepsCount} exercises / steps` : `🏋️ Fitness Workout Plan`;
+                  actionText = `Open Workout View`;
+                } else if (badgeLabel.includes('PRODUCT')) {
+                  const productsCount = rData.products?.length || 0;
+                  metaText = productsCount > 0 ? `🛒 ${productsCount} shoppable products` : `📦 Product Finds`;
+                  actionText = `Open Product Finds`;
+                } else if (badgeLabel.includes('TUTORIAL') || badgeLabel.includes('EDUCATIONAL')) {
+                  const stepsCount = rData.instructions?.length || rData.steps?.length || 0;
+                  metaText = stepsCount > 0 ? `💡 ${stepsCount} guide steps` : `💻 Tutorial Guide`;
+                  actionText = `Open Tutorial View`;
+                }
 
                 return (
                   <div
@@ -255,14 +305,14 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
                       transition: 'transform 0.15s ease, border-color 0.15s ease',
                     }}
                     onClick={() => {
-                      onSelectRecipe(item.recipe_data);
+                      onSelectRecipe(rData);
                       onClose();
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                       <div>
-                        <span className="badge-pill badge-emerald" style={{ marginBottom: '0.35rem' }}>
-                          {platform}
+                        <span className={`badge-pill ${badgeClass}`} style={{ marginBottom: '0.35rem' }}>
+                          {badgeLabel}
                         </span>
                         <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                           {title}
@@ -300,9 +350,9 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
                         marginTop: '0.25rem',
                       }}
                     >
-                      <span>🛒 {ingredientsCount} ingredients indexed</span>
+                      <span>{metaText}</span>
                       <span style={{ color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        Open in Chef View <ExternalLink size={11} />
+                        {actionText} <ExternalLink size={11} />
                       </span>
                     </div>
                   </div>

@@ -582,37 +582,42 @@ def parse_extracted_content(raw_text: str, affiliate_tags: dict = None) -> dict:
             category = "GENERAL"
     else:
         # Fallback category detection if [CATEGORY] tag is omitted in output
-        header_sample = raw_text[:400].upper()
-        if any(k in header_sample for k in ["EDUCATIONAL", "EXPLAINER", "CONCEPT", "SCIENCE", "HISTORY", "THEORY", "LECTURE", "ACADEMIC"]):
-            category = "EDUCATIONAL"
-        elif any(k in header_sample for k in ["TUTORIAL", "TECH TUTORIAL", "TECH_TUTORIAL", "ROADMAP", "PROGRAMMING", "AI ENGINEER", "LLM", "HOW TO", "HOW-TO", "DIY", "💻"]):
-            category = "TUTORIAL"
+        header_sample = raw_text[:500].upper()
+        if any(k in header_sample for k in ["TRAVEL GUIDE", "TRAVEL_GUIDE", "ITINERARY", "PLACES TO VISIT", "DESTINATION", "CITY GUIDE", "TRIP GUIDE", "VARKALA", "GOA", "BALI"]):
+            category = "TRAVEL_GUIDE"
+        elif any(k in header_sample for k in ["WORKOUT", "FITNESS", "EXERCISE", "GYM ROUTINE", "YOGA"]):
+            category = "WORKOUT"
+        elif any(k in header_sample for k in ["RECIPE", "INGREDIENTS", "COOKING", "CHEF", "PREP TIME", "BAKING"]):
+            category = "RECIPE"
         elif any(k in header_sample for k in ["KITCHEN FINDS", "KITCHEN_FINDS", "KITCHEN GADGET", "HOME FINDS"]):
             category = "KITCHEN_FINDS"
         elif any(k in header_sample for k in ["PRODUCT FINDS", "AMAZON FINDS", "UNBOXING", "HAUL"]):
             category = "PRODUCT_FINDS"
-        elif any(k in header_sample for k in ["WORKOUT", "FITNESS", "EXERCISE", "ROUTINE", "GYM", "YOGA"]):
-            category = "WORKOUT"
         elif any(k in header_sample for k in ["FINANCE", "BUSINESS", "INVESTING", "STOCKS", "MONEY", "CRYPTO"]):
             category = "FINANCE_BUSINESS"
-        elif any(k in header_sample for k in ["TRAVEL GUIDE", "TRAVEL_GUIDE", "ITINERARY", "PLACES TO VISIT"]):
-            category = "TRAVEL_GUIDE"
         elif any(k in header_sample for k in ["BEAUTY", "SKINCARE", "MAKEUP", "FASHION", "HAIRSTYLE"]):
             category = "BEAUTY_FASHION"
+        elif any(k in header_sample for k in ["TUTORIAL", "TECH TUTORIAL", "TECH_TUTORIAL", "ROADMAP", "PROGRAMMING", "AI ENGINEER", "LLM", "HOW TO", "HOW-TO", "DIY"]):
+            category = "TUTORIAL"
+        elif any(k in header_sample for k in ["EDUCATIONAL", "EXPLAINER", "CONCEPT", "SCIENCE", "HISTORY", "THEORY", "LECTURE", "ACADEMIC"]):
+            category = "EDUCATIONAL"
         elif any(k in header_sample for k in ["LIFE HACK", "PRODUCTIVITY", "HACK", "SUMMARY", "BOOK SUMMARY"]):
             category = "LIFE_HACKS"
-        elif any(k in header_sample for k in ["RECIPE", "INGREDIENTS", "COOKING", "CHEF", "PREP TIME", "BAKING"]):
-            category = "RECIPE"
         else:
             category = "RECIPE"
-
-
 
     title_match = re.search(r'\[TITLE\]:\s*(.+)', raw_text, re.IGNORECASE)
     if title_match:
         title = title_match.group(1).strip()
     else:
         title = extract_apt_recipe_title(raw_text)
+
+    # Title-based safety check to prevent travel/workout misclassifications
+    title_upper = title.upper()
+    if any(k in title_upper for k in ["ITINERARY", "TRAVEL GUIDE", "PLACES TO VISIT", "CITY GUIDE", "TRIP GUIDE", "DESTINATION"]):
+        category = "TRAVEL_GUIDE"
+    elif any(k in title_upper for k in ["WORKOUT", "FITNESS ROUTINE", "EXERCISE ROUTINE", "GYM ROUTINE"]):
+        category = "WORKOUT"
 
     summary_match = re.search(r'\[SUMMARY\]:\s*(.+?)(?=\n---\n|\[DETAILS\]|\[PRODUCTS\]|\[RESOURCES(?:\s*&\s*TUTORIALS)?\]|$)', raw_text, re.DOTALL | re.IGNORECASE)
     if summary_match:
