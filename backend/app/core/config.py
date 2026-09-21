@@ -28,6 +28,22 @@ class Settings(BaseSettings):
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    SUPABASE_JWKS_URL: Optional[str] = None
+    SUPABASE_JWT_ISSUER: Optional[str] = None
+    SUPABASE_JWT_AUDIENCE: str = "authenticated"
+    SUPABASE_JWT_ALGORITHMS: List[str] = ["ES256"]
+
+    def get_supabase_jwks_url(self) -> str:
+        if self.SUPABASE_JWKS_URL:
+            return self.SUPABASE_JWKS_URL
+        base = (self.SUPABASE_URL or "https://scrqvbgjybnrvcpxbygf.supabase.co").rstrip("/")
+        return f"{base}/auth/v1/.well-known/jwks.json"
+
+    def get_supabase_jwt_issuer(self) -> str:
+        if self.SUPABASE_JWT_ISSUER:
+            return self.SUPABASE_JWT_ISSUER
+        base = (self.SUPABASE_URL or "https://scrqvbgjybnrvcpxbygf.supabase.co").rstrip("/")
+        return f"{base}/auth/v1"
 
     # AI Multimodal Providers
     GEMINI_API_KEY: Optional[str] = None

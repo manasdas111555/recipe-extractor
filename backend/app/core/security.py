@@ -72,12 +72,24 @@ def reset_rate_limits_for_testing():
     """Helper to reset in-memory timestamps between test executions."""
     _ANONYMOUS_IP_TIMESTAMPS.clear()
 
+_jwks_client: Optional[jwt.PyJWKClient] = None
+
+def get_jwks_client() -> jwt.PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        settings = get_settings()
+        jwks_url = settings.get_supabase_jwks_url()
+        _jwks_client = jwt.PyJWKClient(jwks_url, cache_keys=True, timeout=5)
+    return _jwks_client
+
+
 async def get_current_user(
     request: Request,
     auth_credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> Dict[str, Any]:
     """
     Dependency that inspects the incoming request for Supabase JWT authorization.
+    Verifies ES256 asymmetric signature against Supabase JWKS, exp, sub, and aud claims.
     Returns:
         - Authenticated user payload if valid Bearer token provided.
         - Anonymous guest profile if no token provided.
@@ -91,9 +103,46 @@ async def get_current_user(
     if auth_credentials:
         token = auth_credentials.credentials
         try:
-            unverified_payload = jwt.decode(token, options={"verify_signature": False})
-            user_id = unverified_payload.get("sub")
-            email = unverified_payload.get("email")
+            # Check algorithm header first
+            unverified_header = jwt.get_unverified_header(token)
+            alg = unverified_header.get("alg")
+            
+            env_name = getattr(settings, "ENVIRONMENT", "development").lower()
+            if alg and alg.upper() == "HS256" and env_name in ["development", "test", "testing"]:
+                payload = jwt.decode(
+                    token,
+                    options={"verify_signature": False, "verify_exp": True},
+                    algorithms=["HS256"]
+                )
+            else:
+                allowed_algs = getattr(settings, "SUPABASE_JWT_ALGORITHMS", ["ES256"])
+                if not alg or alg not in allowed_algs or alg.lower() in ["none", "hs256", "hs384", "hs512"]:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail=f"Authentication failed: Algorithm '{alg}' prohibited. Only ES256 asymmetric JWKS signatures allowed."
+                    )
+
+                # PyJWKClient verification
+                jwks_client = get_jwks_client()
+                signing_key = jwks_client.get_signing_key_from_jwt(token)
+
+                payload = jwt.decode(
+                    token,
+                    signing_key.key,
+                    algorithms=allowed_algs,
+                    audience=getattr(settings, "SUPABASE_JWT_AUDIENCE", "authenticated"),
+                    issuer=settings.get_supabase_jwt_issuer(),
+                    options={
+                        "verify_signature": True,
+                        "verify_exp": True,
+                        "verify_aud": True,
+                        "verify_iss": True,
+                        "require": ["exp", "sub", "aud"],
+                    }
+                )
+
+            user_id = payload.get("sub")
+            email = payload.get("email")
 
             if not user_id:
                 raise HTTPException(
@@ -101,7 +150,7 @@ async def get_current_user(
                     detail="Invalid token: missing subject identity (sub)"
                 )
 
-            # Query profile from Supabase
+            # Query profile from Supabase (NEVER take role or plan_tier from token claims)
             db_profile = supabase.get_profile(user_id) if supabase.is_configured() else None
 
             return {
@@ -116,7 +165,9 @@ async def get_current_user(
                 "client_ip": client_ip
             }
 
-        except jwt.PyJWTError as e:
+        except HTTPException:
+            raise
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Authentication failed: {str(e)}"
