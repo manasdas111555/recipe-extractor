@@ -140,13 +140,13 @@ async def enqueue_extraction(
     cached = supabase.get_cached_extraction(url_hash)
 
     if cached and cached.get("content_payload"):
-        # Instant cache hit (0-cost)
         cache_id = cached.get("id", "cached")
         data_payload = cached.get("content_payload") or {}
         if isinstance(data_payload, dict):
             from backend.app.core.config import get_settings
-            secret_key = get_settings().SECRET_KEY or "universal_pro_default_secret_key"
-            data_payload["stream_token"] = generate_stream_token(cache_id, secret_key)
+            secret_key = get_settings().SECRET_KEY
+            if secret_key:
+                data_payload["stream_token"] = generate_stream_token(cache_id, secret_key)
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -375,9 +375,9 @@ async def stream_video(
     from backend.app.core.config import get_settings
     from backend.app.services.url_validator import verify_stream_token, validate_social_url
 
-    secret_key = get_settings().SECRET_KEY or "universal_pro_default_secret_key"
+    secret_key = get_settings().SECRET_KEY
     target_id = id or url
-    if not verify_stream_token(target_id, token, secret_key):
+    if not secret_key or not verify_stream_token(target_id, token, secret_key):
         raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
 
     target_url = url

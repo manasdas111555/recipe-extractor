@@ -76,9 +76,10 @@ async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
     # Mint fresh signed stream token for media playback
     settings = get_settings()
     ext_id = body.extraction_id or item_data.get("id") or "rehydrated_item"
-    secret = getattr(settings, "SECRET_KEY", "universal_pro_default_secret_key_2026")
-    fresh_stream_token = generate_stream_token(ext_id, secret)
-    item_data["stream_token"] = fresh_stream_token
+    secret = settings.SECRET_KEY
+    if secret:
+        fresh_stream_token = generate_stream_token(ext_id, secret)
+        item_data["stream_token"] = fresh_stream_token
 
     domain = item_data.get("classified_domain") or item_data.get("domain") or "RECIPE"
     

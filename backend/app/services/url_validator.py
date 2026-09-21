@@ -235,7 +235,7 @@ def validate_url_and_follow_redirects(initial_url: str, max_redirects: int = 3) 
 def generate_stream_token(extraction_id: str, secret_key: str) -> str:
     """Generates a signed HMAC stream token for video stream proxying."""
     if not secret_key:
-        secret_key = "universal_pro_default_secret_key"
+        raise ValueError("SECRET_KEY must be configured to generate stream tokens.")
     key_bytes = secret_key.encode('utf-8')
     msg_bytes = extraction_id.encode('utf-8')
     return hmac.new(key_bytes, msg_bytes, hashlib.sha256).hexdigest()
@@ -243,10 +243,8 @@ def generate_stream_token(extraction_id: str, secret_key: str) -> str:
 
 def verify_stream_token(extraction_id: str, token: str, secret_key: str) -> bool:
     """Verifies a signed HMAC stream token in constant time."""
-    if not extraction_id or not token:
+    if not extraction_id or not token or not secret_key:
         return False
-    if not secret_key:
-        secret_key = "universal_pro_default_secret_key"
     expected = generate_stream_token(extraction_id, secret_key)
     return hmac.compare_digest(expected, token)
 

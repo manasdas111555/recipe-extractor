@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_PREFIX: str = "/api/v1"
     ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     ADMIN_API_KEY: Optional[str] = None
     TRUSTED_PROXY: bool = False
     TRUSTED_PROXY_HOPS: int = 1
@@ -65,12 +65,12 @@ class Settings(BaseSettings):
     MEDIA_DOWNLOAD_RESOLUTION: str = "360"
 
     # Chat Ingestion & Webhook Settings (Sprint 3)
-    SECRET_KEY: str = "universal_pro_default_secret_key_2026"
+    SECRET_KEY: Optional[str] = None
     TELEGRAM_BOT_TOKEN: Optional[str] = None
     TELEGRAM_WEBHOOK_SECRET: Optional[str] = None
-    WHATSAPP_VERIFY_TOKEN: Optional[str] = "universal_pro_verify_token"
+    WHATSAPP_VERIFY_TOKEN: Optional[str] = None
     WHATSAPP_ACCESS_TOKEN: Optional[str] = None
-    WHATSAPP_PHONE_NUMBER_ID: Optional[str] = "1280483961819200"
+    WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
     WHATSAPP_APP_SECRET: Optional[str] = None
 
     # Quota & Rate Limiting (Sprint 3 & 5)
@@ -78,24 +78,61 @@ class Settings(BaseSettings):
     DAILY_FREE_QUOTA_LIMIT: int = 10
 
     # Billing & Subscriptions — Razorpay (Sprint 5)
-    RAZORPAY_KEY_ID: Optional[str] = "rzp_test_mockkey123"
-    RAZORPAY_KEY_SECRET: Optional[str] = "mock_razorpay_secret_key"
-    RAZORPAY_WEBHOOK_SECRET: Optional[str] = "whsec_razorpay_mock_secret"
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
     RAZORPAY_PLAN_PRO_299_INR: str = "plan_pro_299_inr"
 
     # Billing & Subscriptions — Stripe (Sprint 5)
-    STRIPE_API_KEY: Optional[str] = "sk_test_mockstripekey123"
-    STRIPE_WEBHOOK_SECRET: Optional[str] = "whsec_stripe_mock_secret"
+    STRIPE_API_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
     STRIPE_PRICE_PRO_499_USD: str = "price_pro_499_usd"
 
     # CORS Allowed Origins
-    CORS_ORIGINS: List[str] = ["*"]
+    CORS_ORIGINS: List[str] = []
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE) if ENV_FILE.exists() else None,
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    def model_post_init(self, __context):
+        import sys
+        env_name = (self.ENVIRONMENT or "development").lower()
+        is_pytest = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
+
+        if is_pytest and env_name not in ["production", "development_strict"]:
+            if not self.SECRET_KEY:
+                self.SECRET_KEY = "test_secret_key_for_unit_tests"
+            if not self.RAZORPAY_WEBHOOK_SECRET:
+                self.RAZORPAY_WEBHOOK_SECRET = "whsec_razorpay_mock_secret"
+            if not self.STRIPE_WEBHOOK_SECRET:
+                self.STRIPE_WEBHOOK_SECRET = "whsec_stripe_mock_secret"
+            if not self.WHATSAPP_VERIFY_TOKEN:
+                self.WHATSAPP_VERIFY_TOKEN = "universal_pro_verify_token"
+            if not self.WHATSAPP_PHONE_NUMBER_ID:
+                self.WHATSAPP_PHONE_NUMBER_ID = "1280483961819200"
+            if not self.RAZORPAY_KEY_ID:
+                self.RAZORPAY_KEY_ID = "rzp_test_mockkey123"
+            if not self.RAZORPAY_KEY_SECRET:
+                self.RAZORPAY_KEY_SECRET = "mock_razorpay_secret_key"
+            if not self.STRIPE_API_KEY:
+                self.STRIPE_API_KEY = "sk_test_mockstripekey123"
+        elif env_name in ["development", "development_strict"]:
+            if not self.SECRET_KEY:
+                raise ValueError("Local development environment error: SECRET_KEY is missing. Please create a local .env file or set SECRET_KEY.")
+        else:
+            required_secrets = {
+                "SECRET_KEY": self.SECRET_KEY,
+                "SUPABASE_URL": self.SUPABASE_URL,
+                "SUPABASE_ANON_KEY": self.SUPABASE_ANON_KEY,
+                "SUPABASE_SERVICE_ROLE_KEY": self.SUPABASE_SERVICE_ROLE_KEY,
+            }
+            for key_name, val in required_secrets.items():
+                if not val:
+                    raise ValueError(f"Production environment setup failure: Missing required secret environment variable '{key_name}'")
+
 
 _settings_instance: Optional[Settings] = None
 
