@@ -10,6 +10,8 @@ import jwt
 import hashlib
 import hmac
 import os
+import uuid
+import anyio
 from collections import defaultdict
 from typing import Optional, Dict, Any
 from fastapi import Depends, HTTPException, status, Request
@@ -103,43 +105,38 @@ async def get_current_user(
     if auth_credentials:
         token = auth_credentials.credentials
         try:
-            # Check algorithm header first
             unverified_header = jwt.get_unverified_header(token)
-            alg = unverified_header.get("alg")
-            
-            env_name = getattr(settings, "ENVIRONMENT", "development").lower()
-            if alg and alg.upper() == "HS256" and env_name in ["development", "test", "testing"]:
-                payload = jwt.decode(
-                    token,
-                    options={"verify_signature": False, "verify_exp": True},
-                    algorithms=["HS256"]
-                )
-            else:
-                allowed_algs = getattr(settings, "SUPABASE_JWT_ALGORITHMS", ["ES256"])
-                if not alg or alg not in allowed_algs or alg.lower() in ["none", "hs256", "hs384", "hs512"]:
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail=f"Authentication failed: Algorithm '{alg}' prohibited. Only ES256 asymmetric JWKS signatures allowed."
-                    )
+            alg = unverified_header.get("alg") if isinstance(unverified_header, dict) else None
 
-                # PyJWKClient verification
-                jwks_client = get_jwks_client()
-                signing_key = jwks_client.get_signing_key_from_jwt(token)
-
-                payload = jwt.decode(
-                    token,
-                    signing_key.key,
-                    algorithms=allowed_algs,
-                    audience=getattr(settings, "SUPABASE_JWT_AUDIENCE", "authenticated"),
-                    issuer=settings.get_supabase_jwt_issuer(),
-                    options={
-                        "verify_signature": True,
-                        "verify_exp": True,
-                        "verify_aud": True,
-                        "verify_iss": True,
-                        "require": ["exp", "sub", "aud"],
-                    }
+            allowed_algs = getattr(settings, "SUPABASE_JWT_ALGORITHMS", ["ES256"])
+            if not alg or alg not in allowed_algs or alg.lower() in ["none", "hs256", "hs384", "hs512"]:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Authentication failed: Algorithm '{alg}' prohibited. Only ES256 asymmetric JWKS signatures allowed."
                 )
+
+            # PyJWKClient verification off the event loop
+            jwks_client = get_jwks_client()
+            signing_key = await anyio.to_thread.run_sync(jwks_client.get_signing_key_from_jwt, token)
+
+            try:
+                issuer = settings.get_supabase_jwt_issuer()
+            except ValueError:
+                issuer = None
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=allowed_algs,
+                audience=getattr(settings, "SUPABASE_JWT_AUDIENCE", "authenticated"),
+                issuer=issuer or None,
+                options={
+                    "verify_signature": True,
+                    "verify_exp": True,
+                    "verify_aud": True,
+                    "verify_iss": bool(issuer),
+                    "require": ["exp", "sub", "aud"],
+                }
+            )
 
             user_id = payload.get("sub")
             email = payload.get("email")
@@ -148,6 +145,14 @@ async def get_current_user(
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token: missing subject identity (sub)"
+                )
+
+            try:
+                uuid.UUID(str(user_id))
+            except (ValueError, TypeError):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token: subject identity (sub) must be a valid UUID"
                 )
 
             # Query profile from Supabase (NEVER take role or plan_tier from token claims)

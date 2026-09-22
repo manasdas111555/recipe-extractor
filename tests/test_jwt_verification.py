@@ -55,10 +55,10 @@ def mock_jwks_client():
 
 def test_valid_es256_token_authenticated_successfully():
     payload = {
-        "sub": "user_es256_valid_123",
+        "sub": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "email": "es256@universalpro.ai",
         "aud": "authenticated",
-        "iss": "https://scrqvbgjybnrvcpxbygf.supabase.co/auth/v1",
+        "iss": "https://example.supabase.co/auth/v1",
         "exp": int(time.time()) + 3600
     }
     token = create_es256_token(payload)
@@ -66,7 +66,7 @@ def test_valid_es256_token_authenticated_successfully():
     res = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 200
     user = res.json().get("user", {})
-    assert user.get("id") == "user_es256_valid_123"
+    assert user.get("id") == "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     assert user.get("is_anonymous") is False
 
 
@@ -74,7 +74,7 @@ def test_forged_signature_returns_401():
     payload = {
         "sub": "user_forged_123",
         "aud": "authenticated",
-        "iss": "https://scrqvbgjybnrvcpxbygf.supabase.co/auth/v1",
+        "iss": "https://example.supabase.co/auth/v1",
         "exp": int(time.time()) + 3600
     }
     # Sign with a different random private key
@@ -90,7 +90,7 @@ def test_expired_token_returns_401():
     payload = {
         "sub": "user_expired_123",
         "aud": "authenticated",
-        "iss": "https://scrqvbgjybnrvcpxbygf.supabase.co/auth/v1",
+        "iss": "https://example.supabase.co/auth/v1",
         "exp": int(time.time()) - 100 # Expired 100s ago
     }
     expired_token = create_es256_token(payload)
@@ -104,7 +104,7 @@ def test_wrong_audience_returns_401():
     payload = {
         "sub": "user_wrong_aud_123",
         "aud": "unauthenticated_guest", # Wrong audience
-        "iss": "https://scrqvbgjybnrvcpxbygf.supabase.co/auth/v1",
+        "iss": "https://example.supabase.co/auth/v1",
         "exp": int(time.time()) + 3600
     }
     wrong_aud_token = create_es256_token(payload)
