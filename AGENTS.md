@@ -120,3 +120,52 @@
 - **No silent scope.** Work discovered mid-sprint becomes a new ticket labelled "Discovered" before it is done. Unfinished tickets carry over with a stated reason.
 - **Sprint close (before promotion to staging).** Every ticket has a status and evidence; known gaps are listed under "Known non-compliant items on staging"; the compliance matrix is updated; the sprint showcase (docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md) is prepared with all PO fields set to "Pending PO".
 
+## 18. Skill-First Execution Protocol & Workspace Tooling Map
+- **Mandatory Skill-First Inspection**: Before writing any custom code, scripts, helper functions, or ad-hoc implementations, agents MUST first review available skills, reusable scripts, and established routines in the workspace and global agent configuration.
+- **Reuse Over Invention**: If a matching skill, helper script, or established pattern exists for a task, agents MUST prioritize invoking and leveraging it rather than reinventing the wheel or writing redundant code.
+- **Explicit Confirmation Gate**: If no matching skill or reusable script exists for a task, agents MUST output a quick confirmation line before writing custom code:
+  `"No matching skill found; proceeding with custom implementation."`
+- **Workspace Skills & Utility Script Reference Map**:
+  - **Workspace Skills Root**: `.agents/skills/` (e.g. `.agents/skills/frontend-design/SKILL.md`)
+  - **Global Skills Root**: `C:\Users\admin\.gemini\config\skills\`
+  - **Operational & Maintenance Scripts**: `scripts/`
+    - `scripts/ci_check.py`: Complete local CI verification pipeline runner (`tsc`, `lint`, `test`, `build`, `pytest`).
+    - `scripts/promote.py`: Automated git promotion pipeline (`Dev` -> `staging` -> `main`).
+    - `scripts/verify_promotion.py`: Post-promotion staging deployment verification crawler.
+    - `scripts/run_worker.py`: Cross-platform Celery background task worker launcher (`--pool=threads` on Windows).
+    - `scripts/verify_egress.py`: SSRF/IP firewall & egress security verification suite.
+    - `scripts/cli.py`: Unified operational CLI utility.
+    - `scripts/keep_alive.py`: Autonomous server ping & health monitoring script.
+
+## 19. Destructive Workspace Operation Guard
+
+Before deleting, moving, renaming, overwriting, resetting, cleaning, restoring, or recursively removing any project file or directory:
+
+1. Treat the operation as HIGH-RISK.
+2. Do not perform the operation unless the current task explicitly authorizes that exact deletion, move, reset, restore, or cleanup.
+3. Never use broad destructive workspace commands such as:
+   - `Remove-Item -Recurse`
+   - `rm -rf`
+   - `git clean`
+   - `git reset --hard`
+   - broad `git restore`
+   - wholesale directory replacement
+   unless the exact operation and target paths are explicitly authorized by the repository owner.
+4. Never delete, restore, overwrite, or reset:
+   - `AGENTS.md`
+   - migration files
+   - tests
+   - governance documents
+   - configuration files
+   - skills
+   - scripts
+   - documentation
+   as an indirect cleanup step.
+5. If cleanup appears necessary, STOP and report:
+   - the exact files/directories proposed for deletion or restoration
+   - why the operation is necessary
+   - what unrelated files could be affected
+6. Preserve all unrelated existing work.
+7. Never use a destructive cleanup operation to resolve unrelated working-tree changes.
+8. Before any authorized destructive operation, show the exact command and affected paths and wait for explicit repository-owner authorization unless that authorization is already contained in the current task.
+
