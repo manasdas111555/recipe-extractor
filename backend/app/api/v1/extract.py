@@ -313,9 +313,12 @@ async def get_extraction_status(
     supabase = get_supabase_client()
     if supabase.is_configured():
         try:
+            import uuid as uuid_mod
+            uuid_mod.UUID(str(job_id))
             import requests
-            url = f"{supabase.base_url}/rest/v1/extractions?id=eq.{job_id}&select=*"
-            r = requests.get(url, headers=supabase._get_headers(use_service_role=True), timeout=4)
+            url = f"{supabase.base_url}/rest/v1/extractions"
+            params = {"id": f"eq.{job_id}", "select": "*"}
+            r = requests.get(url, headers=supabase._get_headers(use_service_role=True), params=params, timeout=4)
             if r.status_code == 200 and r.json():
                 rec = r.json()[0]
                 return ExtractStatusResponse(
@@ -323,7 +326,7 @@ async def get_extraction_status(
                     status=rec.get("status", "completed"),
                     stage="completed",
                     progress_percent=100,
-                    data=rec.get("content_payload"),
+                    data=rec.get("structured_data"),
                     error=None
                 )
         except Exception:

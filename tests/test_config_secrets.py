@@ -42,12 +42,12 @@ def test_development_environment_gate_fails_on_missing_secret_key(monkeypatch):
 
 
 def test_test_environment_provides_test_fallbacks(monkeypatch):
-    """Verify test environment populates safe test keys for pytest execution."""
+    """Verify test environment populates no fallback secrets in production code."""
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.delenv("SECRET_KEY", raising=False)
-    monkeypatch.delenv("RAZORPAY_KEY_SECRET", raising=False)
+    monkeypatch.delenv("RAZORPAY_WEBHOOK_SECRET", raising=False)
 
-    settings = Settings()
-    assert settings.SECRET_KEY == "test_secret_key_for_unit_tests"
-    assert settings.RAZORPAY_WEBHOOK_SECRET == "whsec_razorpay_mock_secret"
+    settings = Settings(_env_file=None)
+    assert settings.SECRET_KEY is None
+    assert settings.RAZORPAY_WEBHOOK_SECRET is None
     assert settings.DEBUG is False

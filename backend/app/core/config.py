@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ADMIN_API_KEY: Optional[str] = None
     TRUSTED_PROXY: bool = False
     TRUSTED_PROXY_HOPS: int = 1
+    ALLOW_DB_WRITES: bool = False
 
     # Supabase Data Layer
     SUPABASE_URL: Optional[str] = None
@@ -36,13 +37,17 @@ class Settings(BaseSettings):
     def get_supabase_jwks_url(self) -> str:
         if self.SUPABASE_JWKS_URL:
             return self.SUPABASE_JWKS_URL
-        base = (self.SUPABASE_URL or "https://scrqvbgjybnrvcpxbygf.supabase.co").rstrip("/")
+        if not self.SUPABASE_URL:
+            raise ValueError("Configuration error: Missing required setting 'SUPABASE_URL' or 'SUPABASE_JWKS_URL'.")
+        base = self.SUPABASE_URL.rstrip("/")
         return f"{base}/auth/v1/.well-known/jwks.json"
 
     def get_supabase_jwt_issuer(self) -> str:
         if self.SUPABASE_JWT_ISSUER:
             return self.SUPABASE_JWT_ISSUER
-        base = (self.SUPABASE_URL or "https://scrqvbgjybnrvcpxbygf.supabase.co").rstrip("/")
+        if not self.SUPABASE_URL:
+            raise ValueError("Configuration error: Missing required setting 'SUPABASE_URL' or 'SUPABASE_JWT_ISSUER'.")
+        base = self.SUPABASE_URL.rstrip("/")
         return f"{base}/auth/v1"
 
     # AI Multimodal Providers
@@ -98,30 +103,14 @@ class Settings(BaseSettings):
     )
 
     def model_post_init(self, __context):
-        import sys
         env_name = (self.ENVIRONMENT or "development").lower()
-        is_pytest = "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST") is not None
 
-        if is_pytest and env_name not in ["production", "development_strict"]:
-            if not self.SECRET_KEY:
-                self.SECRET_KEY = "test_secret_key_for_unit_tests"
-            if not self.RAZORPAY_WEBHOOK_SECRET:
-                self.RAZORPAY_WEBHOOK_SECRET = "whsec_razorpay_mock_secret"
-            if not self.STRIPE_WEBHOOK_SECRET:
-                self.STRIPE_WEBHOOK_SECRET = "whsec_stripe_mock_secret"
-            if not self.WHATSAPP_VERIFY_TOKEN:
-                self.WHATSAPP_VERIFY_TOKEN = "universal_pro_verify_token"
-            if not self.WHATSAPP_PHONE_NUMBER_ID:
-                self.WHATSAPP_PHONE_NUMBER_ID = "1280483961819200"
-            if not self.RAZORPAY_KEY_ID:
-                self.RAZORPAY_KEY_ID = "rzp_test_mockkey123"
-            if not self.RAZORPAY_KEY_SECRET:
-                self.RAZORPAY_KEY_SECRET = "mock_razorpay_secret_key"
-            if not self.STRIPE_API_KEY:
-                self.STRIPE_API_KEY = "sk_test_mockstripekey123"
-        elif env_name in ["development", "development_strict"]:
+        if env_name in ["development", "development_strict"]:
             if not self.SECRET_KEY:
                 raise ValueError("Local development environment error: SECRET_KEY is missing. Please create a local .env file or set SECRET_KEY.")
+        elif env_name in ["test", "testing"]:
+            # In test environment, all settings must be supplied via environment variables (e.g. conftest.py)
+            pass
         else:
             required_secrets = {
                 "SECRET_KEY": self.SECRET_KEY,
