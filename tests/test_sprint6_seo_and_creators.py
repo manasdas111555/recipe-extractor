@@ -105,6 +105,30 @@ class TestSprint6SEOAndPublicHub:
         assert "urls" in data
         assert any("crispy-air-fryer-samosa" in item["url"] for item in data["urls"])
 
+    def test_public_extraction_db_error_returns_503(self, monkeypatch):
+        from backend.app.core.supabase_client import SupabaseDbError
+        mock_supabase = MagicMock()
+        mock_supabase.get_public_extraction_by_slug_or_id.side_effect = SupabaseDbError("Connection timeout")
+        monkeypatch.setattr("backend.app.api.v1.public_hub.get_supabase_client", lambda: mock_supabase)
+
+        response = client.get("/api/v1/public/extractions/crispy-air-fryer-samosa")
+        assert response.status_code == 503
+        data = response.json()
+        assert "detail" in data
+        assert "temporarily unavailable" in data["detail"]
+
+    def test_public_sitemap_urls_db_error_returns_503(self, monkeypatch):
+        from backend.app.core.supabase_client import SupabaseDbError
+        mock_supabase = MagicMock()
+        mock_supabase.list_public_extraction_slugs.side_effect = SupabaseDbError("Connection timeout")
+        monkeypatch.setattr("backend.app.api.v1.public_hub.get_supabase_client", lambda: mock_supabase)
+
+        response = client.get("/api/v1/public/sitemap?limit=10")
+        assert response.status_code == 503
+        data = response.json()
+        assert "detail" in data
+        assert "temporarily unavailable" in data["detail"]
+
 
 class TestSprint6CreatorTagVault:
     """Tests UPA-702 Creator Custom Affiliate Tag Vault & Injection."""

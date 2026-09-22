@@ -11,7 +11,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Query, status
 
-from backend.app.core.supabase_client import get_supabase_client
+from backend.app.core.supabase_client import get_supabase_client, SupabaseDbError
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,14 @@ async def get_public_extraction(slug_or_id: str):
     Generates Google Recipe Schema JSON-LD and OpenGraph metadata for SSR rendering.
     """
     supabase = get_supabase_client()
-    extraction = supabase.get_public_extraction_by_slug_or_id(slug_or_id)
+    try:
+        extraction = supabase.get_public_extraction_by_slug_or_id(slug_or_id)
+    except SupabaseDbError as e:
+        logger.error(f"Database error during public extraction fetch for '{slug_or_id}': {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service temporarily unavailable. Please try again shortly."
+        )
 
     if not extraction:
         raise HTTPException(
@@ -115,7 +122,15 @@ async def get_sitemap_urls(limit: int = Query(100, ge=1, le=1000)):
     for Next.js dynamic sitemap.ts generation.
     """
     supabase = get_supabase_client()
-    slugs = supabase.list_public_extraction_slugs(limit=limit)
+    try:
+        slugs = supabase.list_public_extraction_slugs(limit=limit)
+    except SupabaseDbError as e:
+        logger.error(f"Database error during sitemap URLs fetch: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service temporarily unavailable. Please try again shortly."
+        )
+
     return {
         "status": "success",
         "count": len(slugs),

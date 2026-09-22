@@ -14,6 +14,11 @@ from backend.app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+
+class SupabaseDbError(Exception):
+    """Raised when Supabase database is configured but unreachable or encounters an HTTP error."""
+    pass
+
 class SupabaseRestClient:
     def __init__(self, base_url: Optional[str] = None, anon_key: Optional[str] = None, service_role_key: Optional[str] = None):
         self.settings = get_settings()
@@ -372,46 +377,60 @@ class SupabaseRestClient:
 
         try:
             r = requests.get(url, headers=self._get_headers(use_service_role=False), params=params, timeout=5)
-            if r.status_code == 200 and r.json():
-                return r.json()[0]
+            if r.status_code == 200:
+                data = r.json()
+                return data[0] if data else None
+            elif r.status_code >= 500:
+                logger.error("Supabase get_public_extraction DB error [HTTP %s]: %s", r.status_code, r.text[:200])
+                raise SupabaseDbError(f"Supabase HTTP {r.status_code}")
             else:
                 logger.error("Supabase get_public_extraction failed [HTTP %s]: %s", r.status_code, r.text[:200])
+                return None
+        except SupabaseDbError:
+            raise
         except Exception as e:
             logger.error(f"Error retrieving public extraction {slug_or_id}: {e}")
-
-        return None
+            raise SupabaseDbError(f"Network error accessing Supabase: {e}")
 
     def list_public_extraction_slugs(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Returns indexed public extraction slugs and metadata for SEO sitemap generation."""
-        if self.is_configured():
-            url = f"{self.base_url}/rest/v1/extractions"
-            params = {
-                "is_public": "eq.true",
-                "select": "id,created_at,structured_data",
-                "order": "created_at.desc",
-                "limit": limit
-            }
-            try:
-                r = requests.get(url, headers=self._get_headers(use_service_role=False), params=params, timeout=5)
-                if r.status_code == 200 and r.json():
-                    results = []
-                    for row in r.json():
-                        content = row.get("structured_data", {})
-                        title = content.get("title", f"Recipe {row.get('id')[:8]}")
-                        slug = "-".join("".join(c for c in title.lower() if c.isalnum() or c.isspace()).split())
-                        results.append({
-                            "slug": slug or row.get("id"),
-                            "title": title,
-                            "category": content.get("category", "recipe"),
-                            "updated_at": row.get("created_at")
-                        })
-                    return results
-                else:
-                    logger.error("Supabase list_public_extraction_slugs failed [HTTP %s]: %s", r.status_code, r.text[:200])
-            except Exception as e:
-                logger.error(f"Error listing public extraction slugs: {e}")
+        if not self.is_configured():
+            return []
 
-        return []
+        url = f"{self.base_url}/rest/v1/extractions"
+        params = {
+            "is_public": "eq.true",
+            "select": "id,created_at,structured_data",
+            "order": "created_at.desc",
+            "limit": limit
+        }
+        try:
+            r = requests.get(url, headers=self._get_headers(use_service_role=False), params=params, timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                results = []
+                for row in data:
+                    content = row.get("structured_data", {})
+                    title = content.get("title", f"Recipe {row.get('id')[:8]}")
+                    slug = "-".join("".join(c for c in title.lower() if c.isalnum() or c.isspace()).split())
+                    results.append({
+                        "slug": slug or row.get("id"),
+                        "title": title,
+                        "category": content.get("category", "recipe"),
+                        "updated_at": row.get("created_at")
+                    })
+                return results
+            elif r.status_code >= 500:
+                logger.error("Supabase list_public_extraction_slugs DB error [HTTP %s]: %s", r.status_code, r.text[:200])
+                raise SupabaseDbError(f"Supabase HTTP {r.status_code}")
+            else:
+                logger.error("Supabase list_public_extraction_slugs failed [HTTP %s]: %s", r.status_code, r.text[:200])
+                return []
+        except SupabaseDbError:
+            raise
+        except Exception as e:
+            logger.error(f"Error listing public extraction slugs: {e}")
+            raise SupabaseDbError(f"Network error accessing Supabase: {e}")
 
     def update_creator_tags(
         self,
