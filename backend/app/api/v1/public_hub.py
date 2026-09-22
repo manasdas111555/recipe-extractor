@@ -23,7 +23,7 @@ def build_schema_org_recipe(extraction: Dict[str, Any]) -> Dict[str, Any]:
     Constructs Google-compliant Schema.org JSON-LD payload for Recipe and HowTo domains.
     Docs: https://developers.google.com/search/docs/appearance/structured-data/recipe
     """
-    content = extraction.get("extracted_content", {})
+    content = extraction.get("structured_data") or extraction.get("extracted_content", {})
     title = content.get("title") or extraction.get("title", "Universal AI Recipe")
     summary = content.get("summary") or content.get("description") or f"Learn how to make {title} with exact ingredients and step-by-step instructions."
     
@@ -86,7 +86,7 @@ async def get_public_extraction(slug_or_id: str):
         )
 
     schema_org = build_schema_org_recipe(extraction)
-    content = extraction.get("extracted_content", {})
+    content = extraction.get("structured_data") or extraction.get("extracted_content", {})
     title = content.get("title") or extraction.get("title", "Universal AI Recipe")
     desc = content.get("summary") or f"Quick instructions and ingredients for {title}."
 

@@ -8,6 +8,7 @@ Verifies:
 """
 
 import pytest
+from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
@@ -51,6 +52,56 @@ class TestSprint6SEOAndPublicHub:
         data = response.json()
         assert data["status"] == "success"
         assert data["count"] > 0
+        assert "urls" in data
+        assert any("crispy-air-fryer-samosa" in item["url"] for item in data["urls"])
+
+    def test_public_extraction_schema_org_recipe_jsonld_mocked(self, monkeypatch):
+        mock_supabase = MagicMock()
+        mock_supabase.get_public_extraction_by_slug_or_id.return_value = {
+            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "slug": "crispy-air-fryer-samosa",
+            "title": "Crispy Air Fryer Samosa",
+            "structured_data": {
+                "title": "Crispy Air Fryer Samosa",
+                "summary": "Crispy and delicious samosas cooked in air fryer.",
+                "prep_time_minutes": 15,
+                "cook_time_minutes": 20,
+                "servings": 4,
+                "category": "Main Course",
+                "ingredients": [
+                    {"name": "Boiled Potatoes", "quantity": "4", "unit": "large"},
+                    {"name": "Green Peas", "quantity": "0.5", "unit": "cup"}
+                ],
+                "steps": [
+                    {"instruction": "Mash potatoes and mix with spices."}
+                ]
+            }
+        }
+        monkeypatch.setattr("backend.app.api.v1.public_hub.get_supabase_client", lambda: mock_supabase)
+
+        response = client.get("/api/v1/public/extractions/crispy-air-fryer-samosa")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        schema = data["schema_org"]
+        assert schema["@context"] == "https://schema.org"
+        assert schema["@type"] == "Recipe"
+        assert schema["name"] == "Crispy Air Fryer Samosa"
+        assert len(schema["recipeIngredient"]) == 2
+        assert len(schema["recipeInstructions"]) == 1
+
+    def test_public_sitemap_urls_mocked(self, monkeypatch):
+        mock_supabase = MagicMock()
+        mock_supabase.list_public_extraction_slugs.return_value = [
+            {"slug": "crispy-air-fryer-samosa", "category": "recipe", "updated_at": "2026-09-21T00:00:00Z"}
+        ]
+        monkeypatch.setattr("backend.app.api.v1.public_hub.get_supabase_client", lambda: mock_supabase)
+
+        response = client.get("/api/v1/public/sitemap?limit=10")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["count"] == 1
         assert "urls" in data
         assert any("crispy-air-fryer-samosa" in item["url"] for item in data["urls"])
 
