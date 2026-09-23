@@ -169,3 +169,56 @@ Before deleting, moving, renaming, overwriting, resetting, cleaning, restoring, 
 7. Never use a destructive cleanup operation to resolve unrelated working-tree changes.
 8. Before any authorized destructive operation, show the exact command and affected paths and wait for explicit repository-owner authorization unless that authorization is already contained in the current task.
 
+## 20. Execution Artifact & Script Provenance Guard
+
+1. Global/IDE scratch scripts may be used only for temporary READ-ONLY diagnostics.
+
+2. Any script that:
+   - mutates a database,
+   - modifies repository files,
+   - changes cloud infrastructure,
+   - deploys,
+   - changes Redis/Celery,
+   - changes secrets/configuration
+   MUST NOT be executed from an opaque global scratch location.
+
+3. Mutating operational scripts must either:
+   a. already exist in the repository under an approved scripts path, or
+   b. be created in the repository under an explicitly ticketed change and reviewed before execution.
+
+4. Temporary read-only scratch scripts must:
+   - state their purpose,
+   - identify their path,
+   - be demonstrably READ-ONLY,
+   - show the executed command,
+   - not be treated as repository deliverables.
+
+5. A scratch script must never silently contain:
+   - INSERT
+   - UPDATE
+   - DELETE
+   - UPSERT
+   - CREATE
+   - ALTER
+   - DROP
+   - GRANT
+   - REVOKE
+   - git restore
+   - git reset
+   - git clean
+   - deployment commands
+   - secret rotation
+   - Production mutation
+
+6. For governed database migrations such as UPA-1230:
+   - the authoritative artifact is the reviewed repository migration file;
+   - execution must use that exact reviewed artifact;
+   - helper scripts may perform preflight or post-execution verification;
+   - helper scripts must not modify the migration file.
+
+7. If a task appears to require a mutating scratch script, STOP and report:
+   - the script path,
+   - why it is needed,
+   - exactly what it would modify,
+   - why an approved repository script or direct reviewed command cannot be used.
+
