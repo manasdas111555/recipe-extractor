@@ -12,11 +12,15 @@ This guide details the **3-Tier Environment Architecture** for Universal Pro AI,
 | Dimension | 🛠️ Development (Dev) | 🧪 Testing & Staging (Staging) | 🚀 Production (Prod) |
 | :--- | :--- | :--- | :--- |
 | **Git Branch** | **`Dev`** | **`staging`** | **`main`** *(Protected)* |
-| **Hosting Platform** | Local Workstation | Streamlit Cloud (Staging App) | Streamlit Cloud (Primary App) |
-| **Access URL** | `http://localhost:8501` | `https://universalpro-stage.streamlit.app/` | `https://universalpro-ai.streamlit.app/` |
+| **Frontend Host** | Local Workstation (`localhost:3000`) | Vercel Preview | Vercel Production |
+| **Backend Host** | Local Workstation (`localhost:8000`) | Dedicated OCI Staging VM *(Pending)* | OCI Production VM (`140.245.214.28`) |
+| **Access URL** | `http://localhost:3000` | Vercel Preview URL | Production Web PWA |
 | **Primary Goal** | Fast feature development | Pre-production testing & cloud validation | 100% reliable consumer traffic |
-| **Data / API Keys** | Local `.env` | Streamlit Cloud Secrets (Staging) | Streamlit Cloud Secrets (Production) |
+| **Data / API Keys** | Local `.env` | Environment Variables (Vercel / Staging Host) | Production Environment Variables (Vercel / OCI) |
 | **Promotion Gate** | Manual commit | Automated CI + `scripts/verify_promotion.py` | Manual approval after Staging verification |
+
+> [!NOTE]
+> **Historical Note `[HISTORICAL / DEPRECATED]`**: Legacy Streamlit Cloud deployments (`universalpro-stage.streamlit.app` and `universalpro-ai.streamlit.app`) served as the v0 prototype and are replaced by the Next.js 15 PWA on Vercel and FastAPI Gateway on OCI.
 
 ---
 

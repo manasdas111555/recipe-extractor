@@ -56,8 +56,8 @@ This document details:
 | :--- | :--- | :--- | :--- |
 | **Production Frontend (Primary)** | Vercel Edge Network | `https://universal-pro-ai.vercel.app` | Next.js 15 PWA web client, global CDN, HTTPS termination & origin IP shield |
 | **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
-| **Production UI (Fallback)** | Streamlit Community Cloud | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | Customer-facing extraction web app |
-| **Staging UI** | Streamlit Community Cloud | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Pre-production testing sandbox |
+| **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | v0 prototype extraction web app (Legacy) |
+| **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Legacy testing sandbox |
 | **FastAPI Backend** | Local / Docker Daemon | `http://localhost:8000` (`/docs`, `/health`, `/api/v1/auth/me`) | Decoupled API Gateway for bots and PWAs |
 | **Database** | Supabase (AWS Mumbai) | `https://scrqvbgjybnrvcpxbygf.supabase.co` | Multi-tenant PostgreSQL database with RLS |
 | **Global Skills Root** | Local Agent Environment | `C:\Users\admin\.gemini\config\skills\` | 14 global agent skills (`frontend-design`, `theme-factory`, `shadcn`, `high-end-visual-design`, etc.) |
