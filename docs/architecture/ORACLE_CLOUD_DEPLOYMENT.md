@@ -2,6 +2,9 @@
 
 This document details the complete, end-to-end setup of our dedicated **24/7 Always Free cloud production environment** on **Oracle Cloud Infrastructure (OCI)**, including the architectural topology, setup procedures, and a detailed engineering log of all issues encountered and resolved.
 
+> [!NOTE]
+> For the overall system solution, multi-environment architecture baseline, and Rule 21 governance, see [System Architecture Baseline](file:///d:/Personal%20Projects/recipe-extractor/docs/architecture/SYSTEM_ARCHITECTURE.md).
+
 ---
 
 ## 📌 Production Server Specification

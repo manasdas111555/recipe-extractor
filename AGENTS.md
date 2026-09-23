@@ -222,3 +222,37 @@ Before deleting, moving, renaming, overwriting, resetting, cleaning, restoring, 
    - exactly what it would modify,
    - why an approved repository script or direct reviewed command cannot be used.
 
+## 21. Documentation Synchronization & Architecture Drift Guard
+
+1. Every governed project change must keep applicable technical documentation synchronized with the implementation.
+
+2. Any architecture, infrastructure, deployment, environment, API, security, database, background-processing, AI provider, configuration, networking, CI/CD, observability, data-flow, integration, or operational change MUST assess documentation impact.
+
+3. Affected living documents must be updated in the same governed ticket/change.
+
+4. Documentation must describe actual implemented and empirically verified state.
+
+5. Documentation must never falsely claim deployment, capability, configuration, security, or verification.
+
+6. Every governed change must produce an explicit **Documentation Impact Assessment**:
+   - `Updated: <document path and sections modified>`
+   OR
+   - `No Documentation Impact: <evidence-based justification>`
+
+7. Obsolete documentation must be corrected or marked historical/deprecated.
+
+8. Documentation must distinguish the five evidence states:
+   - `[VERIFIED IN CURRENT REPOSITORY]`
+   - `[VERIFIED IN EXISTING PROJECT DOCUMENTATION]`
+   - `[EXTERNAL PLATFORM / INFRASTRUCTURE VERIFICATION REQUIRED]`
+   - `[PLANNED / INTENDED ARCHITECTURE]`
+   - `[UNKNOWN / REQUIRES OWNER CONFIRMATION]`
+
+9. The primary goal of Rule 21 is to prevent:
+   - architecture drift
+   - deployment drift
+   - environment drift
+   - infrastructure drift
+   - documentation drift
+
+

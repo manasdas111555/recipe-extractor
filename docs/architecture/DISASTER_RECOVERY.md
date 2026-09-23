@@ -7,6 +7,9 @@
 **Recovery Point Objective (RPO)**: $\le 1\text{ hour}$ (Data loss minimal to zero)  
 **Last Updated**: September 18, 2026  
 
+> [!NOTE]
+> For the authoritative system-wide architecture baseline and Rule 21 documentation synchronization rules, see [System Architecture Baseline](file:///d:/Personal%20Projects/recipe-extractor/docs/architecture/SYSTEM_ARCHITECTURE.md).
+
 ---
 
 ## 🧭 Executive Summary

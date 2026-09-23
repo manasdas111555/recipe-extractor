@@ -2,6 +2,9 @@
 
 This guide details the **3-Tier Environment Architecture** for Universal Pro AI, the automated safety gates, and instructions for configuring the cloud staging instance.
 
+> [!NOTE]
+> For the authoritative system-wide architecture baseline and 5-tier evidence model, see [System Architecture Baseline](file:///d:/Personal%20Projects/recipe-extractor/docs/architecture/SYSTEM_ARCHITECTURE.md).
+
 ---
 
 ## 🏛️ Environment Topology
