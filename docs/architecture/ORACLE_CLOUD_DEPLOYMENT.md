@@ -248,8 +248,14 @@ curl http://localhost/health
 ```
 
 Access from any web browser:
-- **Health Check**: `http://140.245.214.28/health`
-- **Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+- **Production Health Check**: `http://140.245.214.28/health`
+- **Production Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+
+### Staging VM Deployment & Gate Verification (`129.225.86.241`)
+* **Gate 4b (Container Runtime)**: `universalpro-api` and `universalpro-caddy` deployed via `docker compose up -d --build --no-deps api caddy` with 0 restarts and `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH].
+* **Gate 5 (External Health Endpoint)**: `GET http://129.225.86.241/health` -> `HTTP 200 OK` (`{"status":"healthy","service":"Universal Pro AI - API Gateway","version":"1.0.0","integrations":{"supabase":true,"gemini":false,"groq":false,"mistral":false}}`) observed at 2026-09-24 17:13:33 GMT & 17:13:56 GMT [EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
+* **Gate 6 (External Supabase Read Path)**: `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> `HTTP 404 Not Found` (`{"detail":"Public extraction 'non-existent-slug-12345' not found or is private."}`) observed at 2026-09-24 17:14:18 GMT, verifying deployed App -> Staging Supabase (`mzpkdmaxsuhwezsooidu.supabase.co`) connectivity with zero DB writes [EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
+* **Deferred Systems**: Redis / Celery async workers remain deferred to Gate 8; E2E suite deferred to Gate 9; Production (`140.245.214.28`) untouched.
 
 ---
 

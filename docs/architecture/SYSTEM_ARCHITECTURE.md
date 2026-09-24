@@ -253,8 +253,8 @@ graph TD
 * **SSH Management Connectivity**: SSH port 22 login from Owner's workstation [EXTERNALLY VERIFIED VIA SSH].
 * **Container Runtime Baseline**: Docker Engine 29.8.1 (active/enabled), Docker Compose v5.5.1, `ubuntu` user in `docker` group, zero active project containers (`docker ps -a` empty) [ACTUALLY VERIFIED VIA SSH].
 * **Repository Checkout Baseline**: Cloned at `/home/ubuntu/recipe-extractor`, branch `staging` checked out at exact SHA `06e02d192e89979745d2d0c4476e3e520c02fa48` (matching `origin/staging`), clean working tree, `.env` not present, `.env.example` present [ACTUALLY VERIFIED VIA SSH].
-* **Backend Application Runtime**: Staging `.env` configuration, Caddy reverse proxy, and FastAPI gateway runtime [NOT YET DEPLOYED / NOT YET VERIFIED].
-* **Database**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) [VERIFIED IN CURRENT REPOSITORY]. Deployed App $\rightarrow$ Staging Supabase connectivity [NOT YET VERIFIED FROM DEPLOYED APP].
+* **Backend Application Runtime**: Staging `.env` configuration, Caddy reverse proxy, and FastAPI gateway runtime [DEPLOYED & VERIFIED — EXTERNALLY VERIFIED VIA SSH & OWNER WORKSTATION].
+* **Database**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) [VERIFIED IN CURRENT REPOSITORY]. Deployed App $\rightarrow$ Staging Supabase connectivity [VERIFIED — HTTP 404 ON DUMMY SLUG EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
 * **Write Mode**: Initial deployment configured with `ALLOW_DB_WRITES=false` [VERIFIED IN CURRENT REPOSITORY].
 * **Deferred Systems**: Redis / Celery background processing [DEFERRED TO GATE 8]; E2E validation suite [DEFERRED TO GATE 9].
 
@@ -297,10 +297,10 @@ graph TD
 | **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment (`06e02d1` on remote staging) | `[VERIFIED IN CURRENT REPOSITORY]` |
 | **Gate 3** | Vercel Preview frontend build | Vercel | `VERIFIED` | Vercel preview build pipeline | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
 | **Gate 4a** | Staging VM OS Bootstrap, Swap, Docker Setup & Repo Checkout | OCI Staging | `VERIFIED` | Staging VM (`129.225.86.241`) OS updated, 2 GiB swap, Docker 29.8.1, Compose v5.5.1, repo cloned at `staging` `06e02d1` | `[EXTERNALLY VERIFIED VIA SSH]` |
-| **Gate 4b** | Staging `.env` Configuration, Caddy & FastAPI Container Runtime | OCI Staging | `NOT VERIFIED` | Application deployment pending on Staging VM | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
-| **Gate 5** | Staging FastAPI `/health` endpoint | OCI Staging | `NOT VERIFIED` | Health response on staging host | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
-| **Gate 6** | App -> Supabase Staging PostgREST read | Staging App | `NOT VERIFIED` | HTTP 404 on dummy slug lookup from deployed app | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
-| **Gate 7** | Governed DB write enablement | Staging App | `NOT VERIFIED` | `ALLOW_DB_WRITES=true` configuration | `[PLANNED / INTENDED ARCHITECTURE]` |
+| **Gate 4b** | Staging `.env` Configuration, Caddy & FastAPI Container Runtime | OCI Staging | `VERIFIED` | Docker containers (`api` and `caddy`) running, 0 restarts, in-VM `/health` 200 OK | `[EXTERNALLY VERIFIED VIA SSH]` |
+| **Gate 5** | Staging FastAPI `/health` endpoint | OCI Staging | `VERIFIED` | External `GET http://129.225.86.241/health` -> HTTP 200 OK (`{"status":"healthy","integrations":{"supabase":true,...}}`) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
+| **Gate 6** | App -> Supabase Staging PostgREST read | Staging App | `VERIFIED` | External `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> HTTP 404 Not Found (zero DB writes) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
+| **Gate 7** | Governed DB write enablement | Staging App | `NOT VERIFIED` | `ALLOW_DB_WRITES=true` configuration (Initial deployment keeps `ALLOW_DB_WRITES=false`) | `[PLANNED / INTENDED ARCHITECTURE]` |
 | **Gate 8** | Redis / Celery async worker pool | Staging App | `DEFERRED` | Worker task queue processing | `[PLANNED / INTENDED ARCHITECTURE]` |
 | **Gate 9** | Full E2E validation suite | Staging App | `DEFERRED` | End-to-end integration test output | `[PLANNED / INTENDED ARCHITECTURE]` |
 
