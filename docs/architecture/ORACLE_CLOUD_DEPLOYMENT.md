@@ -41,7 +41,8 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
   - Ingress TCP 6379: No inbound OCI Security List rule for TCP 6379
 - **SSH Connectivity**: **EXTERNALLY VERIFIED** by Owner (fingerprint accepted, banner verified)
 - **OS Bootstrap & Runtime Baseline Status**: **ACTUALLY VERIFIED** (Git 2.43.0, Curl 8.5.0, 2.0 GiB `/swapfile` active/persistent, Docker Engine 29.8.1 active/enabled, Docker Compose v5.5.1 installed, `ubuntu` user in `docker` group, 0 containers running)
-- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Repository checkout, `.env` configuration, Caddy reverse proxy, and FastAPI container deployment remain pending)
+- **Repository Checkout Status**: **ACTUALLY VERIFIED** (Cloned at `/home/ubuntu/recipe-extractor`, branch `staging` checked out at exact SHA `06e02d192e89979745d2d0c4476e3e520c02fa48` matching `origin/staging`, clean working tree, `.env` not present, `.env.example` present)
+- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Staging `.env` configuration, Caddy reverse proxy, and FastAPI container deployment remain pending)
 - **Worker & E2E Status**: **DEFERRED** (Redis / Celery background workers and E2E validation deferred)
 - **Database Isolation Target**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) with zero Production DB (`scrqvbgjybnrvcpxbygf`) contact
 
