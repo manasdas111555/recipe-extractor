@@ -21,6 +21,30 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
 
 ---
 
+## 📌 Dedicated Staging Server Specification & Infrastructure Evidence
+
+- **Tenancy**: `manasdas111555` (root)
+- **Region**: `India South (Hyderabad)` (`ap-hyderabad-1`, AD `HJag:AP-HYDERABAD-1-AD-1`)
+- **Instance Name**: `universal-pro-ai-staging-instance`
+- **Public IPv4 Address**: `129.225.86.241` [EXTERNALLY VERIFIED BY OWNER SSH]
+- **Private IPv4 Address**: `10.0.2.242` [EXTERNALLY VERIFIED]
+- **Operating System**: `Canonical Ubuntu 24.04.5 LTS` (x86_64) [EXTERNALLY VERIFIED BY OWNER SSH]
+- **Compute Shape**: `VM.Standard.E2.1.Micro` (AMD 1 OCPU, 1 GB RAM + proposed 2 GB `/swapfile`, Always Free)
+- **Virtual Cloud Network**: `universalpro-ai-vcn` (`10.0.0.0/16`)
+- **Staging Subnet**: `staging-public-subnet` (`10.0.2.0/24`)
+- **Staging VNIC**: `universal-pro-ai-staging-vnic`
+- **Dedicated Staging Security List**: `staging-security-list-universalpro-ai-vcn`
+  - Ingress TCP 22: Restricted SSH (Owner workstation verified)
+  - Ingress TCP 80: Public HTTP (`0.0.0.0/0`)
+  - Ingress TCP 443: Public HTTPS (`0.0.0.0/0`)
+  - Ingress TCP 8000: **NO** public ingress rule (blocked)
+  - Ingress TCP 6379: **NO** public ingress rule (blocked)
+- **SSH Connectivity**: **EXTERNALLY VERIFIED** by Owner (fingerprint accepted, banner verified)
+- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Docker, Caddy, FastAPI app deployment pending)
+- **Database Isolation Target**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) with zero Production DB (`scrqvbgjybnrvcpxbygf`) contact
+
+---
+
 ## 🏗️ Architecture & Component Topology
 
 ```

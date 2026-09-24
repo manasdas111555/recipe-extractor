@@ -13,7 +13,7 @@ This guide details the **3-Tier Environment Architecture** for Universal Pro AI,
 | :--- | :--- | :--- | :--- |
 | **Git Branch** | **`Dev`** | **`staging`** | **`main`** *(Protected)* |
 | **Frontend Host** | Local Workstation (`localhost:3000`) | Vercel Preview | Vercel Production |
-| **Backend Host** | Local Workstation (`localhost:8000`) | Dedicated OCI Staging VM *(Pending)* | OCI Production VM (`140.245.214.28`) |
+| **Backend Host** | Local Workstation (`localhost:8000`) | Dedicated OCI Staging VM (`129.225.86.241`, Provisioned / SSH Verified) | OCI Production VM (`140.245.214.28`) |
 | **Access URL** | `http://localhost:3000` | Vercel Preview URL | Production Web PWA |
 | **Primary Goal** | Fast feature development | Pre-production testing & cloud validation | 100% reliable consumer traffic |
 | **Data / API Keys** | Local `.env` | Environment Variables (Vercel / Staging Host) | Production Environment Variables (Vercel / OCI) |
@@ -148,7 +148,8 @@ WHATSAPP_VERIFY_TOKEN = "your_staging_whatsapp_verify_token"
 
 ### 1. Staging Project Separation Blueprint
 Staging and Production MUST NOT share database instances, JWT keys, user accounts, or Redis task queues.
-- **Dedicated Supabase Project**: Separate Supabase project for staging environment (`https://<staging_id>.supabase.co`).
+- **Dedicated OCI Staging VM**: Dedicated `VM.Standard.E2.1.Micro` instance `universal-pro-ai-staging-instance` (AMD x86_64, Ubuntu 24.04.5 LTS, Public IP `129.225.86.241`, Private IP `10.0.2.242`, Subnet `staging-public-subnet` `10.0.2.0/24`, Security List `staging-security-list-universalpro-ai-vcn`) — **PROVISIONED & SSH VERIFIED BY OWNER**. Application deployment (Docker / Caddy / FastAPI), Supabase connectivity, and Redis/Celery **NOT YET DEPLOYED / NOT YET VERIFIED**.
+- **Dedicated Supabase Project**: Separate Supabase project for staging environment (`https://mzpkdmaxsuhwezsooidu.supabase.co`).
 - **SQL Migration Sequence (Owner-Executed Manual Steps)**:
   1. `01_schema.sql`: Core PostgreSQL tables (`users`, `profiles`, `extractions`, `affiliate_clicks`).
   2. `02_indexes.sql`: Performance lookup indexes (SHA-256 `url_hash`, `user_id`).
