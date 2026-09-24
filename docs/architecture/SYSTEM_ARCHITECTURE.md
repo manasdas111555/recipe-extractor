@@ -249,9 +249,10 @@ graph TD
 ## 22. DETAILED CURRENT STAGING ARCHITECTURE
 
 * **Frontend**: Vercel Preview deployment bound to `staging` branch [VERIFIED IN CURRENT REPOSITORY].
-* **Backend Infrastructure**: Dedicated OCI VM `universal-pro-ai-staging-instance` (`VM.Standard.E2.1.Micro`, AMD x86_64, 1 GB RAM, Ubuntu 24.04.5 LTS) in region `ap-hyderabad-1` (AD `HJag:AP-HYDERABAD-1-AD-1`), VCN `universalpro-ai-vcn`, subnet `staging-public-subnet` (`10.0.2.0/24`), VNIC `universal-pro-ai-staging-vnic`, dedicated Security List `staging-security-list-universalpro-ai-vcn`, Public IP `129.225.86.241`, Private IP `10.0.2.242` [ACTUALLY PROVISIONED / RUNNING — EXTERNALLY VERIFIED BY OWNER SSH].
-* **SSH Management Connectivity**: SSH port 22 login from Owner's Windows workstation [EXTERNALLY VERIFIED BY OWNER SSH].
-* **Backend Application Runtime**: Docker Engine / Compose runtime, Caddy reverse proxy, and FastAPI gateway [NOT YET DEPLOYED / NOT YET VERIFIED].
+* **Backend Infrastructure**: Dedicated OCI VM `universal-pro-ai-staging-instance` (`VM.Standard.E2.1.Micro`, AMD x86_64, 1 GB RAM, Ubuntu 24.04.5 LTS, apt update/upgrade clean, 2.0 GiB `/swapfile` active/persistent in `/etc/fstab`) in region `ap-hyderabad-1` (AD `HJag:AP-HYDERABAD-1-AD-1`), VCN `universalpro-ai-vcn`, subnet `staging-public-subnet` (`10.0.2.0/24`), VNIC `universal-pro-ai-staging-vnic`, dedicated Security List `staging-security-list-universalpro-ai-vcn`, Public IP `129.225.86.241`, Private IP `10.0.2.242` [ACTUALLY PROVISIONED / RUNNING — EXTERNALLY VERIFIED VIA SSH].
+* **SSH Management Connectivity**: SSH port 22 login from Owner's workstation [EXTERNALLY VERIFIED VIA SSH].
+* **Container Runtime Baseline**: Docker Engine 29.8.1 (active/enabled), Docker Compose v5.5.1, `ubuntu` user in `docker` group, zero active project containers (`docker ps -a` empty) [ACTUALLY VERIFIED VIA SSH].
+* **Backend Application Runtime**: Repository checkout, Caddy reverse proxy, and FastAPI gateway [NOT YET DEPLOYED / NOT YET VERIFIED].
 * **Database**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) [VERIFIED IN CURRENT REPOSITORY]. Deployed App $\rightarrow$ Staging Supabase connectivity [NOT YET VERIFIED FROM DEPLOYED APP].
 * **Write Mode**: Initial deployment configured with `ALLOW_DB_WRITES=false` [VERIFIED IN CURRENT REPOSITORY].
 * **Deferred Systems**: Redis / Celery background processing [DEFERRED TO GATE 8]; E2E validation suite [DEFERRED TO GATE 9].
@@ -292,10 +293,10 @@ graph TD
 | Gate | Description | Environment | Status | Evidence Source | Classification |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Gate 1** | Owner authorization & backlog ticket | Governance | `VERIFIED` | `JIRA_BACKLOG.md` ticket entries | `[VERIFIED IN CURRENT REPOSITORY]` |
-| **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment | `[VERIFIED IN CURRENT REPOSITORY]` |
+| **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment (`06e02d1` on remote staging) | `[VERIFIED IN CURRENT REPOSITORY]` |
 | **Gate 3** | Vercel Preview frontend build | Vercel | `VERIFIED` | Vercel preview build pipeline | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
-| **Gate 4a** | Staging OCI Backend VM Infrastructure & SSH Access | OCI Staging | `VERIFIED` | Dedicated OCI Staging VM (`129.225.86.241`) provisioned & SSH verified by Owner | `[EXTERNALLY VERIFIED BY OWNER SSH]` |
-| **Gate 4b** | Staging Docker Engine, Caddy & FastAPI container runtime | OCI Staging | `NOT VERIFIED` | Application deployment pending on Staging VM | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
+| **Gate 4a** | Staging OCI Backend VM OS Bootstrap, 2 GB Swap, & Docker Setup | OCI Staging | `VERIFIED` | Dedicated OCI Staging VM (`129.225.86.241`) provisioned, OS updated, 2 GiB swap active, Docker 29.8.1 & Compose v5.5.1 active | `[EXTERNALLY VERIFIED VIA SSH]` |
+| **Gate 4b** | Staging Repository Checkout, Caddy & FastAPI Container Runtime | OCI Staging | `NOT VERIFIED` | Application deployment pending on Staging VM | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
 | **Gate 5** | Staging FastAPI `/health` endpoint | OCI Staging | `NOT VERIFIED` | Health response on staging host | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
 | **Gate 6** | App -> Supabase Staging PostgREST read | Staging App | `NOT VERIFIED` | HTTP 404 on dummy slug lookup from deployed app | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
 | **Gate 7** | Governed DB write enablement | Staging App | `NOT VERIFIED` | `ALLOW_DB_WRITES=true` configuration | `[PLANNED / INTENDED ARCHITECTURE]` |

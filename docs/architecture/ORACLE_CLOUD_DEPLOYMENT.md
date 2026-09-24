@@ -28,8 +28,8 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
 - **Instance Name**: `universal-pro-ai-staging-instance`
 - **Public IPv4 Address**: `129.225.86.241` [EXTERNALLY VERIFIED BY OWNER SSH]
 - **Private IPv4 Address**: `10.0.2.242` [EXTERNALLY VERIFIED]
-- **Operating System**: `Canonical Ubuntu 24.04.5 LTS` (x86_64) [EXTERNALLY VERIFIED BY OWNER SSH]
-- **Compute Shape**: `VM.Standard.E2.1.Micro (AMD, 1 GB RAM)` with proposed 2 GB `/swapfile` (Always Free)
+- **Operating System**: `Canonical Ubuntu 24.04.5 LTS` (x86_64, Kernel: `6.17.0-1020-oracle`, `apt update`/`upgrade` completed, 0 reboots required) [EXTERNALLY VERIFIED VIA SSH]
+- **Compute Shape**: `VM.Standard.E2.1.Micro (AMD, 1 GB RAM)` with 2.0 GiB `/swapfile` active and persistent in `/etc/fstab` (Always Free) [ACTUALLY VERIFIED VIA SSH]
 - **Virtual Cloud Network**: `universalpro-ai-vcn` (`10.0.0.0/16`)
 - **Staging Subnet**: `staging-public-subnet` (`10.0.2.0/24`)
 - **Staging VNIC**: `universal-pro-ai-staging-vnic`
@@ -40,7 +40,9 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
   - Ingress TCP 8000: No inbound OCI Security List rule for TCP 8000
   - Ingress TCP 6379: No inbound OCI Security List rule for TCP 6379
 - **SSH Connectivity**: **EXTERNALLY VERIFIED** by Owner (fingerprint accepted, banner verified)
-- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Docker, Caddy, FastAPI app deployment pending)
+- **OS Bootstrap & Runtime Baseline Status**: **ACTUALLY VERIFIED** (Git 2.43.0, Curl 8.5.0, 2.0 GiB `/swapfile` active/persistent, Docker Engine 29.8.1 active/enabled, Docker Compose v5.5.1 installed, `ubuntu` user in `docker` group, 0 containers running)
+- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Repository checkout, `.env` configuration, Caddy reverse proxy, and FastAPI container deployment remain pending)
+- **Worker & E2E Status**: **DEFERRED** (Redis / Celery background workers and E2E validation deferred)
 - **Database Isolation Target**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) with zero Production DB (`scrqvbgjybnrvcpxbygf`) contact
 
 ---
