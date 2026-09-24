@@ -1,0 +1,9 @@
+# CODEOWNERS for Universal Pro AI
+# Restricts changes to critical test suites, security components, monetization engines, and governance rules.
+
+tests/ @manasdas111555
+frontend/src/**/__tests__/ @manasdas111555
+AGENTS.md @manasdas111555
+backend/app/services/affiliate_engine.py @manasdas111555
+backend/app/services/url_validator.py @manasdas111555
+backend/app/core/security.py @manasdas111555

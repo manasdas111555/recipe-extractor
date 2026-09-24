@@ -180,6 +180,38 @@ class QuotaManager:
         with self._in_memory_lock:
             self._in_memory_quotas.pop(key, None)
 
+    def check_generic_rate_limit(self, key: str, limit: int = 30, window_seconds: int = 60) -> Tuple[bool, int]:
+        """
+        Generic sliding-window rate limiter utilizing Redis with in-memory fallback.
+        Returns (is_allowed, current_count).
+        """
+        import time
+        r = self._get_redis()
+        bucket = int(time.time() // window_seconds)
+        redis_key = f"rate_limit:{key}:{bucket}"
+
+        if r:
+            try:
+                pipeline = r.pipeline()
+                pipeline.incr(redis_key)
+                pipeline.expire(redis_key, window_seconds + 5)
+                results = pipeline.execute()
+                count = int(results[0])
+                return count <= limit, count
+            except Exception as e:
+                logger.warning(f"[QuotaManager] Redis rate limit error ({e}). Falling back to memory.")
+
+        with self._in_memory_lock:
+            now = time.time()
+            cutoff = now - window_seconds
+            raw_ts = self._in_memory_quotas.get(redis_key, [])
+            timestamps = raw_ts if isinstance(raw_ts, list) else []
+            timestamps = [t for t in timestamps if t > cutoff]
+            timestamps.append(now)
+            self._in_memory_quotas[redis_key] = timestamps
+            count = len(timestamps)
+            return count <= limit, count
+
 
 _quota_manager: Optional[QuotaManager] = None
 

@@ -39,6 +39,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-031** | 2026-09-14 | Skills & Customizations | Global Agent Skills Installation from Downloads/Skill Files (Total 53 Skills) | ✅ Resolved |
 | **ISSUE-032** | 2026-09-15 | UI/UX & Design | Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation | ✅ Resolved |
 | **ISSUE-045** | 2026-09-20 | Security & Architecture | Security Hardening, Pure Function Refactoring, WCAG Accessibility, Admin Telemetry & Vault Rehydration | ✅ Resolved |
+| **ISSUE-046** | 2026-09-20 | Security & Rule Enforcement | TRUSTED_PROXY Default, Egress Firewall Verification, IP Pinning SNI, Streamlit Admin Removal & Vault Rehydration Wiring | ✅ Resolved |
 
 ---
 
@@ -1335,6 +1336,37 @@ Need to execute multi-domain system hardening across SSRF/IP redirect validation
 - Next.js Build (`npm run build`): **SUCCESSFUL (0 errors)**.
 - Vitest Suite (`npm test`): **9 / 9 PASSED**.
 - Backend Pytest Suite (`pytest tests/`): **211 / 211 PASSED**.
+
+### 🚨 ISSUE-046: Security Rule Enforcement & Infrastructure Isolation
+- **Date**: 2026-09-20
+- **Affected Files**: `backend/app/core/config.py`, `backend/app/core/security.py`, `backend/app/services/streamlit_app.py`, `backend/app/api/v1/library.py`, `frontend/src/components/VaultLibrary.tsx`, `scripts/verify_egress.py`, `tests/test_backend_security_hardening.py`, `tests/test_hinglish_prompt_snapshot.py`
+
+#### 1. What Happened (Symptom):
+1. `TRUSTED_PROXY` defaulted to `True` or trusted unvalidated proxy headers by default.
+2. Container egress firewall verification needed real automated tests blocking 169.254.169.254 and private IPs.
+3. IP pinning needed tests asserting Host header and TLS SNI/server_hostname preservation.
+4. Vault item rehydration required sliding window rate limiting (30 req/min) and UI wiring in `VaultLibrary.tsx`.
+5. Streamlit app contained legacy `?admin=1` URL parameter gating.
+6. Hinglish prompt snapshot test was required for Rule 13 compliance.
+
+#### 2. Root Cause:
+1. Proxy settings must default to untrusted (`TRUSTED_PROXY=False`) unless explicitly enabled per environment.
+2. IP pinning overrides destination socket IP; HTTP client MUST preserve the original Host header and TLS SNI server hostname.
+3. Legacy Vault items needed automatic re-hydration upon selection to receive fresh stream tokens without triggering re-extraction.
+4. Streamlit app line 833 evaluated `admin=1` query string without server-side authentication.
+
+#### 3. Resolution (Code Changes):
+- `config.py`: Set `TRUSTED_PROXY: bool = False`. Documented environment values in `.env.example` and `DISASTER_RECOVERY.md`.
+- `scripts/verify_egress.py`: Created automated python & bash egress verification script asserting metadata/private IP connection drops and public HTTPS success.
+- `test_backend_security_hardening.py`: Added `test_ip_pinning_uses_first_public_ip_and_no_reresolve` and `test_ip_pinning_preserves_host_header_and_tls_sni`.
+- `library.py` & `VaultLibrary.tsx`: Added rate limiter to `/api/v1/library/rehydrate` and wired auto-rehydration into `onSelectRecipe`.
+- `streamlit_app.py`: Hardcoded `is_admin = False` permanently disabling URL parameter gating.
+- `test_hinglish_prompt_snapshot.py`: Added snapshot test asserting Hinglish culinary prompt mappings in `REGIONAL_EXTRACTION_SYSTEM_PROMPT`.
+
+#### 4. Testing & Verification:
+- Egress Script (`python scripts/verify_egress.py`): **ALL EGRESS FIREWALL CHECKS PASSED [OK]**.
+- Frontend Vitest (`npm test`): **9 / 9 PASSED**.
+- Backend Pytest (`pytest tests/`): **216 / 216 PASSED**.
 
 ---
 

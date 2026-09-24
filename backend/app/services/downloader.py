@@ -2,9 +2,12 @@ import os
 import sys
 import time
 import re
+import logging
 import requests
 from pathlib import Path
 from typing import Tuple
+
+logger = logging.getLogger(__name__)
 
 # Configure Windows console to UTF-8 to prevent 'charmap' codec errors
 if sys.platform == "win32":

@@ -80,6 +80,9 @@ def check_compilation() -> bool:
 def check_clean_imports() -> bool:
     log_step("Step 2: Isolated Clean-Process Import Smoke Test")
     all_clean = True
+    test_env = os.environ.copy()
+    if not test_env.get("SECRET_KEY"):
+        test_env["SECRET_KEY"] = "test_secret_key_for_unit_tests"
     
     for mod in CORE_MODULES:
         # Run import in a completely isolated sub-process
@@ -96,7 +99,8 @@ def check_clean_imports() -> bool:
         res = subprocess.run(
             [sys.executable, "-c", test_code],
             capture_output=True,
-            text=True
+            text=True,
+            env=test_env
         )
         if res.returncode == 0 and "IMPORTED_SUCCESSFULLY" in res.stdout:
             print(f"  ✅ Clean isolated import: {mod}")
@@ -112,13 +116,18 @@ def check_clean_imports() -> bool:
 
 def run_unit_tests() -> bool:
     log_step("Step 3: Running Full Automated Unit Test Suite")
+    test_env = os.environ.copy()
+    if not test_env.get("SECRET_KEY"):
+        test_env["SECRET_KEY"] = "test_secret_key_for_unit_tests"
+
     res = subprocess.run(
-        [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+        [sys.executable, "-m", "pytest", "tests"],
         cwd=str(ROOT_DIR),
         capture_output=True,
         text=True,
         encoding="utf-8",
-        errors="replace"
+        errors="replace",
+        env=test_env
     )
     
     print(res.stdout)

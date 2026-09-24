@@ -304,8 +304,29 @@ export default function VaultLibrary({ onSelectRecipe, isOpen, onClose }: VaultL
                       gap: '0.5rem',
                       transition: 'transform 0.15s ease, border-color 0.15s ease',
                     }}
-                    onClick={() => {
-                      onSelectRecipe(rData);
+                    onClick={async () => {
+                      let targetData = rData;
+                      const rDataAny = rData as any;
+                      const hasAffiliate = Array.isArray(rDataAny.ingredients) && rDataAny.ingredients.some((ing: any) => typeof ing === 'object' && (ing?.amazon_url || ing?.blinkit_url));
+                      const urlToRehydrate = rDataAny.source_url || rDataAny.url || item.source_url;
+                      if (!hasAffiliate && urlToRehydrate && urlToRehydrate !== '#') {
+                        try {
+                          const res = await fetch('/api/v1/library/rehydrate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              extraction_id: item.id,
+                              canonical_url: urlToRehydrate,
+                              item: rData
+                            })
+                          });
+                          const data = await res.json();
+                          if (data.status === 'success' && data.item) {
+                            targetData = data.item;
+                          }
+                        } catch (e) {}
+                      }
+                      onSelectRecipe(targetData);
                       onClose();
                     }}
                   >

@@ -51,6 +51,7 @@ def execute_extraction_pipeline(
     Step 3: Enrich with multi-store affiliate & 10-minute quick-commerce cart deep links
     Step 4: Persist structured payload to Supabase database & update user daily quota
     """
+    start_time = time.time()
     manager = get_job_manager()
     supabase = get_supabase_client()
     affiliate_engine = get_affiliate_engine()
@@ -187,6 +188,7 @@ def execute_extraction_pipeline(
 
         # Step 4: Persist in Supabase PostgreSQL & Increment Daily Quota (UPA-205)
         update_progress("persisting_to_database", 90)
+        processing_time_ms = int((time.time() - start_time) * 1000)
         try:
             supabase.save_extraction({
                 "id": job_id,
@@ -196,6 +198,7 @@ def execute_extraction_pipeline(
                 "title": meta.get("title", "Extracted Content"),
                 "domain_category": meta.get("category", "RECIPE"),
                 "content_payload": content_payload,
+                "processing_time_ms": processing_time_ms,
                 "status": "completed"
             })
             supabase.increment_daily_quota(user_id)
@@ -203,7 +206,7 @@ def execute_extraction_pipeline(
                 source_platform="web",
                 source_url=video_url,
                 classified_domain=meta.get("category", "RECIPE"),
-                turnaround_time_ms=2500,
+                turnaround_time_ms=processing_time_ms,
                 status="completed"
             )
             logger.info("[%s] Saved extraction & updated quota for user %s", job_id, user_id)

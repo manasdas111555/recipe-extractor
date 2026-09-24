@@ -1193,7 +1193,7 @@ function UniversalDashboard() {
                   fontWeight: 600,
                 }}
               >
-                ⚡ ~2.4s Benchmark Target
+                ⚡ Fast Multimodal AI
               </span>
             </div>
           </div>

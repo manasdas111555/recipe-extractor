@@ -80,8 +80,9 @@ def is_globally_routable_ip(ip_str: str) -> bool:
 
 def resolve_and_validate_hostname(hostname: str) -> Tuple[bool, Optional[str], str]:
     """
-    Resolves a hostname via socket.getaddrinfo, checks ALL returned IPs against global routability,
+    Resolves a hostname via socket.getaddrinfo, validates the target pinned IP,
     and returns (is_valid, pinned_ip, error_message).
+    REJECTS host if ANY resolved IP address is non-global/private.
     """
     try:
         addr_info = socket.getaddrinfo(hostname, 443, socket.AF_UNSPEC, socket.SOCK_STREAM)
@@ -89,14 +90,12 @@ def resolve_and_validate_hostname(hostname: str) -> Tuple[bool, Optional[str], s
             return False, None, f"Could not resolve hostname {hostname}"
 
         pinned_ip = None
-        for res in addr_info:
-            sockaddr = res[4]
-            ip_str = sockaddr[0]
-            clean_ip = unwrap_ip(ip_str)
-            if not is_globally_routable_ip(clean_ip):
-                return False, None, f"Host {hostname} resolved to non-global/private IP {clean_ip}"
+        for item in addr_info:
+            ip_str = unwrap_ip(item[4][0])
+            if not is_globally_routable_ip(ip_str):
+                return False, None, f"Host {hostname} resolved to non-global/private IP {ip_str}"
             if pinned_ip is None:
-                pinned_ip = clean_ip
+                pinned_ip = ip_str
 
         return True, pinned_ip, ""
     except socket.gaierror as e:
@@ -236,7 +235,7 @@ def validate_url_and_follow_redirects(initial_url: str, max_redirects: int = 3) 
 def generate_stream_token(extraction_id: str, secret_key: str) -> str:
     """Generates a signed HMAC stream token for video stream proxying."""
     if not secret_key:
-        secret_key = "universal_pro_default_secret_key"
+        raise ValueError("SECRET_KEY must be configured to generate stream tokens.")
     key_bytes = secret_key.encode('utf-8')
     msg_bytes = extraction_id.encode('utf-8')
     return hmac.new(key_bytes, msg_bytes, hashlib.sha256).hexdigest()
@@ -244,10 +243,49 @@ def generate_stream_token(extraction_id: str, secret_key: str) -> str:
 
 def verify_stream_token(extraction_id: str, token: str, secret_key: str) -> bool:
     """Verifies a signed HMAC stream token in constant time."""
-    if not extraction_id or not token:
+    if not extraction_id or not token or not secret_key:
         return False
-    if not secret_key:
-        secret_key = "universal_pro_default_secret_key"
     expected = generate_stream_token(extraction_id, secret_key)
     return hmac.compare_digest(expected, token)
+
+
+def fetch_pinned_ip_url(url: str, pinned_ip: str, headers: Optional[dict] = None, timeout: int = 5) -> Tuple[int, bytes, dict]:
+    """
+    Connects directly to pinned_ip via HTTPS, setting Host header and TLS SNI server_hostname to original host.
+    Prevents DNS rebinding attacks between validation and connection.
+    """
+    parts = urllib.parse.urlsplit(url)
+    hostname = parts.hostname or ""
+    port = parts.port or 443
+    path = parts.path or "/"
+    if parts.query:
+        path += "?" + parts.query
+
+    import ssl
+    import http.client
+
+    context = ssl.create_default_context()
+    
+    req_headers = {"User-Agent": "UniversalProAI/1.0", "Host": hostname}
+    if headers:
+        req_headers.update(headers)
+
+    conn = http.client.HTTPSConnection(
+        host=pinned_ip,
+        port=port,
+        timeout=timeout,
+        context=context,
+    )
+    conn._server_hostname = hostname
+
+    try:
+        conn.request("GET", path, headers=req_headers)
+        resp = conn.getresponse()
+        body = resp.read()
+        resp_headers = dict(resp.getheaders())
+        conn.close()
+        return resp.status, body, resp_headers
+    except Exception as e:
+        conn.close()
+        raise e
 

@@ -830,9 +830,8 @@ nvidia_key = get_nvidia_api_key()
 aionlabs_key = get_aionlabs_api_key()
 has_any_key = bool(gemini_key or mistral_key or groq_key or nvidia_key or aionlabs_key)
 
-# Admin Mode (Only visible if owner visits with ?admin=1)
-query_params = getattr(st, "query_params", {})
-is_admin = query_params.get("admin") == "1"
+# Admin Mode disabled via URL parameter (Rule 6/14 compliance: server-side auth required)
+is_admin = False
 
 if is_admin:
     with st.sidebar.expander("🛠️ Admin / Server Key Vault", expanded=False):
@@ -1244,7 +1243,7 @@ if active_res:
     """, unsafe_allow_html=True)
 
     # Detailed Pipeline Telemetry demoted to expandable developer drawer (P0 PO Directive)
-    is_admin_mode = bool(st.query_params.get("admin") == "1")
+    is_admin_mode = False  # AGENTS.md Rule 6/14: URL query parameter admin gating strictly forbidden
     with st.expander("🛠️ Pipeline Telemetry & Latency Breakdown (Developer View)", expanded=is_admin_mode):
         b1, b2, b3, b4 = st.columns(4)
         b1.metric("⏱️ Total Turnaround", f"{total_elapsed:.1f}s")

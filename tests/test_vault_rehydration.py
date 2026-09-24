@@ -46,3 +46,34 @@ def test_vault_rehydrate_endpoint_attaches_affiliate_and_quick_commerce_links():
         assert "r=5608766" in ing["flipkart_url"]
         assert "blinkit_url" in ing
         assert "zepto_url" in ing
+
+
+from unittest.mock import patch
+
+@patch("backend.app.api.v1.library.get_client_ip", return_value="203.0.113.199")
+def test_rehydrate_rate_limit_exceeded_returns_429(mock_ip):
+    """Request 31 in a minute returns HTTP 429 Too Many Requests."""
+    bare_item = {
+        "title": "Rate Limit Test Item",
+        "ingredients": ["Salt"]
+    }
+
+    # Execute 30 valid requests
+    statuses = []
+    for i in range(30):
+        res = client.post("/api/v1/library/rehydrate", json={
+            "canonical_url": f"https://www.instagram.com/reel/C3test{i}/",
+            "item": bare_item
+        })
+        statuses.append(res.status_code)
+
+    assert all(s == 200 for s in statuses)
+
+    # 31st request must trigger HTTP 429
+    res_31 = client.post("/api/v1/library/rehydrate", json={
+        "canonical_url": "https://www.instagram.com/reel/C3test31/",
+        "item": bare_item
+    })
+
+    assert res_31.status_code == 429
+    assert "Rate limit exceeded" in res_31.json().get("detail", "")

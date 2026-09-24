@@ -1,9 +1,10 @@
 # 🛡️ Agent Engineering Rules & Repository Constraints — Universal Pro AI
 
 ## 1. Test Suite Integrity & Regression Protection (Strict Owner Directive)
-- **Zero Modification/Deletion of Existing Tests**: You must NEVER modify, edit, comment out, or delete any existing test cases or test files in the `tests/` directory.
+- **Zero Modification/Deletion of Existing Tests**: You must NEVER modify, edit, comment out, or delete any existing test cases or test files in the `tests/` directory or frontend test directories (`frontend/src/**/__tests__`).
 - **Owner Approval Required**: Any change targeting an existing test case (including assertions, parameters, or test signatures) requires **explicit prior sign-off from the repository owner**.
-- **Adding New Tests**: As features expand, you are encouraged to add *new* test cases by creating dedicated test files (e.g., `tests/test_sprintX_*.py`) or appending new, non-destructive test methods.
+- **Adding New Tests**: As features expand, you are encouraged to add *new* test cases by creating dedicated test files (e.g., `tests/test_sprintX_*.py`, `frontend/src/**/__tests__/*.test.ts`) or appending new, non-destructive test methods.
+- **CODEOWNERS Protection**: Maintain CODEOWNERS entries for `tests/`, `AGENTS.md`, `backend/app/services/affiliate_engine.py`, `backend/app/services/url_validator.py`, and `backend/app/core/security.py`.
 - **Regression Contract**: Existing tests serve as an immutable specification contract ensuring zero regressions against prior sprint deliverables.
 
 ## 2. Sprint Governance, 3-Layered Architecture & PO Production Gate
@@ -12,20 +13,23 @@
   2. *Layer 2: Staging (`staging` branch)*: Vercel Preview deployments and Staging cloud containers. All feature additions, bug fixes, and manual verifications MUST deploy here first for PO review.
   3. *Layer 3: Production (`main` branch)*: `universal-pro-ai.vercel.app` and Production OCI containers.
 - **Zero Direct-to-Production Rule (Strict Gate)**: Agents must NEVER push, merge, or fast-forward changes directly to `main` or deploy directly to production containers without **explicit, written prior sign-off from the repository owner / Product Owner**. Hotfixes and patches are subject to this exact same constraint.
-- **Sign-Off Cadence**: At the end of every sprint or major feature milestone, prepare a comprehensive **Product Owner UI/UX Feature Showcase & Feedback Review** document. Wait for explicit PO approval before promoting from `staging` to `main`.
-- **Step-by-Step Staging Promotion Rule**: Upon completing and verifying any step of the UX/Architectural Enhancement Roadmap (e.g., Step 1, Step 2, Step 3, Step 4), all implemented changes MUST immediately be pushed and promoted to the `staging` branch (Layer 2) for Vercel Preview & Staging validation before moving on to subsequent roadmap steps.
-- **Vercel Staging Protection Bypass Protocol**: When running browser subagents, QA crawlers, or automated visual E2E tests against Vercel Preview/Staging deployments, agents MUST navigate via Option A URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`) to set the `_vercel_jwt` cookie on Vercel Edge for all downstream script, asset, and API fetch requests.
+- **Hotfix Fast Path**: Hotfixes must be owner-approved, deployed to staging, and smoke-tested first before any production promotion.
+- **PO Sign-Off & Verdict Protection**: Agents MUST NEVER fill in PO verdicts, checkboxes, or sign-off lines in documentation or PRs (leave as "Pending PO"). Product Owner sign-off is recorded exclusively by the repository owner via PR approval or explicit entries in `docs/po-governance/SIGN_OFF.md` written by the owner.
+- **Step-by-Step Staging Promotion Rule**: Upon completing and verifying any step of the UX/Architectural Enhancement Roadmap, all implemented changes MUST immediately be pushed and promoted to the `staging` branch (Layer 2) for Vercel Preview & Staging validation before moving on to subsequent roadmap steps.
+- **Vercel Staging Protection Bypass Protocol**: When running browser subagents, QA crawlers, or automated visual E2E tests against Vercel Preview/Staging deployments, use Option A URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`) for browser sessions to set the `_vercel_jwt` cookie on Vercel Edge for downstream script, asset, and API requests. Prefer sending the Vercel bypass secret as an HTTP header (`x-vercel-protection-bypass`) for non-browser requests. Never log or commit the secret.
 
 ## 3. Monetization Invariants & Affiliate Parameter Protection (Revenue Shield)
 - **Immutable Affiliate Identifiers**: The default monetization parameters (`tag=manasdas11155-21` for Amazon India and `r=5608766` for EarnKaro) are **immutable constants**. Under no circumstances should these be deleted, mocked, or altered in production paths.
 - **Strict URL Encoding**: All search queries passed to e-commerce and quick-commerce partners (Amazon, Flipkart, Blinkit, Zepto, Instamart, JioMart) MUST use explicit URL encoding (`urllib.parse.quote_plus`). Agents must never generate raw unencoded query strings.
 - **Domain-Affiliate Separation**: Affiliate logic must live exclusively within `backend/app/services/affiliate_engine.py`. Agents must never hardcode store links or affiliate tags inside AI prompt strings or UI presentation components.
+- **Affiliate Disclosures & Channel Governance**: All affiliate links must be accompanied by the disclosure required by affiliate program terms and applicable advertising rules (owner to confirm). The owner must review affiliate program terms for links sent via chat messages (Telegram, WhatsApp) and `.txt` exports.
+- **Creator Tag Vault Status**: The Creator Tag Vault feature remains hidden during initial launch.
 
 ## 4. Ingestion Guardrails & Cloud Cost Protection (Hard Ceilings)
-- **Duration Cap (`MAX_VIDEO_DURATION = 90`)**: Agents must NEVER raise or remove the 90-second duration ceiling without explicit owner approval. Videos exceeding 90 seconds must fail immediately before media download.
-- **Resolution Cap (360p Max)**: Media downloaders must strictly enforce `bestvideo[height<=360]+bestaudio/best[height<=360]`. Never configure `yt-dlp` to pull 720p, 1080p, or unconstrained streams.
+- **Duration Cap (`MAX_VIDEO_DURATION = 90`)**: Agents must NEVER raise or remove the 90-second duration ceiling without explicit owner approval. Videos exceeding 90 seconds must fail immediately before media download. If duration metadata is missing, fail closed.
+- **Resolution Cap (360p Max) & Format String**: Media downloaders must strictly enforce `bestvideo[height<=360]+bestaudio/best[height<=360]` (no bare `/best` fallback), with `max_filesize` set. A dedicated unit test MUST assert this exact format string. Resolution or duration cap changes are permitted only via owner-approved experiments with measured accuracy.
 - **Deterministic Disk Cleanup (`try...finally`)**: Any media download, frame slice, or temporary audio chunk created on disk MUST be deleted in an unskippable `finally:` block. Never leave orphaned `.mp4` or `.mp3` files in `/tmp` or local workspace directories.
-- **Cache-First Bypass Guardrail**: The worker pipeline MUST query Supabase for an existing SHA-256 URL hash *before* initiating any proxy download or Gemini API call. Never trigger redundant AI inference on an already extracted URL.
+- **Canonical Cache-First Bypass Guardrail**: The worker pipeline MUST query Supabase for an existing cache record using the SHA-256 hash of canonical `(platform, video_id)` (not the raw URL) *before* initiating any proxy download or Gemini API call. Never trigger redundant AI inference on an already extracted URL.
 
 ## 5. Architectural Invariants & Cross-Platform Compatibility
 - **Dual-Mode Dispatcher Preservation**: The backend must run in both:
@@ -37,39 +41,37 @@
 
 ## 6. Secret Hygiene & Security Isolation
 - **Zero Hardcoded Secrets**: Never commit, hardcode, or log API keys, proxy credentials, Supabase service roles, or webhook tokens in code or test fixtures. All secrets must resolve through `app.core.config.Settings` from environment variables.
-- **Admin Parameter Isolation**: The Admin Vault (`?admin=1`) and developer latency telemetry cards must remain isolated from standard user responses. Never expose raw infrastructure metrics (cloud prep time, proxy latency, token counts) on public consumer endpoints.
+- **Server-Side Admin Auth & Parameter Isolation**: Admin features require server-side authentication (`X-Admin-Api-Key` header or `role == 'admin'`). NEVER gate anything with a URL parameter such as `?admin=1`. Developer telemetry must remain isolated from standard user responses. Never expose raw infrastructure metrics or admin keys in client bundles.
 
-## 7. UI/UX Performance Contract
-- **Sub-3s Turnaround Contract**: Any changes to the ingestion or inference pipeline must preserve our core benchmark (<1.5s first-paint video preview, <3s completed structured extraction).
+## 7. Unified Measurable SLA & Performance Benchmark
+- **Unified Telemetry SLA Contract**: Extraction turnaround targets are strictly governed by p50 and p95 benchmarks tracked via backend telemetry, split by cached vs non-cached requests and by platform (Instagram, YouTube, TikTok). The repository owner sets the target benchmark numbers. UI components and documentation may cite ONLY empirically measured figures.
 - **Single Docked Video Player**: Never duplicate HTML5 `<video>` player elements on the screen. The media preview player must remain single-docked to prevent duplicate audio tracks and mobile viewport collisions.
 
 ## 8. Gemini Model Lifecycle & Deprecation Governance
-- **Catalog Alignment**: Continuously monitor Google Gemini's official model catalog (https://ai.google.dev/gemini-api/docs/models).
-- **Proactive Pruning of Deprecated Endpoints**: As soon as any model endpoint is marked shutdown or deprecated by Google (e.g., `gemini-2.0-flash`, `gemini-2.0-flash-lite`), agents must promptly prune it from `preferred_candidates` across `gemini_processor.py`, `ai_router.py`, and `app.py` to prevent wasted retry cycles and 404/410 latency spikes.
-- **Flagship Alignment**: The primary dispatch model should always point to Google's latest stable production Flash model (currently `gemini-3.8-flash`), followed by high-reliability fallbacks (`gemini-3.7-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`), before external provider failover.
+- **Centralized Model Configuration**: Model IDs live strictly in `app.core.config.Settings` as the single source of truth, never scattered across multiple backend files.
+- **Startup Check**: Startup catalog validation (`list-models`) must be warn-only and never block application startup.
+- **Primary Model Transition Protocol**: Switching the primary model requires running a golden-set test suite (Hinglish reels, text-overlay reels) with measured benchmark results attached.
+- **Explicit Thinking Level & Cost Governance**: Set the thinking level explicitly (start with low; confirm on the golden set before locking) and record latency and token cost per request. Note that introductory API pricing may end at year-end; continuously review cost assumptions.
+- **Catalog Alignment**: Continuously monitor Google Gemini's official model catalog (https://ai.google.dev/gemini-api/docs/models). As soon as any model endpoint is marked shutdown or deprecated by Google, agents must promptly prune it from `Settings` to prevent 404/410 latency spikes.
 
-## 9. Mandatory 4-Core Document Governance Contract (Immutable Rule)
+## 9. Mandatory 4-Core Document Governance Contract & Measured Metrics
 - **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following 4 core living documents without exception:
   1. **`docs/TROUBLESHOOTING.md`**: Log every encountered error/bug, root cause, exact code resolution diffs, and verification steps.
-  2. **`docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`** (and sprint showcases under `docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md`): Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
+  2. **`docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`**: Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
   3. **`docs/architecture/DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
-  4. **`docs/USER_MANUAL.md`**: Maintain end-to-end user manual and feature guide explaining how to use all features (AI video extraction, cooking mode, wake lock, timers, voice navigation, recipe scaling, quick commerce, and chatbots).
-- **Canonical Folder Hierarchy**:
-  - `docs/architecture/`: Infrastructure, cloud deployment specs (`ENVIRONMENTS.md`, `ORACLE_CLOUD_DEPLOYMENT.md`, `ROADMAP_AND_STRATEGY.md`).
-  - `docs/po-governance/`: Product directives, backlogs (`JIRA_BACKLOG.md`), test specs (`TEST_CASES.md`), and sprint showcases (`showcases/`).
-  - `docs/qa-reports/` & `docs/ui-ux-audits/`: Automated E2E QA reports and visual inspection logs.
-  - `backend/database/`: Supabase SQL schemas and migration scripts.
-- **Verification Rule**: No feature implementation or bug fix is considered complete until all 4 living documents reflect the updated state of the codebase.
+  4. **`docs/USER_MANUAL.md`**: Maintain end-to-end user manual and feature guide explaining how to use all features.
+- **Automated & Measured Metrics**: Metrics (test counts, latency, throughput) must be generated directly from CI outputs or telemetry data, never typed manually by agents. Every numerical figure in documentation must be explicitly labeled as **[MEASURED]** or **[ESTIMATED]**.
+- **Verification Rule**: No feature implementation or bug fix is considered complete until the 4 core living documents plus the sprint backlog (Rule 17) reflect the updated state of the codebase.
 
-## 10. Multi-LLM Council Consensus & Latency SLA Guardrail
-- **Single-Pass Sub-3s Default**: The default extraction pipeline for all web, Telegram, WhatsApp, and API requests MUST remain the fast, single-pass `gemini-3.8-flash` engine to satisfy our core turnaround SLA (<2.4s).
+## 10. Multi-LLM Council Consensus Engine Invariants
 - **Council Mode Invariant**: The 3-Stage Multi-LLM Council Consensus Engine (Gemini + Groq Llama 3.3 + Mistral) must NEVER be configured as the default execution pipeline. It must strictly remain an explicit opt-in selection or an internal fallback retry mechanism.
 - **Provider Key Isolation**: Council execution must degrade gracefully if secondary provider keys (`GROQ_API_KEY`, `MISTRAL_API_KEY`) are missing, falling back to single-provider execution without throwing 500 errors.
 
-## 11. Schema Backward Compatibility & Historical Cache Defense
-- **Zero Breaking Assumptions on `structured_data`**: The Supabase `extractions` table contains historical records from earlier sprints that lack newer schema keys (e.g., `nutrition_per_serving`, `equipment_needed`, `google_maps_locations`, `audio_song`).
-- **Mandatory Optional Types & Null Guards**: All newly introduced JSON fields must be defined as optional (`field?: Type`) in TypeScript interfaces. Frontend components must strictly use optional chaining (`data.nutrition?.calories`) and default fallbacks. Agents must never assume a database record contains newly invented schema fields.
-- **Single-Inference Extraction Schema**: New domain properties (such as nutritional macros) must be incorporated directly into the primary Gemini JSON schema prompt. Agents must NEVER trigger secondary round-trip LLM calls to fetch supplementary metadata for an already extracted video.
+## 11. Schema Backward Compatibility, Schema Versioning & Cache Defense
+- **Zero Breaking Assumptions on `structured_data`**: The Supabase `extractions` table contains historical records from earlier sprints that lack newer schema keys.
+- **Schema Versioning (`schema_version`)**: All newly generated `structured_data` payloads MUST include a top-level `schema_version` field (e.g., `schema_version: 1`) to enable seamless future re-hydration, cache invalidation, and data migrations.
+- **Mandatory Optional Types & Null Guards**: All newly introduced JSON fields must be defined as optional (`field?: Type`) in TypeScript interfaces. Frontend components must strictly use optional chaining (`data.nutrition?.calories`) and default fallbacks.
+- **Single-Inference Extraction Schema**: New domain properties must be incorporated directly into the primary Gemini JSON schema prompt. Agents must NEVER trigger secondary round-trip LLM calls to fetch supplementary metadata for an already extracted video.
 
 ## 12. Mobile In-App Browser & Web API Progressive Enhancement
 - **Strict Feature Detection**: Advanced browser APIs (`navigator.wakeLock`, `AudioContext`, `navigator.clipboard`, `navigator.vibrate`) are heavily restricted or unsupported inside mobile in-app webviews (Instagram WKWebView, WhatsApp browser, Telegram webview).
@@ -81,7 +83,176 @@
 
 ## 13. Regional & Hinglish Culinary Prompt Invariants
 - **Prompt Preservation**: System prompts in `backend/app/services/gemini_processor.py` and `multimodal.py` contain tuned culinary rules for South Asian and Hinglish terminology. Agents must NEVER delete, overwrite, or simplify these rules during prompt refactoring.
-- **Mandatory Linguistic Mappings**:
-  - Spoken metrics must always translate to standardized units while preserving native terms in parentheses: *1 katori* $\rightarrow$ *1 cup (~150g)*, *1 chamach* $\rightarrow$ *1 tbsp*, *chutki bhar* $\rightarrow$ *pinch*.
+- **Mandatory Linguistic Mappings & Approximate Conversions**:
+  - Spoken metrics must always translate to standardized units labeled as approximate while preserving native terms in parentheses: e.g., *1 katori* $\rightarrow$ *1 bowl (~150 ml, approx)* (do NOT label a katori as "1 cup"), *1 chamach* $\rightarrow$ *1 tbsp (approx)*, *chutki bhar* $\rightarrow$ *1 pinch (approx)*.
   - Native ingredient names must be preserved in parentheses: e.g., *Cumin seeds (Jeera)*, *Asafoetida (Hing)*, *Dried Fenugreek (Kasuri Methi)*.
   - Quick-commerce link builders must prioritize the colloquial Indian spice name to ensure accurate search indexing on Blinkit and Zepto.
+- **Snapshot Test Requirement**: A dedicated snapshot unit test MUST assert that Hinglish prompt rules and culinary mappings exist in system prompt templates.
+
+## 14. Security Invariants
+- **Strict URL Validation Order**: Every user-supplied or remote-derived URL MUST pass through `backend/app/services/url_validator.py` (enforcing HTTPS only, domain allowlist, SSRF/IP checks, redirect re-validation after every hop up to max 3) BEFORE cache lookup, media download, or remote fetch. Execution order MUST be: `validate` $\rightarrow$ `cache lookup` $\rightarrow$ `download` $\rightarrow$ `inference`. No entry point (Telegram/WhatsApp bots, webhooks, `/share-target`, worker tasks) may bypass this order.
+- **Signed Stream Proxy Tokens**: `/stream-video` accepts ONLY signed, short-lived HMAC tokens minted at payload serialization time. Stream tokens must NEVER be saved in Supabase cache or stored in the Vault.
+- **Fail-Closed Secrets & Signature Verification**: Webhook and admin secrets must fail closed if unset, using `hmac.compare_digest` for comparison. WhatsApp webhook signatures MUST be verified over the raw request payload body before parsing JSON.
+- **Environment Secret Enforcement**: Define development behavior explicitly (`APP_ENV=development`). Staging and Production environments MUST refuse to start if a required secret is missing, logging only the environment variable NAME.
+- **Server-Side Admin Authentication**: Admin features require server-side authentication (`X-Admin-Api-Key` header or `role == 'admin'`). NEVER gate anything with a URL query parameter such as `?admin=1`. Never ship admin keys or service roles in client bundles.
+- **Allowlisted Merchant Redirects**: E-commerce and quick-commerce redirect endpoints (`/api/v1/affiliate/redirect`) MUST allow only allowlisted HTTPS merchant hosts and reject all external or open-redirect URLs.
+- **Log Privacy & Secret Hygiene**: Never log secrets, API keys, tokens, phone numbers, or full user URLs in application logs or telemetry.
+- **Dependency Audit Compliance**: Dependency changes must be declared in `requirements.txt` / `package.json` and lockfiles (`package-lock.json`), followed immediately by running `pip-audit` (against requirements) and `npm audit`.
+
+## 15. Frontend Design System and Accessibility
+- **Design System Tokens & Contrast**: No hardcoded colors in UI components; all styling must use CSS design tokens from `globals.css` supporting both Light and Dark themes. Text contrast MUST achieve WCAG AA Compliance ($\ge 4.5:1$). Verify visual contrast in both themes at 375px (mobile) and 1280px (desktop) viewports.
+- **Input & Touch Accessibility**: All input fields must enforce `font-size >= 16px` (prevents iOS Safari auto-zoom), touch targets must meet `min-height: 44px` / `min-width: 44px`, visible or `sr-only` `<label>` elements must exist on all controls, and `:focus-visible` outlines must be clearly styled for keyboard navigation.
+- **Modal & Sheet Focus Management**: All modals, drawers, and bottom sheets must implement `role="dialog"`, `aria-modal="true"`, focus trapping, `Escape` key dismissal, and focus restoration to the triggering element upon closing.
+- **Motion & Visual Performance**: Parallax effects and particle canvas backgrounds are forbidden. `backdrop-filter` is permitted ONLY on the sticky header. The `@media (prefers-reduced-motion: reduce)` block must cover every remaining animation and transition in the application.
+- **Action Hierarchy**: Render exactly ONE primary action per result domain (Recipe: *"Shop ingredients"*, Travel: *"Open in Google Maps"*, Product: *"Buy"*, Tutorial: *"Open resources"*). All secondary and utility actions must be contained within the overflow bottom sheet / menu.
+
+## 16. Evidence and Definition of Done
+- **Empirical Evidence Requirement**: Every "verified", "passing", or "score" claim in pull requests, commits, and documentation MUST include exact command execution output or measured values. Unmeasured scores or speculative benchmarks in docs are forbidden.
+- **Complete Verification Pipeline**: Every code change requires executing `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, and `pytest tests/`, with all checks clean green and output attached. Any known test failure BLOCKS promotion to `staging` unless the repository owner explicitly accepts it in writing.
+- **Governance Contract**: Agents must NEVER modify `AGENTS.md` without explicit, prior approval from the repository owner.
+
+## 17. Sprint Planning & Backlog Governance (Jira Backlog Contract)
+- **Every change is a sprint item.** No feature, enhancement, bug fix, refactor, security fix, dependency upgrade or docs-affecting change may start without a ticket in docs/po-governance/JIRA_BACKLOG.md. Each ticket belongs to a sprint: the open sprint or a newly created one. Small fixes are tickets inside the open sprint, not new sprints. Hotfixes: create the ticket first (label HOTFIX); they still follow the Rule 2 gate.
+- **Plan before code.** Before editing code, add or update the sprint entry with: sprint number and name; goal (1-2 sentences); and for each ticket: ID (UPA-####, continuing from the highest existing ID), title, type (Feature/Bug/Security/Tech-debt/Docs), priority (P0-P3), description, testable acceptance criteria, affected files, applicable AGENTS.md rules, risks and rollback notes, test plan.
+- **Owner checkpoint for protected areas.** If a ticket touches tests (Rule 1), affiliate logic (Rule 3), ingestion caps (Rule 4), secrets or security (Rules 6, 14) or AGENTS.md itself, stop after writing the plan and wait for owner approval before coding. Otherwise proceed and report.
+- **Status flow.** Planned -> In Progress -> Verified on Dev -> On Staging -> Ready for PO Review. Agents may set a ticket up to "Ready for PO Review". Only the owner sets "PO Approved" and "Released". Agents never fill PO verdicts (Rule 2).
+- **Traceability.** Every commit message starts with the ticket ID(s), e.g. "[UPA-1101] fix(...)". Each ticket records commit hash(es), files changed and the quoted Rule 16 verification output. Metrics are MEASURED (Rule 9).
+- **No silent scope.** Work discovered mid-sprint becomes a new ticket labelled "Discovered" before it is done. Unfinished tickets carry over with a stated reason.
+- **Sprint close (before promotion to staging).** Every ticket has a status and evidence; known gaps are listed under "Known non-compliant items on staging"; the compliance matrix is updated; the sprint showcase (docs/po-governance/showcases/SPRINT_X_PO_SHOWCASE.md) is prepared with all PO fields set to "Pending PO".
+
+## 18. Skill-First Execution Protocol & Workspace Tooling Map
+- **Mandatory Skill-First Inspection**: Before writing any custom code, scripts, helper functions, or ad-hoc implementations, agents MUST first review available skills, reusable scripts, and established routines in the workspace and global agent configuration.
+- **Reuse Over Invention**: If a matching skill, helper script, or established pattern exists for a task, agents MUST prioritize invoking and leveraging it rather than reinventing the wheel or writing redundant code.
+- **Explicit Confirmation Gate**: If no matching skill or reusable script exists for a task, agents MUST output a quick confirmation line before writing custom code:
+  `"No matching skill found; proceeding with custom implementation."`
+- **Workspace Skills & Utility Script Reference Map**:
+  - **Workspace Skills Root**: `.agents/skills/` (e.g. `.agents/skills/frontend-design/SKILL.md`)
+  - **Global Skills Root**: `C:\Users\admin\.gemini\config\skills\`
+  - **Operational & Maintenance Scripts**: `scripts/`
+    - `scripts/ci_check.py`: Complete local CI verification pipeline runner (`tsc`, `lint`, `test`, `build`, `pytest`).
+    - `scripts/promote.py`: Automated git promotion pipeline (`Dev` -> `staging` -> `main`).
+    - `scripts/verify_promotion.py`: Post-promotion staging deployment verification crawler.
+    - `scripts/run_worker.py`: Cross-platform Celery background task worker launcher (`--pool=threads` on Windows).
+    - `scripts/verify_egress.py`: SSRF/IP firewall & egress security verification suite.
+    - `scripts/cli.py`: Unified operational CLI utility.
+    - `scripts/keep_alive.py`: Autonomous server ping & health monitoring script.
+
+## 19. Destructive Workspace Operation Guard
+
+Before deleting, moving, renaming, overwriting, resetting, cleaning, restoring, or recursively removing any project file or directory:
+
+1. Treat the operation as HIGH-RISK.
+2. Do not perform the operation unless the current task explicitly authorizes that exact deletion, move, reset, restore, or cleanup.
+3. Never use broad destructive workspace commands such as:
+   - `Remove-Item -Recurse`
+   - `rm -rf`
+   - `git clean`
+   - `git reset --hard`
+   - broad `git restore`
+   - wholesale directory replacement
+   unless the exact operation and target paths are explicitly authorized by the repository owner.
+4. Never delete, restore, overwrite, or reset:
+   - `AGENTS.md`
+   - migration files
+   - tests
+   - governance documents
+   - configuration files
+   - skills
+   - scripts
+   - documentation
+   as an indirect cleanup step.
+5. If cleanup appears necessary, STOP and report:
+   - the exact files/directories proposed for deletion or restoration
+   - why the operation is necessary
+   - what unrelated files could be affected
+6. Preserve all unrelated existing work.
+7. Never use a destructive cleanup operation to resolve unrelated working-tree changes.
+8. Before any authorized destructive operation, show the exact command and affected paths and wait for explicit repository-owner authorization unless that authorization is already contained in the current task.
+
+## 20. Execution Artifact & Script Provenance Guard
+
+1. Global/IDE scratch scripts may be used only for temporary READ-ONLY diagnostics.
+
+2. Any script that:
+   - mutates a database,
+   - modifies repository files,
+   - changes cloud infrastructure,
+   - deploys,
+   - changes Redis/Celery,
+   - changes secrets/configuration
+   MUST NOT be executed from an opaque global scratch location.
+
+3. Mutating operational scripts must either:
+   a. already exist in the repository under an approved scripts path, or
+   b. be created in the repository under an explicitly ticketed change and reviewed before execution.
+
+4. Temporary read-only scratch scripts must:
+   - state their purpose,
+   - identify their path,
+   - be demonstrably READ-ONLY,
+   - show the executed command,
+   - not be treated as repository deliverables.
+
+5. A scratch script must never silently contain:
+   - INSERT
+   - UPDATE
+   - DELETE
+   - UPSERT
+   - CREATE
+   - ALTER
+   - DROP
+   - GRANT
+   - REVOKE
+   - git restore
+   - git reset
+   - git clean
+   - deployment commands
+   - secret rotation
+   - Production mutation
+
+6. For governed database migrations such as UPA-1230:
+   - the authoritative artifact is the reviewed repository migration file;
+   - execution must use that exact reviewed artifact;
+   - helper scripts may perform preflight or post-execution verification;
+   - helper scripts must not modify the migration file.
+
+7. If a task appears to require a mutating scratch script, STOP and report:
+   - the script path,
+   - why it is needed,
+   - exactly what it would modify,
+   - why an approved repository script or direct reviewed command cannot be used.
+
+## 21. Documentation Synchronization & Architecture Drift Guard
+
+1. Every governed project change must keep applicable technical documentation synchronized with the implementation.
+
+2. Any architecture, infrastructure, deployment, environment, API, security, database, background-processing, AI provider, configuration, networking, CI/CD, observability, data-flow, integration, or operational change MUST assess documentation impact.
+
+3. Affected living documents must be updated in the same governed ticket/change.
+
+4. Documentation must describe actual implemented and empirically verified state.
+
+5. Documentation must never falsely claim deployment, capability, configuration, security, or verification.
+
+6. Every governed change must produce an explicit **Documentation Impact Assessment**:
+   - `Updated: <document path and sections modified>`
+   OR
+   - `No Documentation Impact: <evidence-based justification>`
+
+7. Obsolete documentation must be corrected or marked historical/deprecated.
+
+8. Documentation must distinguish the five evidence states:
+   - `[VERIFIED IN CURRENT REPOSITORY]`
+   - `[VERIFIED IN EXISTING PROJECT DOCUMENTATION]`
+   - `[EXTERNAL PLATFORM / INFRASTRUCTURE VERIFICATION REQUIRED]`
+   - `[PLANNED / INTENDED ARCHITECTURE]`
+   - `[UNKNOWN / REQUIRES OWNER CONFIRMATION]`
+
+9. The primary goal of Rule 21 is to prevent:
+   - architecture drift
+   - deployment drift
+   - environment drift
+   - infrastructure drift
+   - documentation drift
+
+

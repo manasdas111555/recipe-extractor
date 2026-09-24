@@ -7,6 +7,9 @@
 **Recovery Point Objective (RPO)**: $\le 1\text{ hour}$ (Data loss minimal to zero)  
 **Last Updated**: September 18, 2026  
 
+> [!NOTE]
+> For the authoritative system-wide architecture baseline and Rule 21 documentation synchronization rules, see [System Architecture Baseline](file:///d:/Personal%20Projects/recipe-extractor/docs/architecture/SYSTEM_ARCHITECTURE.md).
+
 ---
 
 ## 🧭 Executive Summary
@@ -53,8 +56,9 @@ This document details:
 | :--- | :--- | :--- | :--- |
 | **Production Frontend (Primary)** | Vercel Edge Network | `https://universal-pro-ai.vercel.app` | Next.js 15 PWA web client, global CDN, HTTPS termination & origin IP shield |
 | **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
-| **Production UI (Fallback)** | Streamlit Community Cloud | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | Customer-facing extraction web app |
-| **Staging UI** | Streamlit Community Cloud | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Pre-production testing sandbox |
+| **Staging Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `129.225.86.241` (Provisioned / SSH Verified; Ports 80, 443 permitted by Security List; No inbound Security List rules for TCP 8000 or TCP 6379) | Dedicated Staging cloud VM (`universal-pro-ai-staging-instance`, Ubuntu 24.04.5 LTS x86_64, `staging-public-subnet` `10.0.2.0/24`, `staging-security-list-universalpro-ai-vcn`); App deployment pending |
+| **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | v0 prototype extraction web app (Legacy) |
+| **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Legacy testing sandbox |
 | **FastAPI Backend** | Local / Docker Daemon | `http://localhost:8000` (`/docs`, `/health`, `/api/v1/auth/me`) | Decoupled API Gateway for bots and PWAs |
 | **Database** | Supabase (AWS Mumbai) | `https://scrqvbgjybnrvcpxbygf.supabase.co` | Multi-tenant PostgreSQL database with RLS |
 | **Global Skills Root** | Local Agent Environment | `C:\Users\admin\.gemini\config\skills\` | 14 global agent skills (`frontend-design`, `theme-factory`, `shadcn`, `high-end-visual-design`, etc.) |
@@ -95,6 +99,35 @@ This document details:
   - `POST /api/v1/extract`: Validates URL, enforces daily quota (HTTP 429 when exceeded), computes SHA-256 `url_hash`, checks PostgreSQL cache (HTTP 200), and enqueues background worker jobs (HTTP 202).
   - `GET /api/v1/extract/status/{job_id}`: Real-time polling endpoint tracking progress percentage, stage lifecycle (`enqueued`, `downloading_media`, `multimodal_ai_inference`, `completed`, `failed`), and output payload.
 - **Job Manager (`backend/app/services/job_manager.py`)**: Thread-safe in-memory job registry and background execution pipeline with automatic Supabase persistence.
+
+### 4b. Mandatory Security Environment Variables & Network Egress Firewall Rules
+- **Required Security Environment Variables & Secret Hygiene**:
+  - `SECRET_KEY`: Mandatory HMAC signing secret for minting short-lived `/stream-video` tokens. Constant fallbacks removed; required at startup in non-dev/production environments.
+  - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`: Mandatory data layer settings. Non-dev environments refuse startup if missing, logging variable names only.
+  - `SUPABASE_JWKS_URL`: Derived automatically as `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` per project.
+  - `ADMIN_API_KEY`: Secret token for accessing admin metrics and system telemetry (`X-Admin-Api-Key`).
+  - `TELEGRAM_BOT_TOKEN` & `TELEGRAM_WEBHOOK_SECRET`: Standardized bot credentials per environment.
+  - `WHATSAPP_VERIFY_TOKEN` & `WHATSAPP_ACCESS_TOKEN`: Standardized Meta WhatsApp Cloud API credentials.
+  - `RAZORPAY_KEY_SECRET` & `STRIPE_WEBHOOK_SECRET`: Feature-gated payment secrets (return HTTP 503 if feature endpoint called without key).
+  - `TRUSTED_PROXY`: Default `False` (ignores spoofed proxy headers); set `True` in production behind Vercel edge proxies.
+  - `TRUSTED_PROXY_HOPS`: Number of trusted proxy hops counted from right edge of `X-Forwarded-For` (default `1`).
+  - `CORS_ORIGINS`: Explicit allowed origin list (defaults empty, no `*` wildcard in production).
+- **Telegram Webhook Secret Token Registration**:
+  ```bash
+  curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+    -d "url=https://universal-pro-ai.vercel.app/api/v1/webhooks/telegram" \
+    -d "secret_token=${TELEGRAM_WEBHOOK_SECRET}"
+  ```
+- **Worker & API Container Egress Firewall Rules**:
+  - Outbound traffic restricted to verified required service ports: **Port 443** (HTTPS for Gemini/Groq/Mistral AI, Supabase REST, Telegram/WhatsApp APIs, e-commerce hosts), **Port 6379/33816** (Celery + Upstash Redis broker), and **Port 5432/6543** (Supabase Direct PostgreSQL).
+  - Hard egress drop rules applied on container network bridge (`iptables` / Docker network driver) blocking cloud metadata IP `169.254.169.254` and RFC1918 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`).
+  - *Verification Distinction*: Backend unit tests (`tests/test_backend_security_hardening.py`) validate the application `url_validator` logic, while `scripts/verify_egress.py` (or `scripts/verify_egress.sh`) verifies the active container network firewall.
+- **UPA-1218 Staging Isolation & Interim DB Rules**:
+  - Separate Supabase project (`https://<staging_id>.supabase.co`) with manual owner execution of `backend/database/*.sql` (`01_schema.sql` through `05_views.sql`).
+  - Separate Redis DB index (DB 1 vs DB 0), key prefix (`staging:` vs `prod:`), and Celery queue (`staging_default_queue` vs `prod_default_queue`).
+  - Interim Rule: Zero agent schema mutations or data deletions. SQL files written by agent are applied ONLY by owner after DB backup; all changes must be additive and backward compatible (`UPA-1215` `is_public` nullable/defaulted).
+  - Staging QA tests MUST NOT modify or delete production rows. Table inventory tracked for every change (`profiles`, `extractions`, `affiliate_clicks`).
+
 
 ### 5. Multi-Environment & CI/CD Pipeline (`scripts/`, `.github/`)
 - **`scripts/verify_promotion.py`**: Executes syntax validation, isolated clean-process module imports, and the 45-test unit suite.

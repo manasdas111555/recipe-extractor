@@ -2,6 +2,9 @@
 
 This guide details the **3-Tier Environment Architecture** for Universal Pro AI, the automated safety gates, and instructions for configuring the cloud staging instance.
 
+> [!NOTE]
+> For the authoritative system-wide architecture baseline and 5-tier evidence model, see [System Architecture Baseline](file:///d:/Personal%20Projects/recipe-extractor/docs/architecture/SYSTEM_ARCHITECTURE.md).
+
 ---
 
 ## 🏛️ Environment Topology
@@ -9,11 +12,15 @@ This guide details the **3-Tier Environment Architecture** for Universal Pro AI,
 | Dimension | 🛠️ Development (Dev) | 🧪 Testing & Staging (Staging) | 🚀 Production (Prod) |
 | :--- | :--- | :--- | :--- |
 | **Git Branch** | **`Dev`** | **`staging`** | **`main`** *(Protected)* |
-| **Hosting Platform** | Local Workstation | Streamlit Cloud (Staging App) | Streamlit Cloud (Primary App) |
-| **Access URL** | `http://localhost:8501` | `https://universalpro-stage.streamlit.app/` | `https://universalpro-ai.streamlit.app/` |
+| **Frontend Host** | Local Workstation (`localhost:3000`) | Vercel Preview | Vercel Production |
+| **Backend Host** | Local Workstation (`localhost:8000`) | Dedicated OCI Staging VM (`129.225.86.241`, Provisioned / SSH Verified) | OCI Production VM (`140.245.214.28`) |
+| **Access URL** | `http://localhost:3000` | Vercel Preview URL | Production Web PWA |
 | **Primary Goal** | Fast feature development | Pre-production testing & cloud validation | 100% reliable consumer traffic |
-| **Data / API Keys** | Local `.env` | Streamlit Cloud Secrets (Staging) | Streamlit Cloud Secrets (Production) |
+| **Data / API Keys** | Local `.env` | Environment Variables (Vercel / Staging Host) | Production Environment Variables (Vercel / OCI) |
 | **Promotion Gate** | Manual commit | Automated CI + `scripts/verify_promotion.py` | Manual approval after Staging verification |
+
+> [!NOTE]
+> **Historical Note `[HISTORICAL / DEPRECATED]`**: Legacy Streamlit Cloud deployments (`universalpro-stage.streamlit.app` and `universalpro-ai.streamlit.app`) served as the v0 prototype and are replaced by the Next.js 15 PWA on Vercel and FastAPI Gateway on OCI.
 
 ---
 
@@ -120,8 +127,50 @@ SUPABASE_SERVICE_ROLE_KEY = "your_supabase_service_role_key"
 ```
 
 #### For Staging (`universalpro-stage`):
-Same as above, but with Staging Channel ID:
+Same as above, but with Staging credentials & channel IDs:
 ```toml
 CUELINKS_ID = "317821"
+SUPABASE_URL = "https://your-staging-project.supabase.co"
+SUPABASE_ANON_KEY = "your_staging_supabase_anon_key"
+SUPABASE_SERVICE_ROLE_KEY = "your_staging_supabase_service_role_key"
+SUPABASE_JWKS_URL = "https://your-staging-project.supabase.co/auth/v1/.well-known/jwks.json"
+SECRET_KEY = "your_staging_secret_key"
+REDIS_URL = "rediss://.../1"
+REDIS_KEY_PREFIX = "staging:"
+CELERY_DEFAULT_QUEUE = "staging_default_queue"
+TELEGRAM_BOT_TOKEN = "your_staging_telegram_bot_token"
+WHATSAPP_VERIFY_TOKEN = "your_staging_whatsapp_verify_token"
 ```
+
+---
+
+## 🔒 UPA-1218: Staging Environment Isolation Protocol & Interim Rules
+
+### 1. Staging Project Separation Blueprint
+Staging and Production MUST NOT share database instances, JWT keys, user accounts, or Redis task queues.
+- **Dedicated OCI Staging VM**: Dedicated `VM.Standard.E2.1.Micro` instance `universal-pro-ai-staging-instance` (AMD x86_64, Ubuntu 24.04.5 LTS, Public IP `129.225.86.241`, Private IP `10.0.2.242`, Subnet `staging-public-subnet` `10.0.2.0/24`, Security List `staging-security-list-universalpro-ai-vcn`) — **PROVISIONED & SSH VERIFIED BY OWNER**. Application deployment (Docker / Caddy / FastAPI), Supabase connectivity, and Redis/Celery **NOT YET DEPLOYED / NOT YET VERIFIED**.
+- **Dedicated Supabase Project**: Separate Supabase project for staging environment (`https://mzpkdmaxsuhwezsooidu.supabase.co`).
+- **SQL Migration Sequence (Owner-Executed Manual Steps)**:
+  1. `01_schema.sql`: Core PostgreSQL tables (`users`, `profiles`, `extractions`, `affiliate_clicks`).
+  2. `02_indexes.sql`: Performance lookup indexes (SHA-256 `url_hash`, `user_id`).
+  3. `03_functions.sql`: Atomic RPC functions (`increment_user_extraction_count`).
+  4. `04_rls_policies.sql`: Tenant Row-Level Security policies.
+  5. `05_views.sql`: Analytics and public recipe views.
+  *(Manual Steps: Owner creates staging project in Supabase UI $\rightarrow$ opens SQL Editor $\rightarrow$ runs scripts 01 through 05 in sequence $\rightarrow$ verifies schema).*
+- **Per-Environment Redis & Queue Isolation (Finding & Proposal)**:
+  - **Finding**: Currently, staging and production share `REDIS_URL` and default Celery task queue `celery` if unisolated, creating risks of staging workers pulling production tasks.
+  - **Proposal**: 
+    - Database Index: Production uses Redis DB 0 (`/0`), Staging uses Redis DB 1 (`/1`).
+    - Key Prefix: Production `prod:`, Staging `staging:`.
+    - Celery Queue: Production `prod_default_queue`, Staging `staging_default_queue`.
+- **JWKS Endpoint Verification**:
+  - Verify Staging JWKS via HTTP GET `{STAGING_SUPABASE_URL}/auth/v1/.well-known/jwks.json` returns 200 with valid ES256 key set.
+
+### 2. Interim Rules (Enforced Until UPA-1218 is Complete)
+- **Zero Agent Schema Mutations**: The agent NEVER applies a schema migration, table modification, or data deletion directly to database instances. SQL files may be drafted, but ONLY the owner applies them after taking a database backup. All migrations MUST be additive and backward compatible (e.g. `UPA-1215` `is_public` column nullable or defaulted `false`, zero destructive backfill).
+- **Production Row Protection & Table Inventory**: Tests and QA execution on staging MUST NOT modify or delete existing production rows. For every feature change, list which tables are read or written:
+  - `profiles`: READ (plan_tier, quota), WRITE (custom affiliate tags, daily count).
+  - `extractions`: READ (SHA-256 cache hit), WRITE (new reel extractions).
+  - `affiliate_clicks`: WRITE (monetization telemetry clicks).
+- **Separate Credentials**: Independent `SECRET_KEY`, webhook secrets (`TELEGRAM_WEBHOOK_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `RAZORPAY_WEBHOOK_SECRET`, `STRIPE_WEBHOOK_SECRET`), and Telegram bot token per environment.
 

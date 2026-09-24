@@ -12,6 +12,8 @@ import sys
 import time
 import unittest
 import jwt
+from unittest.mock import patch, MagicMock
+from cryptography.hazmat.primitives.asymmetric import ec
 from pathlib import Path
 from fastapi.testclient import TestClient
 
@@ -43,16 +45,30 @@ class TestAuthSecurity(unittest.TestCase):
 
     def test_authenticated_user_with_valid_jwt(self):
         """Verify requests with a valid mock Supabase JWT are authenticated correctly."""
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        public_key = private_key.public_key()
+        test_issuer = "https://auth.example.com/auth/v1"
+
         mock_payload = {
             "sub": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "email": "creator@universalpro.ai",
             "role": "authenticated",
+            "aud": "authenticated",
+            "iss": test_issuer,
             "exp": int(time.time()) + 3600
         }
-        mock_token = jwt.encode(mock_payload, "test-secret", algorithm="HS256")
+        mock_token = jwt.encode(mock_payload, private_key, algorithm="ES256", headers={"kid": "test-key-id"})
+
+        mock_signing_key = MagicMock()
+        mock_signing_key.key = public_key
+        mock_jwks_client = MagicMock()
+        mock_jwks_client.get_signing_key_from_jwt.return_value = mock_signing_key
 
         headers = {"Authorization": f"Bearer {mock_token}"}
-        response = self.client.get("/api/v1/auth/me", headers=headers)
+        with patch("backend.app.core.security.get_jwks_client", return_value=mock_jwks_client), \
+             patch("backend.app.core.config.Settings.get_supabase_jwt_issuer", return_value=test_issuer):
+            response = self.client.get("/api/v1/auth/me", headers=headers)
+
         self.assertEqual(response.status_code, 200)
         data = response.json()
         user = data["user"]
