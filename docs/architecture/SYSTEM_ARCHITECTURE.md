@@ -294,13 +294,13 @@ graph TD
 | Gate | Description | Environment | Status | Evidence Source | Classification |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Gate 1** | Owner authorization & backlog ticket | Governance | `VERIFIED` | `JIRA_BACKLOG.md` ticket entries | `[VERIFIED IN CURRENT REPOSITORY]` |
-| **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment (`06e02d1` on remote staging) | `[VERIFIED IN CURRENT REPOSITORY]` |
+| **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment (`8fcfdf0` on remote staging) | `[VERIFIED IN CURRENT REPOSITORY]` |
 | **Gate 3** | Vercel Preview frontend build | Vercel | `VERIFIED` | Vercel preview build pipeline | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
-| **Gate 4a** | Staging VM OS Bootstrap, Swap, Docker Setup & Repo Checkout | OCI Staging | `VERIFIED` | Staging VM (`129.225.86.241`) OS updated, 2 GiB swap, Docker 29.8.1, Compose v5.5.1, repo cloned at `staging` `06e02d1` | `[EXTERNALLY VERIFIED VIA SSH]` |
+| **Gate 4a** | Staging VM OS Bootstrap, Swap, Docker Setup & Repo Checkout | OCI Staging | `VERIFIED` | Staging VM (`129.225.86.241`) OS updated, 2 GiB swap, Docker 29.8.1, Compose v5.5.1, repo cloned at `staging` `8fcfdf0` | `[EXTERNALLY VERIFIED VIA SSH]` |
 | **Gate 4b** | Staging `.env` Configuration, Container Runtime & Secret Rotation | OCI Staging | `VERIFIED` | Docker containers (`api` and `caddy`) running, 0 restarts, in-VM `/health` 200 OK. Staging `SECRET_KEY` rotated on 2026-09-25: cryptographically generated on VM, 0 secret exposure, `.env` mode 600, `ALLOW_DB_WRITES=false`, Redis/Celery deferred | `[EXTERNALLY VERIFIED VIA SSH]` |
 | **Gate 5** | Staging FastAPI `/health` endpoint | OCI Staging | `VERIFIED` | External `GET http://129.225.86.241/health` -> HTTP 200 OK (`{"status":"healthy","integrations":{"supabase":true,...}}`) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
 | **Gate 6** | App -> Supabase Staging PostgREST read | Staging App | `VERIFIED` | External `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> HTTP 404 Not Found (zero DB writes) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
-| **Gate 7** | Governed DB write enablement | Staging App | `NOT VERIFIED` | `ALLOW_DB_WRITES=true` configuration (Initial deployment keeps `ALLOW_DB_WRITES=false`) | `[PLANNED / INTENDED ARCHITECTURE]` |
+| **Gate 7** | Governed DB write enablement | Staging App | `VERIFIED` | Controlled PostgREST synthetic write/read/delete on Staging (`8fcfdf0`); immediate cleanup verified; post-test runtime restored to `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH] | `[EXTERNALLY VERIFIED VIA SSH]` |
 | **Gate 8** | Redis / Celery async worker pool | Staging App | `DEFERRED` | Worker task queue processing | `[PLANNED / INTENDED ARCHITECTURE]` |
 | **Gate 9** | Full E2E validation suite | Staging App | `DEFERRED` | End-to-end integration test output | `[PLANNED / INTENDED ARCHITECTURE]` |
 
