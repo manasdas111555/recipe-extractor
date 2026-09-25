@@ -148,7 +148,7 @@ WHATSAPP_VERIFY_TOKEN = "your_staging_whatsapp_verify_token"
 
 ### 1. Staging Project Separation Blueprint
 Staging and Production MUST NOT share database instances, JWT keys, user accounts, or Redis task queues.
-- **Dedicated OCI Staging VM**: Dedicated `VM.Standard.E2.1.Micro` instance `universal-pro-ai-staging-instance` (AMD x86_64, Ubuntu 24.04.5 LTS, Public IP `129.225.86.241`, Private IP `10.0.2.242`, Subnet `staging-public-subnet` `10.0.2.0/24`, Security List `staging-security-list-universalpro-ai-vcn`) — **PROVISIONED & SSH VERIFIED BY OWNER**. Application deployment (Docker / Caddy / FastAPI), Supabase connectivity, and Redis/Celery **NOT YET DEPLOYED / NOT YET VERIFIED**.
+- **Dedicated OCI Staging VM**: Dedicated `VM.Standard.E2.1.Micro` instance `universal-pro-ai-staging-instance` (AMD x86_64, Ubuntu 24.04.5 LTS, Public IP `129.225.86.241`, Private IP `10.0.2.242`, Subnet `staging-public-subnet` `10.0.2.0/24`, Security List `staging-security-list-universalpro-ai-vcn`) — **PROVISIONED, OS BOOTSTRAP, 2.0 GiB SWAP, DOCKER 29.8.1/COMPOSE v5.5.1, REPO CHECKOUT (`staging` at `06e02d1`), .ENV (MODE 600), CADDY + FASTAPI CONTAINER RUNTIME (ZERO RESTARTS), EXTERNAL /HEALTH (200 OK), AND STAGING SUPABASE POSTGREST READ PATH (404 NOT FOUND ON DUMMY SLUG) VERIFIED**. Database write enablement (`ALLOW_DB_WRITES=false` currently), DNS/TLS, and Redis/Celery **NOT YET ENABLED / NOT YET VERIFIED / DEFERRED TO GATES 7-8**.
 - **Dedicated Supabase Project**: Separate Supabase project for staging environment (`https://mzpkdmaxsuhwezsooidu.supabase.co`).
 - **SQL Migration Sequence (Owner-Executed Manual Steps)**:
   1. `01_schema.sql`: Core PostgreSQL tables (`users`, `profiles`, `extractions`, `affiliate_clicks`).

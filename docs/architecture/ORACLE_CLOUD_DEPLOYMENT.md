@@ -28,8 +28,8 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
 - **Instance Name**: `universal-pro-ai-staging-instance`
 - **Public IPv4 Address**: `129.225.86.241` [EXTERNALLY VERIFIED BY OWNER SSH]
 - **Private IPv4 Address**: `10.0.2.242` [EXTERNALLY VERIFIED]
-- **Operating System**: `Canonical Ubuntu 24.04.5 LTS` (x86_64) [EXTERNALLY VERIFIED BY OWNER SSH]
-- **Compute Shape**: `VM.Standard.E2.1.Micro (AMD, 1 GB RAM)` with proposed 2 GB `/swapfile` (Always Free)
+- **Operating System**: `Canonical Ubuntu 24.04.5 LTS` (x86_64, Kernel: `6.17.0-1020-oracle`, `apt update`/`upgrade` completed, 0 reboots required) [EXTERNALLY VERIFIED VIA SSH]
+- **Compute Shape**: `VM.Standard.E2.1.Micro (AMD, 1 GB RAM)` with 2.0 GiB `/swapfile` active and persistent in `/etc/fstab` (Always Free) [ACTUALLY VERIFIED VIA SSH]
 - **Virtual Cloud Network**: `universalpro-ai-vcn` (`10.0.0.0/16`)
 - **Staging Subnet**: `staging-public-subnet` (`10.0.2.0/24`)
 - **Staging VNIC**: `universal-pro-ai-staging-vnic`
@@ -40,7 +40,10 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
   - Ingress TCP 8000: No inbound OCI Security List rule for TCP 8000
   - Ingress TCP 6379: No inbound OCI Security List rule for TCP 6379
 - **SSH Connectivity**: **EXTERNALLY VERIFIED** by Owner (fingerprint accepted, banner verified)
-- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Docker, Caddy, FastAPI app deployment pending)
+- **OS Bootstrap & Runtime Baseline Status**: **ACTUALLY VERIFIED** (Git 2.43.0, Curl 8.5.0, 2.0 GiB `/swapfile` active/persistent, Docker Engine 29.8.1 active/enabled, Docker Compose v5.5.1 installed, `ubuntu` user in `docker` group, 0 containers running)
+- **Repository Checkout Status**: **ACTUALLY VERIFIED** (Cloned at `/home/ubuntu/recipe-extractor`, branch `staging` checked out at exact SHA `06e02d192e89979745d2d0c4476e3e520c02fa48` matching `origin/staging`, clean working tree, `.env` not present, `.env.example` present)
+- **Application Deployment Status**: **NOT YET DEPLOYED / NOT YET VERIFIED** (Staging `.env` configuration, Caddy reverse proxy, and FastAPI container deployment remain pending)
+- **Worker & E2E Status**: **DEFERRED** (Redis / Celery background workers and E2E validation deferred)
 - **Database Isolation Target**: Dedicated Staging Supabase project (`mzpkdmaxsuhwezsooidu.supabase.co`) with zero Production DB (`scrqvbgjybnrvcpxbygf`) contact
 
 ---
@@ -245,8 +248,14 @@ curl http://localhost/health
 ```
 
 Access from any web browser:
-- **Health Check**: `http://140.245.214.28/health`
-- **Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+- **Production Health Check**: `http://140.245.214.28/health`
+- **Production Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+
+### Staging VM Deployment & Gate Verification (`129.225.86.241`)
+* **Gate 4b (Container Runtime & Secret Rotation)**: `universalpro-api` and `universalpro-caddy` deployed via `docker compose up -d --build --no-deps api caddy` with 0 restarts and `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH]. Staging `SECRET_KEY` rotated on 2026-09-25: previous value considered compromised after accidental chat exposure; replacement generated cryptographically on Staging VM (`secrets.token_urlsafe(32)`); zero secret value exposure; `.env` mode 600 preserved; `ENVIRONMENT=staging` & `ALLOW_DB_WRITES=false` unchanged; API container recreated with 0 restarts; Caddy healthy. Execution deviation noted: unexpected Redis container auto-started by compose dependency was immediately stopped & removed to preserve Gate 8 deferral.
+* **Gate 5 (External Health Endpoint)**: `GET http://129.225.86.241/health` -> `HTTP 200 OK` (`{"status":"healthy","service":"Universal Pro AI - API Gateway","version":"1.0.0","integrations":{"supabase":true,"gemini":false,"groq":false,"mistral":false}}`) observed at 2026-09-24 17:13:33 GMT & 17:13:56 GMT and re-verified post-rotation at 2026-09-25 05:55:31 GMT [EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
+* **Gate 6 (External Supabase Read Path)**: `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> `HTTP 404 Not Found` (`{"detail":"Public extraction 'non-existent-slug-12345' not found or is private."}`) observed at 2026-09-24 17:14:18 GMT and re-verified post-rotation at 2026-09-25 05:55:46 GMT, verifying deployed App -> Staging Supabase (`mzpkdmaxsuhwezsooidu.supabase.co`) connectivity with zero DB writes [EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
+* **Deferred Systems**: Redis / Celery async workers remain deferred to Gate 8; E2E suite deferred to Gate 9; Production (`140.245.214.28`) untouched.
 
 ---
 
