@@ -302,7 +302,7 @@ graph TD
 | **Gate 6** | App -> Supabase Staging PostgREST read | Staging App | `VERIFIED` | External `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> HTTP 404 Not Found (zero DB writes) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
 | **Gate 7** | Governed DB write enablement | Staging App | `VERIFIED` | Controlled PostgREST synthetic write/read/delete on Staging (`8fcfdf0`); immediate cleanup verified; post-test runtime restored to `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH] | `[EXTERNALLY VERIFIED VIA SSH]` |
 | **Gate 8** | Redis / Celery async worker pool | Staging App | `VERIFIED` | Controlled Redis 7 + Celery worker startup, task consumption, write-guard preservation, and clean rollback to in-memory fallback on Staging (`8fcfdf0`); post-test runtime restored to `ALLOW_DB_WRITES=false` with Redis/worker stopped [EXTERNALLY VERIFIED VIA SSH] | `[EXTERNALLY VERIFIED VIA SSH]` |
-| **Gate 9** | Full E2E validation suite | Staging App | `DEFERRED` | End-to-end integration test output | `[PLANNED / INTENDED ARCHITECTURE]` |
+| **Gate 9** | Full E2E validation suite | Staging App | `DEFERRED — Readiness Inspection Complete` | Readiness inspected on 2026-09-25; classified as READY FOR SEPARATE OWNER AUTHORIZATION; full E2E execution remains deferred to Gate 9; post-inspection Staging restored to read-only baseline (`ALLOW_DB_WRITES=false`) with Redis/Celery stopped | `[READ-ONLY INSPECTION VERIFIED]` |
 
 ---
 
