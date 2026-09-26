@@ -57,8 +57,8 @@ This document details:
 | **Production Frontend (Primary)** | Vercel Edge Network | `https://universal-pro-ai.vercel.app` | Next.js 15 PWA web client, global CDN, HTTPS termination & origin IP shield |
 | **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
 | **Staging Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `129.225.86.241` (OS Bootstrap, 2 GiB Swap, Docker 29.8.1, Repo Checkout at `staging` `06e02d1`, `.env` Mode 600, Caddy + FastAPI Containers Running with 0 Restarts, External `/health` 200 OK, and External Supabase PostgREST Read 404 Verified; Ports 80, 443 permitted by Security List; No inbound Security List rules for TCP 8000 or TCP 6379) | Dedicated Staging cloud VM (`universal-pro-ai-staging-instance`, Ubuntu 24.04.5 LTS x86_64, `staging-public-subnet` `10.0.2.0/24`, `staging-security-list-universalpro-ai-vcn`, repo at `/home/ubuntu/recipe-extractor` on `staging` `06e02d1`); Caddy+API runtime verified with `ALLOW_DB_WRITES=false`; Redis/Celery deferred to Gate 8 |
-| **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | v0 prototype extraction web app (Legacy) |
-| **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Legacy testing sandbox |
+| **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[RETIRED / DECOMMISSIONED]` | `https://manas-recipe-extractor.streamlit.app/` (Decommissioned per UPA-1203) | Retired v0 prototype web app |
+| **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[RETIRED / DECOMMISSIONED]` | `https://universalpro-stage.streamlit.app/` (Decommissioned per UPA-1203) | Retired legacy testing sandbox |
 | **FastAPI Backend** | Local / Docker Daemon | `http://localhost:8000` (`/docs`, `/health`, `/api/v1/auth/me`) | Decoupled API Gateway for bots and PWAs |
 | **Database** | Supabase (AWS Mumbai) | `https://scrqvbgjybnrvcpxbygf.supabase.co` | Multi-tenant PostgreSQL database with RLS |
 | **Global Skills Root** | Local Agent Environment | `C:\Users\admin\.gemini\config\skills\` | 14 global agent skills (`frontend-design`, `theme-factory`, `shadcn`, `high-end-visual-design`, etc.) |
@@ -68,7 +68,7 @@ This document details:
 
 ## 🛠️ What We Developed & How It Works
 
-### 1. Presentation & Streamlit Runtime (`app.py`, `ui_components.py`)
+### 1. Presentation & Modular UI Components (`ui_components.py`)
 - **Dynamic Platform Detection**: Identifies Instagram Reels, YouTube Shorts, and TikTok URLs on input paste.
 - **Neural Scanner Perception Engine**: Displays dynamic progress states during AI processing to prevent perceived lag.
 - **Multi-Store Affiliate Delivery Shelf**: 

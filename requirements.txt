@@ -1,5 +1,4 @@
 google-genai==2.22.0
-streamlit==1.63.0
 yt-dlp==2026.8.19
 requests==2.34.2
 python-dotenv==1.2.3
