@@ -1396,6 +1396,35 @@ Outbound HTTP/HTTPS connections needed protection against DNS rebinding and Time
 - Frontend Vitest (`npm test`): **12 / 12 PASSED [MEASURED]**.
 - TypeScript Check (`npx tsc --noEmit`): **0 ERRORS [MEASURED]**.
 
+### 🚨 ISSUE-048: Container Egress Firewall Hardening & Rollback Automation (UPA-1206)
+- **Date**: 2026-09-26
+- **Affected Files**: `deploy/setup_egress_firewall.sh`, `deploy/rollback_egress_firewall.sh`, `scripts/verify_egress.py`
+
+#### 1. What Happened (Symptom):
+Docker containers running API and Celery workers required strict host-level egress network filtering to prevent container breakouts or SSRF pivoting to internal cloud instance metadata (169.254.169.254) and RFC 1918 private subnets, while guaranteeing that intra-compose communications (API <-> Redis <-> Caddy) and inbound connections remained undisturbed.
+
+#### 2. Root Cause:
+1. Bare `-d <private range> -j REJECT` rules without source filtering can inadvertently impact other host-level routing.
+2. Compose-to-compose traffic (e.g. `172.28.0.0/16` or `172.16.0.0/12`) requires an explicit `RETURN` rule before RFC 1918 reject rules.
+3. IPv6 egress was unconfigured in `ip6tables`.
+4. An emergency single-command rollback script was required for operator safety.
+
+#### 3. Resolution (Code Changes):
+- `deploy/setup_egress_firewall.sh`:
+  - Enforced `-s <compose subnet>` source binding on all outbound filtering rules.
+  - Inserted compose-to-compose `RETURN` rule before private range blocks.
+  - Added IPv6 filtering with `ip6tables` (`fc00::/7`, `fe80::/10`, `::1/128`).
+  - Added idempotency (flush on start) and reboot persistence via `netfilter-persistent` / `/etc/iptables`.
+- `deploy/rollback_egress_firewall.sh`:
+  - Created automated rollback script flushing `DOCKER-USER` chain and resetting policy to `RETURN`.
+- `scripts/verify_egress.py`:
+  - Verified local and container egress verification suite.
+
+#### 4. Testing & Verification:
+- Egress Script (`python scripts/verify_egress.py`): **ALL CONTAINER EGRESS FIREWALL CHECKS PASSED [OK] [MEASURED]**.
+- Full Pytest Regression (`pytest tests/ -q`): **249 PASSED, 3 DESELECTED in 22.34s [MEASURED]**.
+- Status: **🟠 Verified on Dev / NOT VERIFIED (Container Execution)** awaiting isolated Linux test host console access run per Rule 21.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
