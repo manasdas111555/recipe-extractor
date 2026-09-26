@@ -1368,6 +1368,34 @@ Need to execute multi-domain system hardening across SSRF/IP redirect validation
 - Frontend Vitest (`npm test`): **9 / 9 PASSED**.
 - Backend Pytest (`pytest tests/`): **216 / 216 PASSED**.
 
+### 🚨 ISSUE-047: IP Pinning & PinnedHTTPSConnection Security Hardening (UPA-1205)
+- **Date**: 2026-09-26
+- **Affected Files**: `backend/app/services/url_validator.py`, `tests/test_pinned_https.py`
+
+#### 1. What Happened (Symptom):
+Outbound HTTP/HTTPS connections needed protection against DNS rebinding and Time-of-Check-Time-of-Use (TOCTOU) race conditions where DNS resolution changes between validation and connection time. Additionally, DNS lookups could block the asyncio event loop, and redirect validation needed single-resolution fail-closed enforcement.
+
+#### 2. Root Cause:
+1. Standard `http.client.HTTPSConnection` sets TLS SNI `server_hostname` to the socket destination host (the numeric IP when connecting to a pinned address), causing TLS handshake/cert validation failures unless explicitly overridden.
+2. Synchronous DNS calls (`socket.getaddrinfo`) block the main event loop if executed on async routes.
+3. Redirect probes needed to connect directly to the pre-validated pinned IP without issuing secondary unbounded DNS queries.
+
+#### 3. Resolution (Code Changes):
+- `backend/app/services/url_validator.py`:
+  - Created `PinnedHTTPSConnection(http.client.HTTPSConnection)` subclass binding `self.target_host` to `server_hostname` for TLS SNI and certificate verification while connecting socket to `pinned_ip`.
+  - Added fail-closed `connect()` guard verifying `ip.is_global` before establishing the TCP socket.
+  - Implemented `async_resolve_and_validate_hostname` and `async_validate_url_and_follow_redirects` using a dedicated `ThreadPoolExecutor` off the event loop.
+  - Hardened `validate_url_and_follow_redirects` to use single DNS resolution per hop and direct pinned IP probing.
+- `tests/test_pinned_https.py`:
+  - Added comprehensive test suite with `trustme` CA certificate generation, loopback TLS handshakes, SNI verification, cert mismatch rejection, and async helper validation.
+
+#### 4. Testing & Verification:
+- Unit Test Suite (`pytest tests/test_pinned_https.py -v`): **13 / 13 PASSED [MEASURED]**.
+- Security Suite (`pytest tests/test_backend_security_hardening.py tests/test_ssrf_entrypoint.py tests/test_pinned_https.py -v`): **36 / 36 PASSED [MEASURED]**.
+- Full Pytest Regression (`pytest tests/ -q`): **249 PASSED, 3 DESELECTED in 22.24s [MEASURED]**.
+- Frontend Vitest (`npm test`): **12 / 12 PASSED [MEASURED]**.
+- TypeScript Check (`npx tsc --noEmit`): **0 ERRORS [MEASURED]**.
+
 ---
 
 ## 📌 Standard Protocol for Logging Future Issues
