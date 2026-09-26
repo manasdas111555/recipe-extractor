@@ -11,7 +11,6 @@
 set -euo pipefail
 
 COMPOSE_SUBNET="${COMPOSE_SUBNET:-172.28.0.0/16}"
-DOCKER_BRIDGE_RANGE="172.16.0.0/12"
 
 echo "==> Configuring iptables DOCKER-USER chain egress rules for subnet: ${COMPOSE_SUBNET}..."
 
@@ -27,9 +26,8 @@ ip6tables -F DOCKER-USER
 iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 ip6tables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-# 3. Allow internal Compose-to-Compose communication (before private range rejects)
+# 3. Allow internal Compose-to-Compose communication ONLY for the specific compose subnet
 iptables -A DOCKER-USER -s "${COMPOSE_SUBNET}" -d "${COMPOSE_SUBNET}" -j RETURN
-iptables -A DOCKER-USER -s "${DOCKER_BRIDGE_RANGE}" -d "${DOCKER_BRIDGE_RANGE}" -j RETURN
 
 # 4. Allow container outbound DNS (UDP/TCP port 53)
 iptables -A DOCKER-USER -s "${COMPOSE_SUBNET}" -p udp --dport 53 -j RETURN

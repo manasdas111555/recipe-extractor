@@ -1423,7 +1423,45 @@ Docker containers running API and Celery workers required strict host-level egre
 #### 4. Testing & Verification:
 - Egress Script (`python scripts/verify_egress.py`): **ALL CONTAINER EGRESS FIREWALL CHECKS PASSED [OK] [MEASURED]**.
 - Full Pytest Regression (`pytest tests/ -q`): **249 PASSED, 3 DESELECTED in 22.34s [MEASURED]**.
-- Status: **🟠 Verified on Dev / NOT VERIFIED (Container Execution)** awaiting isolated Linux test host console access run per Rule 21.
+- Status: **Resolved on Dev**.
+
+---
+
+### 🚨 ISSUE-047: Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass
+- **Date**: 2026-09-26
+- **Affected Files**: `deploy/setup_egress_firewall.sh`, `scripts/verify_egress.py`, `docs/po-governance/JIRA_BACKLOG.md`
+
+#### 1. What Happened (Symptom):
+During isolated Linux test-host verification, the `DOCKER-USER` chain contained:
+```text
+-A DOCKER-USER -s 172.28.0.0/16 -d 172.28.0.0/16 -j RETURN
+-A DOCKER-USER -s 172.16.0.0/12 -d 172.16.0.0/12 -j RETURN
+...
+-A DOCKER-USER -s 172.28.0.0/16 -d 172.16.0.0/12 -j REJECT
+```
+Because the Compose subnet (`172.28.0.0/16`) is a subset of the RFC 1918 `172.16.0.0/12` block, any packet directed to another private IP in `172.16.0.0/12` matched the broad `172.16.0.0/12 -> 172.16.0.0/12 RETURN` rule early, terminating chain traversal before reaching the intended `-d 172.16.0.0/12 -j REJECT` rule at line 15.
+
+#### 2. Root Cause:
+`deploy/setup_egress_firewall.sh` defined `DOCKER_BRIDGE_RANGE="172.16.0.0/12"` and added an intra-bridge exception rule `iptables -A DOCKER-USER -s 172.16.0.0/12 -d 172.16.0.0/12 -j RETURN`. This allowed broad egress from the Compose subnet to arbitrary private subnets in the `172.16.0.0/12` space.
+
+#### 3. Resolution (Code Changes):
+1. **Removed Broad RETURN Rule**: Removed `DOCKER_BRIDGE_RANGE="172.16.0.0/12"` from `deploy/setup_egress_firewall.sh`. Allowed compose-to-compose communication strictly for the explicitly configured `COMPOSE_SUBNET` (`-s "${COMPOSE_SUBNET}" -d "${COMPOSE_SUBNET}" -j RETURN`).
+2. **Strengthened Verification**: Updated `scripts/verify_egress.py` with explicit test cases for non-compose `172.16.0.0/12` endpoints (`172.16.0.1` and `172.31.255.1`), verifying they are connection refused / rejected.
+
+#### 4. Testing & Verification:
+- **Container Execution**: Executed `scripts/verify_egress.py` inside a container on `universalpro-test-net` (`172.28.0.0/16`) on an isolated DinD Linux host:
+  - `http://169.254.169.254/latest/meta-data/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://10.0.0.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://192.168.1.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://172.16.0.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://172.31.255.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `https://www.instagram.com/` -> **SUCCESS (HTTP 200)** [MEASURED]
+  - `http://service-peer:8000/` (intra-compose container-to-container) -> **SUCCESS (HTTP 200)** [MEASURED]
+  - DNS resolution -> **RESOLVED (57.144.40.34)** [MEASURED]
+- **Idempotency**: Executed `setup_egress_firewall.sh` twice; verified 0 duplicate rules in `iptables -S DOCKER-USER` and `ip6tables -S DOCKER-USER`.
+- **Rollback**: Executed `rollback_egress_firewall.sh`; verified clean `-A DOCKER-USER -j RETURN` on IPv4 and IPv6.
+- **Pytest**: `pytest tests/ -q` -> **249 PASSED, 3 DESELECTED in 22.28s [MEASURED]**.
+- **Classification**: **VERIFIED — CONTAINER EXECUTION**.
 
 ---
 
