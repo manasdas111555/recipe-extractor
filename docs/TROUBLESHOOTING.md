@@ -40,6 +40,9 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-032** | 2026-09-15 | UI/UX & Design | Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation | ✅ Resolved |
 | **ISSUE-045** | 2026-09-20 | Security & Architecture | Security Hardening, Pure Function Refactoring, WCAG Accessibility, Admin Telemetry & Vault Rehydration | ✅ Resolved |
 | **ISSUE-046** | 2026-09-20 | Security & Rule Enforcement | TRUSTED_PROXY Default, Egress Firewall Verification, IP Pinning SNI, Streamlit Admin Removal & Vault Rehydration Wiring | ✅ Resolved |
+| **ISSUE-047** | 2026-09-26 | Security & Network | IP Pinning & PinnedHTTPSConnection Security Hardening (UPA-1205) | ✅ Resolved |
+| **ISSUE-048** | 2026-09-26 | Security & DevOps | Container Egress Firewall Hardening & Rollback Automation (UPA-1206) | ✅ Resolved |
+| **ISSUE-049** | 2026-09-26 | Security & DevOps | Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206) | ✅ Resolved |
 
 ---
 
@@ -1427,7 +1430,7 @@ Docker containers running API and Celery workers required strict host-level egre
 
 ---
 
-### 🚨 ISSUE-047: Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass
+### 🚨 ISSUE-049: Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206)
 - **Date**: 2026-09-26
 - **Affected Files**: `deploy/setup_egress_firewall.sh`, `scripts/verify_egress.py`, `docs/po-governance/JIRA_BACKLOG.md`
 
