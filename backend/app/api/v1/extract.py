@@ -481,14 +481,8 @@ async def stream_video(
 
     cleanup_ephemeral_media_cache()
 
-    # 6. Non-Blocking Worker Thread Download / Cache Lookup
-    url_hash = hashlib.sha256(target_url.encode("utf-8")).hexdigest()[:16]
-    cached_candidates = list(MEDIA_CACHE_DIR.glob(f"stream_{url_hash}.*"))
-    video_file = None
-    if cached_candidates and cached_candidates[0].exists():
-        video_file = str(cached_candidates[0])
-    else:
-        video_file = await asyncio.to_thread(_download_stream_video_sync, target_url, MEDIA_CACHE_DIR)
+    # 6. Non-Blocking Worker Thread Download / Retrieval
+    video_file = await asyncio.to_thread(_download_stream_video_sync, target_url, MEDIA_CACHE_DIR)
 
     if not video_file or not os.path.exists(video_file):
         raise HTTPException(status_code=404, detail="Unable to stream media content.")
@@ -497,7 +491,38 @@ async def stream_video(
     max_stream_bytes = 50 * 1024 * 1024  # 50MB Cap (Rule 4)
 
     if file_size > max_stream_bytes:
+        if os.path.exists(video_file):
+            try:
+                os.remove(video_file)
+            except Exception:
+                pass
         raise HTTPException(status_code=400, detail=f"Media file size ({file_size} bytes) exceeds maximum 50MB stream limit.")
+
+    def stream_file_with_cleanup(filepath: str, start: int = 0, length: Optional[int] = None):
+        """
+        Streaming generator ensuring unskippable try...finally deterministic disk cleanup
+        upon normal completion, streaming exception, or client disconnect (AGENTS.md Rule 4 & UPA-1213).
+        """
+        try:
+            with open(filepath, "rb") as f:
+                if start > 0:
+                    f.seek(start)
+                remaining = length if length is not None else float("inf")
+                chunk_size = 64 * 1024
+                while remaining > 0:
+                    read_len = min(chunk_size, int(remaining)) if remaining != float("inf") else chunk_size
+                    chunk = f.read(read_len)
+                    if not chunk:
+                        break
+                    if remaining != float("inf"):
+                        remaining -= len(chunk)
+                    yield chunk
+        finally:
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
 
     # 7. HTTP Range Requests & 206 Partial Content (Smooth Seeking)
     range_header = request.headers.get("range")
@@ -511,26 +536,17 @@ async def stream_video(
             range_end = min(range_end, file_size - 1)
 
             if range_start > range_end or range_start >= file_size:
+                if os.path.exists(video_file):
+                    try:
+                        os.remove(video_file)
+                    except Exception:
+                        pass
                 return Response(
                     status_code=416,
                     headers={"Content-Range": f"bytes */{file_size}"}
                 )
 
             content_length = (range_end - range_start) + 1
-
-            def range_generator(start: int, length: int):
-                with open(video_file, "rb") as f:
-                    f.seek(start)
-                    remaining = length
-                    chunk_size = 64 * 1024
-                    while remaining > 0:
-                        read_len = min(chunk_size, remaining)
-                        data = f.read(read_len)
-                        if not data:
-                            break
-                        remaining -= len(data)
-                        yield data
-
             headers = {
                 "Content-Range": f"bytes {range_start}-{range_end}/{file_size}",
                 "Accept-Ranges": "bytes",
@@ -538,7 +554,7 @@ async def stream_video(
                 "Content-Type": "video/mp4",
             }
             return StreamingResponse(
-                range_generator(range_start, content_length),
+                stream_file_with_cleanup(video_file, start=range_start, length=content_length),
                 status_code=206,
                 headers=headers,
                 media_type="video/mp4"
@@ -547,22 +563,8 @@ async def stream_video(
             logger.warning("Error handling Range request, falling back to full stream: %s", range_err)
 
     # Standard 200 Streaming Response
-    def iterfile():
-        total_bytes = 0
-        chunk_size = 64 * 1024
-        with open(video_file, "rb") as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                total_bytes += len(chunk)
-                if total_bytes > max_stream_bytes:
-                    logger.warning("Streaming byte count (%d) exceeded 50MB limit. Terminating stream.", total_bytes)
-                    break
-                yield chunk
-
     return StreamingResponse(
-        iterfile(),
+        stream_file_with_cleanup(video_file, start=0, length=file_size),
         status_code=200,
         media_type="video/mp4",
         headers={

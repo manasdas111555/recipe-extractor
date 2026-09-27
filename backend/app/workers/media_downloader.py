@@ -156,9 +156,20 @@ def download_worker_media(
                     except Exception as meta_err:
                         logger.warning("Pre-flight metadata extraction skipped: %s", meta_err)
 
-                    info = ydl.extract_info(video_url, download=True)
                     if not info:
                         continue
+
+                    duration = info.get("duration")
+                    if duration and duration > max_duration:
+                        candidate = ydl.prepare_filename(info)
+                        base, _ = os.path.splitext(candidate)
+                        for p in [candidate, f"{base}.mp4"]:
+                            if os.path.exists(p):
+                                try:
+                                    os.remove(p)
+                                except Exception:
+                                    pass
+                        return False, f"Video duration ({duration}s) exceeds maximum allowed limit ({max_duration}s)."
 
                     candidate = ydl.prepare_filename(info)
 
