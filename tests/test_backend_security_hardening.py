@@ -13,6 +13,7 @@ import pytest
 import socket
 import hmac
 import hashlib
+import time
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
@@ -175,14 +176,18 @@ class TestStreamTokenAndWebhooks:
     def test_stream_token_generation_and_verification(self):
         ext_id = "extraction_uuid_12345"
         secret = "super_secret_test_key"
+        media_url = "https://www.instagram.com/reel/123/"
 
-        token = generate_stream_token(ext_id, secret)
+        token = generate_stream_token(ext_id, secret, media_url=media_url)
         assert isinstance(token, str)
-        assert len(token) == 64
+        assert "." in token
+        exp_str, sig = token.split(".", 1)
+        assert int(exp_str) > int(time.time())
+        assert len(sig) == 64
 
-        assert verify_stream_token(ext_id, token, secret) is True
-        assert verify_stream_token(ext_id, "invalid_token_hash", secret) is False
-        assert verify_stream_token("different_id", token, secret) is False
+        assert verify_stream_token(ext_id, token, secret, media_url=media_url) is True
+        assert verify_stream_token(ext_id, "invalid_token_hash", secret, media_url=media_url) is False
+        assert verify_stream_token("different_id", token, secret, media_url=media_url) is False
 
     def test_stream_video_endpoint_rejection_without_token(self):
         # Raw ?url= without stream_token should fail with HTTP 400
@@ -193,8 +198,9 @@ class TestStreamTokenAndWebhooks:
     def test_stream_video_endpoint_with_valid_token(self):
         ext_id = "test_stream_id"
         secret = settings.SECRET_KEY or "universal_pro_default_secret_key"
-        token = generate_stream_token(ext_id, secret)
-        res = client.get(f"/api/v1/extract/stream-video?token={token}&id={ext_id}&url=https://www.instagram.com/reel/123/")
+        media_url = "https://www.instagram.com/reel/123/"
+        token = generate_stream_token(ext_id, secret, media_url=media_url)
+        res = client.get(f"/api/v1/extract/stream-video?token={token}&id={ext_id}")
         # Should not fail with 400 token error (may return 404 if file not on disk, which is valid)
         assert res.status_code in [200, 404]
 

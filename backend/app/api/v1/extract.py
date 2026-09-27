@@ -395,11 +395,11 @@ async def stream_video(
     Enforces per-client-IP rate limiting (429), strict 50MB byte ceiling, 90s duration cap,
     offloads blocking download to worker thread pool, and supports HTTP Range (206) requests.
     """
-    # 1. Parameter presence validation
-    if url is not None and not token:
+    # 1. Parameter presence & query hygiene validation
+    if "url" in request.query_params or url is not None:
         raise HTTPException(
             status_code=400,
-            detail="Direct url streaming without signed token is prohibited. Provide token and id parameters."
+            detail="Client-supplied ?url= parameter is strictly prohibited on /stream-video. Streaming requires only 'id' and 'token' parameters."
         )
 
     if not token or not id:
@@ -420,7 +420,7 @@ async def stream_video(
             detail="Rate limit exceeded for video streaming (max 60 requests per minute)."
         )
 
-    # 3. Initial Token Format & Basic Cryptographic Check
+    # 3. Initial Token Format & Basic Expiration Check (<exp>.<sig>)
     from backend.app.core.config import get_settings
     from backend.app.services.url_validator import verify_stream_token, validate_social_url
 
@@ -428,22 +428,21 @@ async def stream_video(
     if not secret_key:
         raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
 
-    if "." in token:
-        parts = token.split(".", 1)
-        if len(parts) != 2:
-            raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
-        try:
-            exp_val = int(parts[0])
-            if exp_val < int(time.time()):
-                raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
-    else:
-        # Legacy raw token
-        if not verify_stream_token(id, token, secret_key):
-            raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
+    if "." not in token:
+        # Legacy raw token without expiration prefix is strictly rejected (UPA-1213)
+        raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
 
-    # 4. Server-Side Media URL Resolution
+    parts = token.split(".", 1)
+    if len(parts) != 2:
+        raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
+    try:
+        exp_val = int(parts[0])
+        if exp_val < int(time.time()):
+            raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
+
+    # 4. Server-Side Media URL Resolution (No Trust in Client URLs)
     target_url: Optional[str] = None
     job_manager = get_job_manager()
     job = job_manager.get_job(id)
@@ -468,14 +467,10 @@ async def stream_video(
                 except Exception:
                     pass
 
-    # Backward compatibility for test fixture contexts
-    if not target_url and url:
-        target_url = url
-
     if not target_url:
         raise HTTPException(status_code=404, detail="Media target URL not found for stream token.")
 
-    # 5. Full Token Cryptographic Verification (URL & ID Binding)
+    # 5. Full Token Cryptographic Verification (Bound to ID and server-resolved URL)
     if not verify_stream_token(id, token, secret_key, media_url=target_url):
         raise HTTPException(status_code=400, detail="Invalid or expired stream token.")
 

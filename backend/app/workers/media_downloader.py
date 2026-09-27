@@ -100,7 +100,7 @@ def download_worker_media(
             f"bestvideo[height<={res_limit}][ext=mp4]+bestaudio[ext=m4a]/"
             f"bestvideo[height<={res_limit}]+bestaudio/"
             f"best[height<={res_limit}][ext=mp4]/"
-            f"best[height<={res_limit}]/best"
+            f"best[height<={res_limit}]"
         )
 
         max_bytes = settings.MAX_MEDIA_DOWNLOAD_MB * 1024 * 1024

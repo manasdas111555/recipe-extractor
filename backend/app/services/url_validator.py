@@ -332,60 +332,52 @@ def generate_stream_token(extraction_id: str, secret_key: str, media_url: str = 
     Format: <exp>.<sig>
     exp = int(time.time()) + ttl_seconds (default 900s = 15m)
     sig = HMAC-SHA256(secret, f"{extraction_id}|{sha256(media_url)}|{exp}").hexdigest()
-
-    If media_url is empty, falls back to legacy raw HMAC-SHA256 for backward test compatibility.
     """
     if not secret_key:
         raise ValueError("SECRET_KEY must be configured to generate stream tokens.")
     if not extraction_id:
         raise ValueError("extraction_id must be provided to generate stream tokens.")
 
-    if media_url:
-        exp = int(time.time()) + ttl_seconds
-        url_hash = hashlib.sha256(media_url.strip().encode("utf-8")).hexdigest()
-        msg = f"{extraction_id}|{url_hash}|{exp}"
-        sig = hmac.new(secret_key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
-        return f"{exp}.{sig}"
-    else:
-        # Legacy fallback (assert len(token) == 64)
-        key_bytes = secret_key.encode('utf-8')
-        msg_bytes = extraction_id.encode('utf-8')
-        return hmac.new(key_bytes, msg_bytes, hashlib.sha256).hexdigest()
+    exp = int(time.time()) + ttl_seconds
+    url_hash = hashlib.sha256(media_url.strip().encode("utf-8")).hexdigest() if media_url else ""
+    msg = f"{extraction_id}|{url_hash}|{exp}"
+    sig = hmac.new(secret_key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{exp}.{sig}"
 
 
 def verify_stream_token(extraction_id: str, token: str, secret_key: str, media_url: str = "") -> bool:
     """
     Verifies a signed HMAC stream token in constant time.
-    Rejects malformed tokens, expired tokens, ID mismatches, and URL mismatches.
+    Strictly requires <exp>.<sig> format.
+    Rejects legacy raw tokens, malformed tokens, expired tokens, ID mismatches, and URL mismatches.
     """
     if not extraction_id or not token or not secret_key:
         return False
 
     try:
-        if "." in token:
-            parts = token.split(".", 1)
-            if len(parts) != 2:
-                return False
-            exp_str, sig = parts
-            try:
-                exp = int(exp_str)
-            except ValueError:
-                return False
+        if "." not in token:
+            # Legacy raw tokens without expiration prefix are strictly rejected (UPA-1213)
+            return False
 
-            # Check expiration
-            if exp < int(time.time()):
-                logger.warning("Stream token expired (exp=%d, now=%d)", exp, int(time.time()))
-                return False
+        parts = token.split(".", 1)
+        if len(parts) != 2:
+            return False
+        exp_str, sig = parts
+        try:
+            exp = int(exp_str)
+        except ValueError:
+            return False
 
-            # Compute expected signature
-            url_hash = hashlib.sha256(media_url.strip().encode("utf-8")).hexdigest() if media_url else ""
-            msg = f"{extraction_id}|{url_hash}|{exp}"
-            expected_sig = hmac.new(secret_key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
-            return hmac.compare_digest(expected_sig, sig)
-        else:
-            # Legacy raw 64-char hex token
-            expected = hmac.new(secret_key.encode("utf-8"), extraction_id.encode("utf-8"), hashlib.sha256).hexdigest()
-            return hmac.compare_digest(expected, token)
+        # Check expiration
+        if exp < int(time.time()):
+            logger.warning("Stream token expired (exp=%d, now=%d)", exp, int(time.time()))
+            return False
+
+        # Compute expected signature bound to ID, URL hash, and expiration timestamp
+        url_hash = hashlib.sha256(media_url.strip().encode("utf-8")).hexdigest() if media_url else ""
+        msg = f"{extraction_id}|{url_hash}|{exp}"
+        expected_sig = hmac.new(secret_key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected_sig, sig)
     except Exception as exc:
         logger.warning("Error verifying stream token: %s", exc)
         return False
