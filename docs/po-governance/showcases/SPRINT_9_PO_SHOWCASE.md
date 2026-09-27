@@ -83,7 +83,9 @@ flowchart TD
 ## Module 5: Gemini 3.8 Flash Indian Regional & Hinglish Prompt Tuning
 
 ### 🧑‍💻 User Flow & Solution
-* **Sprint 9 Enhancement:** Integrated `REGIONAL_EXTRACTION_SYSTEM_PROMPT` into `gemini_processor.py` converting spoken Indian metrics (*"1 katori"* -> *"1 cup (~150g)"*, *"ek chamach"* -> *"1 tbsp"*, *"swadanusar"* -> *"to taste"*) while preserving colloquial names (*Ghee*, *Jeera*, *Kasuri Methi*, *Hing*).
+* **Sprint 9 Enhancement:** Integrated `REGIONAL_EXTRACTION_SYSTEM_PROMPT` into `gemini_processor.py` preserving native culinary terminology with standardized approximate unit conversions (`[ILLUSTRATIVE]`: *"1 katori"* -> *"1 bowl (~150 ml, approx)"*, *"ek chamach"* -> *"1 tbsp (approx)"*, *"chutki bhar"* -> *"1 pinch (approx)"*, *"swadanusar"* -> *"to taste"*) and localized spice names (*Clarified Butter (Ghee)*, *Cumin Seeds (Jeera)*, *Dried Fenugreek (Kasuri Methi)*, *Asafoetida (Hing)*).
+* **Evaluation Standard (UPA-1210):** System prompt snapshot strings cited in documentation are `[ILLUSTRATIVE]`. The formal Hinglish golden-set transition benchmark is classified as `[NOT VERIFIED]` until a live API evaluation against 3–5 fixed reference reels/transcripts is conducted with empirical token usage, latency, and accuracy metrics recorded.
+* **Regression Invariant:** Verified via snapshot unit test `tests/test_hinglish_prompt_snapshot.py` (Rule 13).
 
 ---
 
