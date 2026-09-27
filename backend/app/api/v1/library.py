@@ -78,7 +78,7 @@ async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
     ext_id = body.extraction_id or item_data.get("id") or "rehydrated_item"
     secret = settings.SECRET_KEY
     if secret:
-        fresh_stream_token = generate_stream_token(ext_id, secret)
+        fresh_stream_token = generate_stream_token(ext_id, secret, media_url=target_url or "")
         item_data["stream_token"] = fresh_stream_token
 
     domain = item_data.get("classified_domain") or item_data.get("domain") or "RECIPE"

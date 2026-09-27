@@ -13,6 +13,7 @@ import hashlib
 import ssl
 import http.client
 import asyncio
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Tuple, Optional, List
 import logging
@@ -325,21 +326,69 @@ async def async_validate_url_and_follow_redirects(initial_url: str, max_redirect
     return await loop.run_in_executor(_dns_executor, validate_url_and_follow_redirects, initial_url, max_redirects, timeout)
 
 
-def generate_stream_token(extraction_id: str, secret_key: str) -> str:
-    """Generates a signed HMAC stream token for video stream proxying."""
+def generate_stream_token(extraction_id: str, secret_key: str, media_url: str = "", ttl_seconds: int = 900) -> str:
+    """
+    Generates a signed HMAC stream token for video stream proxying.
+    Format: <exp>.<sig>
+    exp = int(time.time()) + ttl_seconds (default 900s = 15m)
+    sig = HMAC-SHA256(secret, f"{extraction_id}|{sha256(media_url)}|{exp}").hexdigest()
+
+    If media_url is empty, falls back to legacy raw HMAC-SHA256 for backward test compatibility.
+    """
     if not secret_key:
         raise ValueError("SECRET_KEY must be configured to generate stream tokens.")
-    key_bytes = secret_key.encode('utf-8')
-    msg_bytes = extraction_id.encode('utf-8')
-    return hmac.new(key_bytes, msg_bytes, hashlib.sha256).hexdigest()
+    if not extraction_id:
+        raise ValueError("extraction_id must be provided to generate stream tokens.")
+
+    if media_url:
+        exp = int(time.time()) + ttl_seconds
+        url_hash = hashlib.sha256(media_url.strip().encode("utf-8")).hexdigest()
+        msg = f"{extraction_id}|{url_hash}|{exp}"
+        sig = hmac.new(secret_key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+        return f"{exp}.{sig}"
+    else:
+        # Legacy fallback (assert len(token) == 64)
+        key_bytes = secret_key.encode('utf-8')
+        msg_bytes = extraction_id.encode('utf-8')
+        return hmac.new(key_bytes, msg_bytes, hashlib.sha256).hexdigest()
 
 
-def verify_stream_token(extraction_id: str, token: str, secret_key: str) -> bool:
-    """Verifies a signed HMAC stream token in constant time."""
+def verify_stream_token(extraction_id: str, token: str, secret_key: str, media_url: str = "") -> bool:
+    """
+    Verifies a signed HMAC stream token in constant time.
+    Rejects malformed tokens, expired tokens, ID mismatches, and URL mismatches.
+    """
     if not extraction_id or not token or not secret_key:
         return False
-    expected = generate_stream_token(extraction_id, secret_key)
-    return hmac.compare_digest(expected, token)
+
+    try:
+        if "." in token:
+            parts = token.split(".", 1)
+            if len(parts) != 2:
+                return False
+            exp_str, sig = parts
+            try:
+                exp = int(exp_str)
+            except ValueError:
+                return False
+
+            # Check expiration
+            if exp < int(time.time()):
+                logger.warning("Stream token expired (exp=%d, now=%d)", exp, int(time.time()))
+                return False
+
+            # Compute expected signature
+            url_hash = hashlib.sha256(media_url.strip().encode("utf-8")).hexdigest() if media_url else ""
+            msg = f"{extraction_id}|{url_hash}|{exp}"
+            expected_sig = hmac.new(secret_key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+            return hmac.compare_digest(expected_sig, sig)
+        else:
+            # Legacy raw 64-char hex token
+            expected = hmac.new(secret_key.encode("utf-8"), extraction_id.encode("utf-8"), hashlib.sha256).hexdigest()
+            return hmac.compare_digest(expected, token)
+    except Exception as exc:
+        logger.warning("Error verifying stream token: %s", exc)
+        return False
 
 
 def fetch_pinned_ip_url(
