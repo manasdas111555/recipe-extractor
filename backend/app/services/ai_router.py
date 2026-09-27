@@ -4,15 +4,26 @@ import time
 from pathlib import Path
 from typing import Tuple, Dict, Any
 
-from config import (
-    get_api_key,
-    get_mistral_api_key,
-    get_groq_api_key,
-    get_affiliate_tags
-)
-from gemini_processor import process_video_and_generate_recipe, safe_print
-from mistral_processor import process_video_with_mistral
-from groq_processor import process_video_with_groq
+try:
+    from backend.app.services.config import (
+        get_api_key,
+        get_mistral_api_key,
+        get_groq_api_key,
+        get_affiliate_tags
+    )
+    from backend.app.services.gemini_processor import process_video_and_generate_recipe, safe_print
+    from backend.app.services.mistral_processor import process_video_with_mistral
+    from backend.app.services.groq_processor import process_video_with_groq
+except ImportError:
+    from config import (
+        get_api_key,
+        get_mistral_api_key,
+        get_groq_api_key,
+        get_affiliate_tags
+    )
+    from gemini_processor import process_video_and_generate_recipe, safe_print
+    from mistral_processor import process_video_with_mistral
+    from groq_processor import process_video_with_groq
 
 AI_PROVIDERS = [
     "Google Gemini (Native Video AI)",

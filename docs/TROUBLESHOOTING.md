@@ -43,6 +43,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-047** | 2026-09-26 | Security & Network | IP Pinning & PinnedHTTPSConnection Security Hardening (UPA-1205) | ✅ Resolved |
 | **ISSUE-048** | 2026-09-26 | Security & DevOps | Container Egress Firewall Hardening & Rollback Automation (UPA-1206) | ✅ Resolved |
 | **ISSUE-049** | 2026-09-26 | Security & DevOps | Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206) | ✅ Resolved |
+| **ISSUE-050** | 2026-09-27 | Dependencies & Security | Python 3.11 Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207) | ✅ Resolved |
 
 ---
 
@@ -1465,6 +1466,48 @@ Because the Compose subnet (`172.28.0.0/16`) is a subset of the RFC 1918 `172.16
 - **Rollback**: Executed `rollback_egress_firewall.sh`; verified clean `-A DOCKER-USER -j RETURN` on IPv4 and IPv6.
 - **Pytest**: `pytest tests/ -q` -> **249 PASSED, 3 DESELECTED in 22.28s [MEASURED]**.
 - **Classification**: **VERIFIED — CONTAINER EXECUTION**.
+
+---
+
+### 🚨 ISSUE-050: Python 3.11 Runtime Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207)
+- **Date**: 2026-09-27
+- **Affected Files**: `requirements.txt`, `requirements-dev.txt`, `requirements.lock`, `backend/requirements.txt`, `backend/app/services/llm_council.py`, `backend/app/workers/tasks.py`
+
+#### 1. What Happened (Symptom):
+During repository dependency auditing and Docker containerization:
+1. `requirements.txt` contained dead dependencies (`pypdf`) from earlier prototype iterations and lacked explicit `uvicorn[standard]` for FastAPI container startup.
+2. Developer and test tools (`pytest`, `pytest-asyncio`, `pytest-socket`, `pip-audit`, `trustme`, `fakeredis`) were mixed or unpartitioned.
+3. In Python 3.11, `backend/app/services/llm_council.py` triggered a `SyntaxError: f-string expression part cannot include a backslash` when joining strings inside an f-string expression.
+4. `backend/app/workers/tasks.py` had an import resolution conflict where direct submodule imports bypassed top-level mock patch targets in `tests/test_sprint6_content_payload.py`.
+
+#### 2. Root Cause:
+1. Manifest drift across sprints without strict dev vs. runtime dependency partitioning.
+2. Python 3.11 syntax constraint on f-string inner backslashes (prior to Python 3.12 grammar improvements).
+3. Ambiguity between top-level `import ai_router` vs nested package import in Celery worker context.
+
+#### 3. Resolution (Code Changes):
+1. **Manifest Cleaning & Dev Partitioning**:
+   - `requirements.txt`: Removed dead `pypdf`, added explicit `uvicorn[standard]>=0.34.0`, synced `backend/requirements.txt`.
+   - `requirements-dev.txt`: Added `pytest>=7.0.0`, `pytest-asyncio>=0.23.0`, `pytest-socket>=0.8.1`, `pip-audit>=2.7.0`, `trustme>=1.1.0`, `fakeredis>=2.20.0`, `pip-tools>=7.4.0`.
+2. **Python 3.11 Syntax Fix**:
+   - `backend/app/services/llm_council.py`: Extracted `formatted_anon_outputs = "---".join(...)` before the f-string interpolation.
+3. **Import Robustness**:
+   - `backend/app/workers/tasks.py` & services: Added defensive `try/except ImportError` fallbacks ensuring both top-level and package-level module resolution without breaking existing test mock targets.
+4. **Deterministic Lockfile Generation**:
+   - Generated pinned `requirements.lock` using `pip-compile` inside an isolated Docker `python:3.11-slim` container.
+
+#### 4. Testing & Verification:
+- **Clean Venv Python 3.11 Container**: Built clean environment in Docker container; imported all backend modules (`ALL RUNTIME IMPORTS SUCCESSFUL IN CONTAINER [OK]`) [MEASURED].
+- **Deterministic Lockfile**: Re-ran resolution; verified 1:1 exact byte match (186 lines pinned) [MEASURED].
+- **Security Audit**:
+  - `pip-audit -r requirements.txt` -> **0 known vulnerabilities found [OK] [MEASURED]**.
+  - `pip-audit -r requirements.lock` -> **0 known vulnerabilities found [OK] [MEASURED]**.
+- **Docker Build & Boot**:
+  - Built `universal-pro-ai:upa-1207` from Dockerfile [MEASURED].
+  - Booted container with `docker run -d -p 8000:8000 --name upa1207-test universal-pro-ai:upa-1207` [MEASURED].
+  - `curl http://localhost:8000/health` -> **HTTP 200 `{"status":"healthy",...}` [MEASURED]**.
+- **Full Pytest Suite**: `pytest tests/ -q` -> **249 passed, 3 deselected in 22.33s [MEASURED]**.
+- **Status**: **Resolved on Dev**.
 
 ---
 

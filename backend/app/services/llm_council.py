@@ -21,15 +21,26 @@ ROOT_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from config import get_api_key, get_mistral_api_key, get_groq_api_key, get_affiliate_tags, ensure_download_dir
-from gemini_processor import (
-    process_video_and_generate_recipe,
-    parse_extracted_content,
-    format_downloadable_txt,
-    safe_print
-)
-from mistral_processor import process_video_with_mistral
-from groq_processor import process_video_with_groq
+try:
+    from backend.app.services.config import get_api_key, get_mistral_api_key, get_groq_api_key, get_affiliate_tags, ensure_download_dir
+    from backend.app.services.gemini_processor import (
+        process_video_and_generate_recipe,
+        parse_extracted_content,
+        format_downloadable_txt,
+        safe_print
+    )
+    from backend.app.services.mistral_processor import process_video_with_mistral
+    from backend.app.services.groq_processor import process_video_with_groq
+except ImportError:
+    from config import get_api_key, get_mistral_api_key, get_groq_api_key, get_affiliate_tags, ensure_download_dir
+    from gemini_processor import (
+        process_video_and_generate_recipe,
+        parse_extracted_content,
+        format_downloadable_txt,
+        safe_print
+    )
+    from mistral_processor import process_video_with_mistral
+    from groq_processor import process_video_with_groq
 
 logger = logging.getLogger(__name__)
 
@@ -166,11 +177,12 @@ def run_llm_council_extraction(
     notify("Stage 2/3: Running Anonymized Peer Audit & Ingredient Verification...")
     anon_text_map, anon_json_map = anonymize_outputs(stage1_results)
 
+    formatted_anon_outputs = "---".join([f"{label}:\n{text}\n" for label, text in anon_text_map.items()])
     audit_prompt = f"""You are the Lead Auditor of the LLM Council for Recipe Extraction.
 Below are extraction outputs from {len(anon_text_map)} independent AI models analyzing the same video.
 Identify discrepancies in ingredients, quantities, measurements, or cooking instructions between models.
 
-{"---".join([f"{label}:\n{text}\n" for label, text in anon_text_map.items()])}
+{formatted_anon_outputs}
 
 List concise audit notes highlighting:
 1. Missing or extra ingredients across models.

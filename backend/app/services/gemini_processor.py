@@ -25,7 +25,10 @@ def safe_print(msg: str):
         except Exception:
             pass
 
-from config import get_api_key, ensure_download_dir, get_affiliate_tags
+try:
+    from backend.app.services.config import get_api_key, ensure_download_dir, get_affiliate_tags
+except ImportError:
+    from config import get_api_key, ensure_download_dir, get_affiliate_tags
 
 
 REGIONAL_EXTRACTION_SYSTEM_PROMPT = """

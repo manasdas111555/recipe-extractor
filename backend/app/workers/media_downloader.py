@@ -134,7 +134,10 @@ def download_worker_media(
                 logger.info("Worker media download using residential proxy: %s", effective_proxy)
 
             try:
-                from config import get_youtube_cookie_file
+                try:
+                    from backend.app.services.config import get_youtube_cookie_file
+                except ImportError:
+                    from config import get_youtube_cookie_file
                 cookie_path = get_youtube_cookie_file()
                 if cookie_path and cookie_path.exists():
                     ydl_opts['cookiefile'] = str(cookie_path.resolve())

@@ -8,9 +8,14 @@ import urllib.error
 from pathlib import Path
 from typing import Tuple, Dict, Any, List
 
-from config import get_mistral_api_key, ensure_download_dir, get_affiliate_tags
-from media_utils import extract_audio_from_video, extract_keyframes
-from gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
+try:
+    from backend.app.services.config import get_mistral_api_key, ensure_download_dir, get_affiliate_tags
+    from backend.app.services.media_utils import extract_audio_from_video, extract_keyframes
+    from backend.app.services.gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
+except ImportError:
+    from config import get_mistral_api_key, ensure_download_dir, get_affiliate_tags
+    from media_utils import extract_audio_from_video, extract_keyframes
+    from gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
 
 def process_video_with_mistral(
     video_path: str,
