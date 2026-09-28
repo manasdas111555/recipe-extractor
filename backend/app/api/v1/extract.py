@@ -35,33 +35,27 @@ router = APIRouter(prefix="/extract", tags=["Extraction"])
 # ==============================================================================
 # Single Source of Truth for Domain Hints (UPA-1216)
 # ==============================================================================
-_ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+_ROOT_DIR = Path(__file__).resolve().parents[4]
 _DOMAIN_OPTIONS_FILE = _ROOT_DIR / "frontend" / "src" / "data" / "domain_options.json"
+
 
 
 def load_canonical_domain_ids() -> List[str]:
     """Loads canonical domain hint IDs from the authoritative JSON definition."""
-    if _DOMAIN_OPTIONS_FILE.exists():
-        try:
-            with open(_DOMAIN_OPTIONS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                ids = [item["id"] for item in data if isinstance(item, dict) and "id" in item]
-                if ids:
-                    return ids
-        except Exception as exc:
-            logger.warning(f"Could not parse {_DOMAIN_OPTIONS_FILE}: {exc}")
-    # Fallback to standard 9 IDs if file is missing in isolated runtime
-    return [
-        "auto",
-        "recipe",
-        "kitchen_product",
-        "fitness_workout",
-        "interior_design",
-        "gaming",
-        "tech_diy",
-        "unboxing",
-        "diy",
-    ]
+    if not _DOMAIN_OPTIONS_FILE.exists():
+        raise FileNotFoundError(
+            f"Authoritative domain options definition file missing at: {_DOMAIN_OPTIONS_FILE}"
+        )
+    try:
+        with open(_DOMAIN_OPTIONS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            ids = [item["id"] for item in data if isinstance(item, dict) and "id" in item]
+            if not ids:
+                raise ValueError(f"No valid domain IDs found in {_DOMAIN_OPTIONS_FILE}")
+            return ids
+    except Exception as exc:
+        raise RuntimeError(f"Failed to load canonical domain options from {_DOMAIN_OPTIONS_FILE}: {exc}")
+
 
 
 CANONICAL_DOMAIN_IDS = load_canonical_domain_ids()

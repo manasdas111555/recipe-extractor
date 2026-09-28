@@ -299,6 +299,28 @@ class TestDomainHintEnum:
             assert member.value == d
             assert DomainHint(d) == member
 
+    def test_no_hardcoded_fallback_domain_list_in_extract_py(self):
+        """Verify extract.py contains no duplicate hardcoded fallback list of domain IDs."""
+        extract_path = Path(__file__).resolve().parent.parent / "backend" / "app" / "api" / "v1" / "extract.py"
+        with open(extract_path, "r", encoding="utf-8") as f:
+            extract_source = f.read()
+
+        # Check function body of load_canonical_domain_ids
+        match = re.search(r"def load_canonical_domain_ids\(\).*?:(.*?)(?=\n[A-Z_]|\nclass |\ndef )", extract_source, re.DOTALL)
+        assert match is not None, "Could not locate load_canonical_domain_ids in extract.py"
+        func_body = match.group(1)
+
+        for d in self.EXPECTED_DOMAINS:
+            assert f'"{d}"' not in func_body and f"'{d}'" not in func_body, (
+                f"Duplicate hardcoded domain '{d}' found in load_canonical_domain_ids fallback"
+            )
+
+    def test_missing_canonical_file_raises_error_without_fallback(self):
+        """Verify that a missing canonical file raises FileNotFoundError instead of silently substituting hardcoded IDs."""
+        with patch("backend.app.api.v1.extract._DOMAIN_OPTIONS_FILE", Path("/non/existent/path/domain_options.json")):
+            with pytest.raises(FileNotFoundError):
+                load_canonical_domain_ids()
+
     def test_frontend_consumes_domain_options_json_directly(self):
         """Verify frontend/src/app/page.tsx imports DOMAIN_OPTIONS from domain_options.json."""
         frontend_page_path = Path(__file__).resolve().parent.parent / "frontend" / "src" / "app" / "page.tsx"
