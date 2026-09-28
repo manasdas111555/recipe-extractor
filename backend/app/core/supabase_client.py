@@ -83,6 +83,55 @@ class SupabaseRestClient:
             logger.error(f"Error querying extraction cache for {url_hash}: {e}")
         return None
 
+    def get_extraction_by_id(
+        self,
+        extraction_id: str,
+        user_id: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Query public.extractions for a single extraction by extraction_id, scoped to ownership.
+        - If user_id is provided: returns if user owns the row OR row is public.
+        - If user_id is None (guest): returns ONLY if row is public.
+        Validates extraction_id and user_id UUID formats.
+        """
+        if not self.is_configured() or not extraction_id:
+            return None
+
+        try:
+            valid_ext_id = str(uuid.UUID(str(extraction_id)))
+        except (ValueError, TypeError):
+            logger.debug("Invalid extraction_id UUID for get_extraction_by_id: %s", extraction_id)
+            return None
+
+        valid_user_id: Optional[str] = None
+        if user_id:
+            try:
+                valid_user_id = str(uuid.UUID(str(user_id)))
+            except (ValueError, TypeError):
+                valid_user_id = None
+
+        url = f"{self.base_url}/rest/v1/extractions"
+        params: Dict[str, Any] = {
+            "id": f"eq.{valid_ext_id}",
+            "select": "*"
+        }
+
+        if valid_user_id:
+            params["or"] = f"(user_id.eq.{valid_user_id},is_public.eq.true)"
+        else:
+            params["is_public"] = "eq.true"
+
+        try:
+            r = requests.get(url, headers=self._get_headers(use_service_role=False), params=params, timeout=5)
+            if r.status_code == 200:
+                data = r.json()
+                return data[0] if data else None
+            else:
+                logger.error("Supabase get_extraction_by_id failed [HTTP %s]: %s", r.status_code, r.text[:200])
+        except Exception as e:
+            logger.error(f"Error fetching extraction {extraction_id}: {e}")
+        return None
+
     def insert_extraction(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Insert new extraction record into public.extractions."""
         if not self.is_write_allowed():

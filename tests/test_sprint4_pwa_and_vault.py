@@ -97,15 +97,13 @@ class TestSprint4VaultLibrary(unittest.TestCase):
     @patch("backend.app.api.v1.library.get_supabase_client")
     def test_library_export_markdown(self, mock_get_sb):
         mock_sb = MagicMock()
-        mock_sb.list_extractions.return_value = [
-            {
-                "id": "rec-exp-1",
-                "title": "Crispy Air Fryer Tofu",
-                "cooking_time": "15 mins",
-                "ingredients": ["Firm Tofu", "Soy sauce", "Cornstarch"],
-                "steps": ["Press tofu", "Toss in starch", "Air fry at 200C"]
-            }
-        ]
+        mock_sb.get_extraction_by_id.return_value = {
+            "id": "rec-exp-1",
+            "title": "Crispy Air Fryer Tofu",
+            "cooking_time": "15 mins",
+            "ingredients": ["Firm Tofu", "Soy sauce", "Cornstarch"],
+            "steps": ["Press tofu", "Toss in starch", "Air fry at 200C"]
+        }
         mock_get_sb.return_value = mock_sb
 
         response = self.client.get("/api/v1/library/rec-exp-1/export?format=markdown")
@@ -118,12 +116,10 @@ class TestSprint4VaultLibrary(unittest.TestCase):
     @patch("backend.app.api.v1.library.get_supabase_client")
     def test_library_export_json(self, mock_get_sb):
         mock_sb = MagicMock()
-        mock_sb.list_extractions.return_value = [
-            {
-                "id": "rec-exp-2",
-                "title": "Garlic Noodles"
-            }
-        ]
+        mock_sb.get_extraction_by_id.return_value = {
+            "id": "rec-exp-2",
+            "title": "Garlic Noodles"
+        }
         mock_get_sb.return_value = mock_sb
 
         response = self.client.get("/api/v1/library/rec-exp-2/export?format=json")
