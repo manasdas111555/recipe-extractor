@@ -28,8 +28,8 @@ class TestSprint5TieredQuotas:
 
     def test_quota_limits_by_tier(self):
         qm = QuotaManager()
-        assert qm.get_limit_for_tier("guest") == 3
-        assert qm.get_limit_for_tier("free") == 10
+        assert qm.get_limit_for_tier("guest") == 20
+        assert qm.get_limit_for_tier("free") == 30
         assert qm.get_limit_for_tier("pro") == 999999
 
     def test_quota_exhaustion_guest(self):

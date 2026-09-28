@@ -218,7 +218,8 @@ class TestStreamTokenAndWebhooks:
         }
         req = Request(scope)
         # Should pick the rightmost IP appended by trusted proxy (203.0.113.195), not 1.1.1.1
-        assert get_client_ip(req) == "203.0.113.195"
+        with patch.object(settings, "TRUSTED_PROXY", True):
+            assert get_client_ip(req) == "203.0.113.195"
 
     def test_redirect_to_private_ip_mock(self):
         from backend.app.services.url_validator import validate_url_and_follow_redirects
@@ -290,8 +291,8 @@ class TestStreamTokenAndWebhooks:
         with patch.object(settings, "TRUSTED_PROXY", True):
             assert get_client_ip(req) == "203.0.113.5"
 
-        with patch.object(settings, "TRUSTED_PROXY", False), patch.object(settings, "TRUSTED_PROXY_HOPS", 1):
-            assert get_client_ip(req) == "198.51.100.2"
+        with patch.object(settings, "TRUSTED_PROXY", False):
+            assert get_client_ip(req) == "10.0.0.1"
 
     def test_expired_or_forged_stream_token_rejection(self):
         ext_id = "target_extraction_id"

@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status, 
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from backend.app.core.config import get_settings
 from backend.app.services.quota_service import get_quota_manager
 from backend.app.core.security import get_current_user, check_anonymous_rate_limit
 from backend.app.core.supabase_client import get_supabase_client
@@ -79,52 +80,25 @@ async def enqueue_extraction(
 ):
     """
     Submits a short-form video for multimodal extraction.
-    1. Enforces strict anonymous sliding-window rate limit (3 req/min).
-    2. Validates user daily quota (returns 429 if exceeded).
-    3. Computes SHA-256 URL hash and checks PostgreSQL cache.
-    4. If cached, returns HTTP 200 with zero-cost data immediately.
-    5. If new, enqueues to Celery distributed worker pool (or BackgroundTasks fallback)
-       and returns HTTP 202 with job_id and poll_url.
+    1. Enforces strict anonymous sliding-window rate limit (Redis-backed).
+    2. Validates video URL structure, scheme, allowlist, and SSRF rules.
+    3. Computes SHA-256 URL hash and checks PostgreSQL cache (0-cost).
+    4. If cached, returns HTTP 200 with data immediately without consuming daily quota.
+    5. If cache miss, consumes daily quota (guests and free users) and enqueues to worker pool.
     """
-    # 1. Anonymous Tier Rate Limiter (P0 PO Directive: 3 req/min)
+    settings = get_settings()
+
+    # 1. Anonymous Tier Rate Limiter (Redis-backed sliding window per IP)
     if current_user.get("is_anonymous"):
         client_ip = current_user.get("client_ip", "127.0.0.1")
-        if not check_anonymous_rate_limit(client_ip, max_requests=3, window_seconds=60):
+        anon_limit = getattr(settings, "ANONYMOUS_RATE_LIMIT_PER_MINUTE", 3)
+        if not check_anonymous_rate_limit(client_ip, max_requests=anon_limit, window_seconds=60):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded: Anonymous tier allows 3 requests per minute. Upgrade or authenticate for higher throughput."
+                detail=f"Rate limit exceeded: Anonymous tier allows {anon_limit} requests per minute. Upgrade or authenticate for higher throughput."
             )
 
-    # 2. Daily Quota Verification (UPA-601 Redis Quota Manager)
-    is_anonymous = current_user.get("is_anonymous", False)
-    extractions_today = current_user.get("extractions_today", 0)
-    daily_limit = current_user.get("daily_quota_limit", 3)
-    is_pro = current_user.get("plan_tier") in ["pro", "unlimited"]
-
-    # Backward compatibility for mocked user objects in existing test suites
-    if extractions_today >= daily_limit and not is_pro:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Daily extraction quota limit reached for free tier. Upgrade to Pro for unlimited extractions."
-        )
-
-    # Active Quota Consumption for registered users
-    if not is_anonymous and not is_pro:
-        quota_manager = get_quota_manager()
-        user_identifier = current_user.get("id") or current_user.get("user_id") or "user"
-        allowed, usage, remaining = quota_manager.check_and_consume_quota(
-            identifier=user_identifier,
-            is_pro=is_pro,
-            daily_limit=daily_limit
-        )
-
-        if not allowed:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Daily extraction quota limit reached for free tier. Upgrade to Pro for unlimited extractions."
-            )
-
-    # Validate URL against Allowlist & SSRF rules
+    # 2. Validate URL against Allowlist & SSRF rules (Before cache lookup & quota consumption)
     from backend.app.services.url_validator import validate_social_url, generate_stream_token
     is_valid_url, url_err, _, _ = validate_social_url(payload.video_url)
     if not is_valid_url:
@@ -133,7 +107,7 @@ async def enqueue_extraction(
             detail=f"Invalid video URL: {url_err}"
         )
 
-    # Compute URL Hash for viral 0-cost caching
+    # 3. Compute URL Hash for viral 0-cost caching
     canonical_url = payload.video_url.strip()
     url_hash = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()
 
@@ -144,8 +118,7 @@ async def enqueue_extraction(
         cache_id = cached.get("id", "cached")
         data_payload = cached.get("content_payload") or {}
         if isinstance(data_payload, dict):
-            from backend.app.core.config import get_settings
-            secret_key = get_settings().SECRET_KEY
+            secret_key = settings.SECRET_KEY
             if secret_key:
                 data_payload["stream_token"] = generate_stream_token(cache_id, secret_key, media_url=canonical_url)
 
@@ -160,6 +133,41 @@ async def enqueue_extraction(
                 "data": data_payload
             }
         )
+
+    # 4. Consume Daily Quota ONLY on Cache Miss (UPA-1214)
+    is_anonymous = current_user.get("is_anonymous", False)
+    is_pro = current_user.get("plan_tier") in ["pro", "unlimited"]
+    daily_limit = current_user.get(
+        "daily_quota_limit",
+        getattr(settings, "DAILY_GUEST_QUOTA_LIMIT", 20) if is_anonymous else getattr(settings, "DAILY_FREE_QUOTA_LIMIT", 30)
+    )
+
+    # Backward compatibility for mocked user objects in existing test suites
+    extractions_today = current_user.get("extractions_today", 0)
+    if extractions_today >= daily_limit and not is_pro:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily extraction quota limit reached for free tier. Upgrade to Pro for unlimited extractions."
+        )
+
+    # Active Quota Consumption for non-pro users (both guest IP and authenticated users)
+    if not is_pro:
+        quota_manager = get_quota_manager()
+        user_identifier = current_user.get("id") or current_user.get("user_id") or "user"
+        tier_name = "guest" if is_anonymous else (current_user.get("plan_tier") or "free")
+        allowed, usage, remaining = quota_manager.check_and_consume_quota(
+            identifier=str(user_identifier),
+            is_pro=is_pro,
+            daily_limit=daily_limit,
+            tier=tier_name
+        )
+
+        if not allowed:
+            tier_label = "guest" if is_anonymous else "free"
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Daily extraction quota limit reached for {tier_label} tier. Upgrade to Pro for unlimited extractions."
+            )
 
     # Cache miss: Enqueue asynchronous worker job
     job_id = str(uuid.uuid4())

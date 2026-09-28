@@ -192,13 +192,13 @@ class TestSprint4TieredQuotas(unittest.TestCase):
         # Guest tier
         guest_limits = get_user_quota_limits(None)
         self.assertEqual(guest_limits["tier"], "guest")
-        self.assertEqual(guest_limits["daily_quota_limit"], 3)
+        self.assertEqual(guest_limits["daily_quota_limit"], 20)
 
         # Authenticated free tier
         auth_free_user = {"id": "user-123", "role": "free", "is_anonymous": False}
         free_limits = get_user_quota_limits(auth_free_user)
         self.assertEqual(free_limits["tier"], "free")
-        self.assertEqual(free_limits["daily_quota_limit"], 10)
+        self.assertEqual(free_limits["daily_quota_limit"], 30)
 
         # Pro tier
         pro_user = {"id": "user-vip", "role": "pro", "is_anonymous": False}
