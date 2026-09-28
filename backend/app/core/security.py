@@ -245,7 +245,17 @@ def require_admin_user(
     Requirement D.1: Define 'admin' explicitly (ADMIN_API_KEY header or explicit role == 'admin').
     Fails closed (401/403) if ADMIN_API_KEY is unset or invalid.
     Does NOT accept plan_tier == 'pro' as admin.
+    Rate limits admin authentication attempts using client IP (max 5 attempts per minute).
     """
+    client_ip = get_client_ip(request)
+    from backend.app.services.quota_service import get_quota_manager
+    allowed, count = get_quota_manager().check_generic_rate_limit(f"admin_auth:{client_ip}", limit=5, window_seconds=60)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many admin authentication attempts. Please retry later."
+        )
+
     settings = get_settings()
     admin_key_header = request.headers.get("X-Admin-Api-Key") or request.headers.get("x-admin-api-key")
     expected_admin_key = getattr(settings, "ADMIN_API_KEY", None) or os.environ.get("ADMIN_API_KEY")
@@ -256,7 +266,8 @@ def require_admin_user(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Admin authentication failed: ADMIN_API_KEY is not configured on the server."
             )
-        if not hmac.compare_digest(admin_key_header, expected_admin_key):
+        # Compare admin key as bytes using hmac.compare_digest
+        if not hmac.compare_digest(admin_key_header.encode("utf-8"), expected_admin_key.encode("utf-8")):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid Admin API Key"

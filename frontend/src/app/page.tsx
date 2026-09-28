@@ -49,19 +49,8 @@ import {
   formatTurnaroundTime,
   cleanLineLeadingNumerics,
 } from '../lib/recipeUtils';
+import DOMAIN_OPTIONS from '../data/domain_options.json';
 
-
-const DOMAIN_OPTIONS = [
-  { id: 'auto', label: 'Auto-Detect (Universal AI)', icon: '⚡' },
-  { id: 'recipe', label: '🍳 Cooking Recipe & Food', icon: '🍳' },
-  { id: 'kitchen_product', label: '🛍️ Kitchen Finds & Home Gadgets', icon: '🛍️' },
-  { id: 'fitness_workout', label: '🏋️ Fitness & Workout Routine', icon: '🏋️' },
-  { id: 'interior_design', label: '🏠 Interior & Home Decor', icon: '🏠' },
-  { id: 'gaming', label: '🎮 Gaming & Tech Setup', icon: '🎮' },
-  { id: 'tech_diy', label: '💻 Tech Tutorial & Code Guide', icon: '💻' },
-  { id: 'unboxing', label: '📦 Product Unboxing & Amazon Finds', icon: '📦' },
-  { id: 'diy', label: '💡 Life Hacks & Productivity', icon: '💡' },
-];
 
 function UniversalDashboard() {
   const searchParams = useSearchParams();

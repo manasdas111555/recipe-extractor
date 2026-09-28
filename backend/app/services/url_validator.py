@@ -39,9 +39,15 @@ ALLOWED_MERCHANT_DOMAINS = {
     "myntra.com",
     "blinkit.com",
     "zepto.now",
+    "zeptonow.com",
+    "swiggy.com",
     "instamart.com",
     "bigbasket.com",
     "jiomart.com",
+    "ajio.com",
+    "nykaa.com",
+    "earnkaro.com",
+    "google.com",
 }
 
 

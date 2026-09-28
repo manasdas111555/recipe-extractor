@@ -5,6 +5,8 @@ FastAPI Extraction Endpoints (UPA-106 & UPA-107)
 - GET /api/v1/extract/status/{job_id}: Real-time polling and progress tracker.
 """
 
+import json
+from enum import Enum
 import uuid
 import hashlib
 import logging
@@ -30,10 +32,52 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/extract", tags=["Extraction"])
 
+# ==============================================================================
+# Single Source of Truth for Domain Hints (UPA-1216)
+# ==============================================================================
+_ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+_DOMAIN_OPTIONS_FILE = _ROOT_DIR / "frontend" / "src" / "data" / "domain_options.json"
+
+
+def load_canonical_domain_ids() -> List[str]:
+    """Loads canonical domain hint IDs from the authoritative JSON definition."""
+    if _DOMAIN_OPTIONS_FILE.exists():
+        try:
+            with open(_DOMAIN_OPTIONS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                ids = [item["id"] for item in data if isinstance(item, dict) and "id" in item]
+                if ids:
+                    return ids
+        except Exception as exc:
+            logger.warning(f"Could not parse {_DOMAIN_OPTIONS_FILE}: {exc}")
+    # Fallback to standard 9 IDs if file is missing in isolated runtime
+    return [
+        "auto",
+        "recipe",
+        "kitchen_product",
+        "fitness_workout",
+        "interior_design",
+        "gaming",
+        "tech_diy",
+        "unboxing",
+        "diy",
+    ]
+
+
+CANONICAL_DOMAIN_IDS = load_canonical_domain_ids()
+
+DomainHint = Enum(
+    "DomainHint",
+    {d.upper(): d for d in CANONICAL_DOMAIN_IDS},
+    type=str,
+)
+
+
+
 class ExtractRequest(BaseModel):
     video_url: str = Field(..., description="Public video URL from Instagram, YouTube Shorts, or TikTok")
     preferred_language: Optional[str] = Field("en", description="Target output language code (e.g., 'en', 'hi', 'es')")
-    domain_hint: Optional[str] = Field("auto", description="Domain classification hint: 'auto', 'recipe', 'kitchen_product', 'tech_diy', 'fitness_workout'")
+    domain_hint: Optional[DomainHint] = Field(DomainHint.AUTO, description="Domain classification hint matching frontend option IDs")
 
     @model_validator(mode="before")
     @classmethod
@@ -52,6 +96,34 @@ class ExtractRequest(BaseModel):
         if len(clean) < 10:
             raise ValueError("video_url is too short to be a valid URL")
         return clean
+
+    @field_validator("domain_hint", mode="before")
+    @classmethod
+    def validate_domain_hint(cls, v: Any) -> Any:
+        if v is None:
+            return DomainHint.AUTO
+        if isinstance(v, DomainHint):
+            return v
+        if isinstance(v, str):
+            clean = v.strip().lower()
+            try:
+                return DomainHint(clean)
+            except ValueError:
+                valid_options = ", ".join(f"'{e.value}'" for e in DomainHint)
+                raise ValueError(
+                    f"Invalid domain_hint '{v}'. Allowed domain hint options are: {valid_options}"
+                )
+        return v
+
+    @field_validator("preferred_language", mode="before")
+    @classmethod
+    def validate_preferred_language(cls, v: Any) -> Any:
+        if v is None:
+            return "en"
+        if isinstance(v, str):
+            clean = v.strip()
+            return clean if clean else "en"
+        return str(v)
 
 
 class ExtractResponse(BaseModel):
