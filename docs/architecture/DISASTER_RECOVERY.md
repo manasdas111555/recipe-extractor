@@ -288,7 +288,7 @@ If the virtual machine was completely corrupted or terminated:
    curl -fsSL https://get.docker.com | sudo sh
    sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
    git clone https://github.com/manasdas111555/recipe-extractor.git
-   cd recipe-extractor && nano .env && docker compose up -d --build
+   cd recipe-extractor && nano .env && docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
    ```
 3. Update DNS / frontend backend proxy to the new IP. (RTO: $\le 5$ minutes).
 

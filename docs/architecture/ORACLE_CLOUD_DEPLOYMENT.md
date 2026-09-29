@@ -229,8 +229,10 @@ cd recipe-extractor
 nano .env
 # (Save Supabase, Gemini, and monetization keys)
 
-# Start multi-container stack
-docker compose up -d --build
+# Start multi-container stack with security hardening overlay (Production / Staging)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
+
+# Note: Bare `docker compose up -d --build` runs the unhardened base configuration (for local development)
 ```
 
 ---
