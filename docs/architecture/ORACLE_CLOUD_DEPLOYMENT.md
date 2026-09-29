@@ -54,36 +54,37 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
 User Requests (Web, Mobile, WhatsApp, Telegram)
                        │
                        ▼
-          Public IP: 140.245.214.28
-      ┌─────────────────────────────────┐
-      │   Oracle VCN Security List      │
-      │   Allowed Ports: 22, 80, 443,   │
-      │                  8000           │
-      └────────────────┬────────────────┘
-                       │
-                       ▼
-   ┌───────────────────────────────────────────────┐
-   │         Ubuntu 24.04 Production VM            │
-   │  ┌─────────────────────────────────────────┐  │
-   │  │ Caddy Reverse Proxy (Port 80 / 443)     │  │
-   │  └────────────────────┬────────────────────┘  │
-   │                       │                       │
-   │         ┌─────────────┴─────────────┐         │
-   │         ▼                           ▼         │
-   │  ┌──────────────┐            ┌──────────────┐ │
-   │  │ FastAPI API  │            │ Celery Worker│ │
-   │  │  (Port 8000) │            │ (Extraction) │ │
-   │  └──────┬───────┘            └──────┬───────┘ │
-   │         │                           │         │
-   │         └─────────────┬─────────────┘         │
-   │                       ▼                       │
-   │             ┌──────────────────┐              │
-   │             │   Redis Server   │              │
-   │             │   (Port 6379)    │              │
-   │             └──────────────────┘              │
-   │                                               │
-   │   2GB Virtual Swap File (/swapfile)           │
-   └───────────────────────────────────────────────┘
+       HTTPS Production API Domain
+       (OWNER-DESIGNATED / TBD ──► Resolves to 140.245.214.28)
+       ┌────────────────────────────────────────────────────────┐
+       │   Oracle VCN Security List                             │
+       │   Allowed Ports: 22, 80, 443                           │
+       │   (Port 8000 remediation governed under UPA-1226)      │
+       └───────────────────────────┬────────────────────────────┘
+                                   │
+                                   ▼
+    ┌──────────────────────────────────────────────────────────┐
+    │         Ubuntu 24.04 Production VM                       │
+    │  ┌────────────────────────────────────────────────────┐  │
+    │  │ Caddy Reverse Proxy (Port 80 / 443 with {$API_DOMAIN})│ │
+    │  └────────────────────────────┬───────────────────────┘  │
+    │                               │                          │
+    │         ┌─────────────────────┴─────────────────────┐    │
+    │         ▼                                           ▼    │
+    │  ┌──────────────┐                            ┌─────────┐ │
+    │  │ FastAPI API  │                            │ Celery  │ │
+    │  │  (Port 8000) │                            │ Worker  │ │
+    │  └──────┬───────┘                            └────┬────┘ │
+    │         │                                         │      │
+    │         └─────────────────────┬───────────────────┘      │
+    │                               ▼                          │
+    │                     ┌──────────────────┐                 │
+    │                     │   Redis Server   │                 │
+    │                     │   (Port 6379)    │                 │
+    │                     └──────────────────┘                 │
+    │                                                          │
+    │   2GB Virtual Swap File (/swapfile)                      │
+    └──────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -249,9 +250,9 @@ curl http://localhost/health
 # Response: {"status":"healthy"}
 ```
 
-Access from any web browser:
-- **Production Health Check**: `http://140.245.214.28/health`
-- **Production Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+Access from web browser / client:
+- **Future Production Health Check**: `https://${API_DOMAIN}/health` (Requires Owner-designated domain with DNS A record pointing to `140.245.214.28`)
+- **Local In-VM Health Check (Diagnostics)**: `curl http://localhost:8000/health` or `curl http://localhost/health`
 
 ### Staging VM Deployment & Gate Verification (`129.225.86.241`)
 * **Gate 4b (Container Runtime & Secret Rotation)**: `universalpro-api` and `universalpro-caddy` deployed via `docker compose up -d --build --no-deps api caddy` with 0 restarts and `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH]. Staging `SECRET_KEY` rotated on 2026-09-25: previous value considered compromised after accidental chat exposure; replacement generated cryptographically on Staging VM (`secrets.token_urlsafe(32)`); zero secret value exposure; `.env` mode 600 preserved; `ENVIRONMENT=staging` & `ALLOW_DB_WRITES=false` unchanged; API container recreated with 0 restarts; Caddy healthy. Execution deviation noted: unexpected Redis container auto-started by compose dependency was immediately stopped & removed to preserve Gate 8 deferral.
@@ -274,10 +275,10 @@ End Users (Global Browsers, Mobile PWAs)
       https://universal-pro-ai.vercel.app
                      │
          [Next.js Dynamic Rewrites]
-         /api/:path* ──► http://140.245.214.28/api/:path*
+         /api/:path* ──► https://${API_DOMAIN}/api/:path*
                      │
-                     ▼
-          Oracle Cloud OCI Backend (Hyderabad)
+                     ▼ HTTPS (Port 443 / Caddy Auto-TLS)
+          Oracle Cloud OCI Backend (Hyderabad: 140.245.214.28)
          (Shielded, Always-Free, 24/7 Compute)
 ```
 

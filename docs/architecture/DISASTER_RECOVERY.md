@@ -55,7 +55,7 @@ This document details:
 | Component | Platform / Host | Access URL / Identifier | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Production Frontend (Primary)** | Vercel Edge Network | `https://universal-pro-ai.vercel.app` | Next.js 15 PWA web client, global CDN, HTTPS termination & origin IP shield |
-| **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
+| **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443; 8000 remediation per UPA-1226) / Future HTTPS Gateway (`{$API_DOMAIN}` — OWNER-DESIGNATED / TBD) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
 | **Staging Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `129.225.86.241` (OS Bootstrap, 2 GiB Swap, Docker 29.8.1, Repo Checkout at `staging` `06e02d1`, `.env` Mode 600, Caddy + FastAPI Containers Running with 0 Restarts, External `/health` 200 OK, and External Supabase PostgREST Read 404 Verified; Ports 80, 443 permitted by Security List; No inbound Security List rules for TCP 8000 or TCP 6379) | Dedicated Staging cloud VM (`universal-pro-ai-staging-instance`, Ubuntu 24.04.5 LTS x86_64, `staging-public-subnet` `10.0.2.0/24`, `staging-security-list-universalpro-ai-vcn`, repo at `/home/ubuntu/recipe-extractor` on `staging` `06e02d1`); Caddy+API runtime verified with `ALLOW_DB_WRITES=false`; Redis/Celery deferred to Gate 8 |
 | **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[RETIRED / DECOMMISSIONED]` | `https://manas-recipe-extractor.streamlit.app/` (Decommissioned per UPA-1203) | Retired v0 prototype web app |
 | **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[RETIRED / DECOMMISSIONED]` | `https://universalpro-stage.streamlit.app/` (Decommissioned per UPA-1203) | Retired legacy testing sandbox |
@@ -304,7 +304,7 @@ If the virtual machine was completely corrupted or terminated:
    - Click **Run workflow** $\rightarrow$ select branch `main` $\rightarrow$ click **Run workflow**.
 
 #### Step 2: Permanent Fix
-Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http://140.245.214.28`) or the global Vercel Edge frontend (`https://universal-pro-ai.vercel.app`), which have zero hibernation timeouts.
+Point users and mobile PWAs to the global Vercel Edge frontend (`https://universal-pro-ai.vercel.app`) or the dedicated Oracle Cloud backend infrastructure (`140.245.214.28`), which have zero hibernation timeouts.
 
 ---
 
@@ -319,8 +319,8 @@ Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http
 
 #### Step 2: Verify or Update Environment Variables
 1. Go to **Project Settings** $\rightarrow$ **Environment Variables**.
-2. Verify `NEXT_PUBLIC_API_URL` points to `http://140.245.214.28`.
-3. If the Oracle Cloud IP ever changes, update this variable and click **Redeploy**.
+2. Verify `NEXT_PUBLIC_API_URL`: for production HTTPS deployment, set `NEXT_PUBLIC_API_URL=https://${API_DOMAIN}` (where `API_DOMAIN` is the Owner-designated domain pointing to `140.245.214.28`). Ensure `TRUSTED_PROXY=true` and `TRUSTED_PROXY_HOPS=2` are configured in the backend environment to accurately resolve client IPs across the Vercel Edge $\rightarrow$ Caddy $\rightarrow$ FastAPI forwarding chain.
+3. If the backend domain or host changes, update `NEXT_PUBLIC_API_URL` and click **Redeploy**.
 
 ---
 

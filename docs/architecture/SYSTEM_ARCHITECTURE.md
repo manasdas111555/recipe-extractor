@@ -65,7 +65,7 @@ The system follows a strict 3-layered environment isolation model:
 | :--- | :--- | :--- | :--- | :--- |
 | **Development** | Localhost (3000) | Localhost (8000) | Local / Supabase Dev | `[VERIFIED IN CURRENT REPOSITORY]` |
 | **Staging** | Vercel Preview | Dedicated OCI VM (Pending) | Supabase Staging (`mzpkd...`) | `[EXTERNAL PLATFORM / INFRASTRUCTURE VERIFICATION REQUIRED]` |
-| **Production** | Vercel Production | OCI Production VM (`140.245.214.28`) | Supabase Production (`scrq...`) | `[VERIFIED IN EXISTING PROJECT DOCUMENTATION]` |
+| **Production** | Vercel Production | OCI Production VM (`140.245.214.28`) / Future HTTPS Gateway (`{$API_DOMAIN}` — OWNER-DESIGNATED / TBD) | Supabase Production (`scrq...`) | `[VERIFIED IN EXISTING PROJECT DOCUMENTATION]` |
 
 ---
 
@@ -240,7 +240,10 @@ graph TD
 ## 21. DETAILED CURRENT PRODUCTION ARCHITECTURE
 
 * **Frontend**: Next.js 15 PWA deployed on Vercel Production [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
-* **Backend**: FastAPI app running in Docker container on OCI VM behind Caddy reverse proxy [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
+* **Backend**: FastAPI app running in Docker container on OCI VM (`140.245.214.28`) behind Caddy reverse proxy [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
+* **Production API Domain**: OWNER-DESIGNATED / TBD (`API_DOMAIN` environment variable required at Production deployment time) [PLANNED / INTENDED ARCHITECTURE].
+* **Intended Ingress Chain**: `Client → Vercel Edge → Caddy (HTTPS:443) → FastAPI (api:8000)` [PLANNED / INTENDED ARCHITECTURE].
+* **Trusted Proxy Contract**: `TRUSTED_PROXY=True`, `TRUSTED_PROXY_HOPS=2` resolving the 2-hop forwarding chain (`Client IP → Vercel Edge → Caddy → FastAPI`) [VERIFIED IN CURRENT REPOSITORY].
 * **Database**: Supabase Production PostgreSQL [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
 * **Status**: `UNTOUCHED` during all staging and development operations [VERIFIED IN CURRENT REPOSITORY].
 
@@ -277,7 +280,8 @@ graph TD
 ## 25. DOCKER & CADDY DEPLOYMENT ARCHITECTURE
 
 * **Containers**: Defined in `docker-compose.yml` (`redis`, `api`, `worker`, `caddy`) [VERIFIED IN CURRENT REPOSITORY].
-* **Caddy Reverse Proxy**: Automatic HTTPS TLS termination and reverse proxying to `api:8000` [VERIFIED IN CURRENT REPOSITORY].
+* **Caddy Reverse Proxy**: Automatic HTTPS TLS termination using parameterized site block `{$API_DOMAIN}` (requiring Owner-designated domain at deployment) and reverse proxying internally to `api:8000` with gzip/zstd compression [VERIFIED IN CURRENT REPOSITORY].
+* **Trusted Proxy Integration**: FastAPI configured with `TRUSTED_PROXY=True` and `TRUSTED_PROXY_HOPS=2` in production settings to resolve the true client IP across the 2-hop Vercel and Caddy proxy chain (`Client -> Vercel -> Caddy -> FastAPI`) [VERIFIED IN CURRENT REPOSITORY].
 
 ---
 
