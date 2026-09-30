@@ -67,3 +67,25 @@
 - **Status:** 🟢 PO Approved
 - **Date:** 2026-09-30
 
+---
+
+## Production Port Shielding Sign-Off — UPA-1226
+
+### 1. Scope of Review
+- **UPA-1226: Production API Public Exposure & Port Shielding**
+  - Loopback-binding FastAPI container port to `127.0.0.1:8000:8000` in `docker-compose.yml` to prevent direct public internet bypass.
+  - Caddy internal Docker network forwarding (`reverse_proxy api:8000`) preserved.
+  - Redis loopback binding (`127.0.0.1:6379:6379`) preserved.
+  - Configurable schema documentation settings (`DOCS_URL`, `REDOC_URL`, `OPENAPI_URL`) added to `Settings` with automatic `None` normalization.
+  - Verified 404 response on `/docs`, `/redoc`, `/openapi.json` when documentation is disabled.
+  - Standard development documentation defaults preserved.
+  - Documentation updated in `ORACLE_CLOUD_DEPLOYMENT.md` removing obsolete `iptables --dport 8000` rule and recording TCP 8000 removal.
+  - Verified Dev implementation (commit `b3088ea`, backlog sync `160e9c3`, dedicated test suite 31/31 passed, full backend suite 337 passed / 3 deselected, frontend 19 passed, Next.js build clean).
+  - Production status: Production VM, OCI console, DNS, Vercel, and database remained untouched.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Verdict:** Approved ("i approve")
+- **Status:** 🟢 PO Approved
+- **Date:** 2026-09-30
+
+
