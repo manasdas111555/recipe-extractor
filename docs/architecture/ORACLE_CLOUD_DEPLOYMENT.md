@@ -54,36 +54,37 @@ This document details the complete, end-to-end setup of our dedicated **24/7 Alw
 User Requests (Web, Mobile, WhatsApp, Telegram)
                        │
                        ▼
-          Public IP: 140.245.214.28
-      ┌─────────────────────────────────┐
-      │   Oracle VCN Security List      │
-      │   Allowed Ports: 22, 80, 443,   │
-      │                  8000           │
-      └────────────────┬────────────────┘
-                       │
-                       ▼
-   ┌───────────────────────────────────────────────┐
-   │         Ubuntu 24.04 Production VM            │
-   │  ┌─────────────────────────────────────────┐  │
-   │  │ Caddy Reverse Proxy (Port 80 / 443)     │  │
-   │  └────────────────────┬────────────────────┘  │
-   │                       │                       │
-   │         ┌─────────────┴─────────────┐         │
-   │         ▼                           ▼         │
-   │  ┌──────────────┐            ┌──────────────┐ │
-   │  │ FastAPI API  │            │ Celery Worker│ │
-   │  │  (Port 8000) │            │ (Extraction) │ │
-   │  └──────┬───────┘            └──────┬───────┘ │
-   │         │                           │         │
-   │         └─────────────┬─────────────┘         │
-   │                       ▼                       │
-   │             ┌──────────────────┐              │
-   │             │   Redis Server   │              │
-   │             │   (Port 6379)    │              │
-   │             └──────────────────┘              │
-   │                                               │
-   │   2GB Virtual Swap File (/swapfile)           │
-   └───────────────────────────────────────────────┘
+       HTTPS Production API Domain
+       (OWNER-DESIGNATED / TBD ──► Resolves to 140.245.214.28)
+       ┌────────────────────────────────────────────────────────┐
+       │   Oracle VCN Security List                             │
+       │   Allowed Ports: 22, 80, 443                           │
+       │   (Port 8000 remediation governed under UPA-1226)      │
+       └───────────────────────────┬────────────────────────────┘
+                                   │
+                                   ▼
+    ┌──────────────────────────────────────────────────────────┐
+    │         Ubuntu 24.04 Production VM                       │
+    │  ┌────────────────────────────────────────────────────┐  │
+    │  │ Caddy Reverse Proxy (Port 80 / 443 with {$API_DOMAIN})│ │
+    │  └────────────────────────────┬───────────────────────┘  │
+    │                               │                          │
+    │         ┌─────────────────────┴─────────────────────┐    │
+    │         ▼                                           ▼    │
+    │  ┌──────────────┐                            ┌─────────┐ │
+    │  │ FastAPI API  │                            │ Celery  │ │
+    │  │  (Port 8000) │                            │ Worker  │ │
+    │  └──────┬───────┘                            └────┬────┘ │
+    │         │                                         │      │
+    │         └─────────────────────┬───────────────────┘      │
+    │                               ▼                          │
+    │                     ┌──────────────────┐                 │
+    │                     │   Redis Server   │                 │
+    │                     │   (Port 6379)    │                 │
+    │                     └──────────────────┘                 │
+    │                                                          │
+    │   2GB Virtual Swap File (/swapfile)                      │
+    └──────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -112,9 +113,9 @@ In **Default Security List for universalpro-ai-vcn**, added the following Ingres
 | Stateless | Source CIDR | IP Protocol | Destination Port Range | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | No | `0.0.0.0/0` | TCP | `22` | SSH Remote Login |
-| No | `0.0.0.0/0` | TCP | `80` | HTTP Web Traffic |
-| No | `0.0.0.0/0` | TCP | `443` | HTTPS Encrypted Web Traffic |
-| No | `0.0.0.0/0` | TCP | `8000` | FastAPI Direct API Gateway |
+| No | `0.0.0.0/0` | TCP | `80` | HTTP Web Traffic (Caddy redirect) |
+| No | `0.0.0.0/0` | TCP | `443` | HTTPS Encrypted Web Traffic (Caddy TLS) |
+| *Removed* | `0.0.0.0/0` | TCP | `8000` | *Deprecated / Removed per UPA-1226 (Loopback bound `127.0.0.1:8000`)* |
 
 ### Step 4: Compute VM Instance Creation
 1. **Name**: `universal-pro-ai-instance`
@@ -208,10 +209,9 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 4. Open Ubuntu OS internal firewall
+# 4. Open Ubuntu OS internal firewall (Only Ports 80 and 443; Port 8000 blocked per UPA-1226)
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8000 -j ACCEPT
 sudo apt install -y iptables-persistent
 sudo netfilter-persistent save
 
@@ -229,8 +229,10 @@ cd recipe-extractor
 nano .env
 # (Save Supabase, Gemini, and monetization keys)
 
-# Start multi-container stack
-docker compose up -d --build
+# Start multi-container stack with security hardening overlay (Production / Staging)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
+
+# Note: Bare `docker compose up -d --build` runs the unhardened base configuration (for local development)
 ```
 
 ---
@@ -247,15 +249,183 @@ curl http://localhost/health
 # Response: {"status":"healthy"}
 ```
 
-Access from any web browser:
-- **Production Health Check**: `http://140.245.214.28/health`
-- **Production Swagger Interactive API Docs**: `http://140.245.214.28/docs`
+Access from web browser / client:
+- **Future Production Health Check**: `https://${API_DOMAIN}/health` (Requires Owner-designated domain with DNS A record pointing to `140.245.214.28`)
+- **Local In-VM Health Check (Diagnostics)**: `curl http://localhost:8000/health` or `curl http://localhost/health`
 
 ### Staging VM Deployment & Gate Verification (`129.225.86.241`)
 * **Gate 4b (Container Runtime & Secret Rotation)**: `universalpro-api` and `universalpro-caddy` deployed via `docker compose up -d --build --no-deps api caddy` with 0 restarts and `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH]. Staging `SECRET_KEY` rotated on 2026-09-25: previous value considered compromised after accidental chat exposure; replacement generated cryptographically on Staging VM (`secrets.token_urlsafe(32)`); zero secret value exposure; `.env` mode 600 preserved; `ENVIRONMENT=staging` & `ALLOW_DB_WRITES=false` unchanged; API container recreated with 0 restarts; Caddy healthy. Execution deviation noted: unexpected Redis container auto-started by compose dependency was immediately stopped & removed to preserve Gate 8 deferral.
 * **Gate 5 (External Health Endpoint)**: `GET http://129.225.86.241/health` -> `HTTP 200 OK` (`{"status":"healthy","service":"Universal Pro AI - API Gateway","version":"1.0.0","integrations":{"supabase":true,"gemini":false,"groq":false,"mistral":false}}`) observed at 2026-09-24 17:13:33 GMT & 17:13:56 GMT and re-verified post-rotation at 2026-09-25 05:55:31 GMT [EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
 * **Gate 6 (External Supabase Read Path)**: `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> `HTTP 404 Not Found` (`{"detail":"Public extraction 'non-existent-slug-12345' not found or is private."}`) observed at 2026-09-24 17:14:18 GMT and re-verified post-rotation at 2026-09-25 05:55:46 GMT, verifying deployed App -> Staging Supabase (`mzpkdmaxsuhwezsooidu.supabase.co`) connectivity with zero DB writes [EXTERNALLY VERIFIED FROM OWNER WORKSTATION].
-* **Deferred Systems**: Redis / Celery async workers remain deferred to Gate 8; E2E suite deferred to Gate 9; Production (`140.245.214.28`) untouched.
+* **Gate 7 (Controlled Write Verification & Rollback)**: Empirically verified on Staging (`8fcfdf0cbd4d030b064bb36cfd34178fa204a8da`) on 2026-09-25 under explicit owner authorization. Controlled temporary enablement of `ALLOW_DB_WRITES=true` for synthetic test (`c0186ec3-dd4a-479e-b992-0e7d6e59bfd9` in `public.extractions`) demonstrated real PostgREST mutation, remote database persistence (`2026-09-25T09:50:30.377393+00:00`), and retrieval. Immediate cleanup via service-role DELETE verified (`0` rows remaining). Immediate rollback restored `ALLOW_DB_WRITES=false` in `.env` (mode 600) and reloaded API container (`/health` healthy). Post-rollback negative guard confirmed zero DB mutation occurs when disabled. Staging is actively in read-only isolation (`ALLOW_DB_WRITES=false`) [EXTERNALLY VERIFIED VIA SSH].
+* **Gate 8 (Controlled Redis/Celery Verification & Rollback)**: Empirically verified on Staging (`8fcfdf0cbd4d030b064bb36cfd34178fa204a8da`) on 2026-09-25 under explicit owner authorization. `universalpro-redis` (`redis:7-alpine`, bound to `127.0.0.1:6379`, 0 public ingress) started healthy (`PONG`). `universalpro-worker` (`--pool=threads --concurrency=4`, 0 published ports, `cap_drop: ALL`, `no-new-privileges:true`) registered to `redis://redis:6379/0` (`inspect ping` OK). Broker reachability verified (`True`). Real async task (`gate8_job_1790332992_8561bd`) dispatched via `apply_async` and consumed by worker (`PENDING` $\rightarrow$ `PROGRESS` $\rightarrow$ `SUCCESS`). Important qualification: task experienced media-download failure during execution on synthetic non-existent URL; worker correctly honored `ALLOW_DB_WRITES=false` and skipped database insert (0 remote DB rows found). Resource health verified (0 restarts, 0 OOM, 570 MiB RAM, 1.7 GiB free swap). Controlled rollback stopped and removed worker & Redis containers; post-rollback broker check confirmed `False`; API automatically resumed in-memory `BackgroundTasks` fallback with `/health` healthy. Staging actively in read-only isolation (`ALLOW_DB_WRITES=false`) [EXTERNALLY VERIFIED VIA SSH].
+* **Gate 9 (Controlled E2E Execution & AI Verification)**: Empirically verified on Staging (`8fcfdf0cbd4d030b064bb36cfd34178fa204a8da`) on 2026-09-25 under explicit owner authorization with dedicated Staging Gemini credential. Validated public test video (`https://www.youtube.com/shorts/DPdivoOcXHM`), cache miss confirmed (`is_cached: false`), fresh E2E execution. Real API request accepted (`POST /api/v1/extract` -> HTTP 202 ACCEPTED, job ID `879bf101-bcba-47f9-8ece-121138d80cfa`), distributed Celery dispatch verified (`celery_redis_queue`), worker task consumption confirmed, and media ingestion succeeded (oEmbed stream resolved `yt_stream_DPdivoOcXHM.jpg` after automatic bot fallback). Multimodal AI inference succeeded via Gemini (`gemini-3.8-flash`): file uploaded (`POST /upload/.../files` 200 OK, 4.9s), reasoning executed (`POST /models/gemini-3.8-flash:generateContent` 200 OK, 17.4s), and remote file cleaned (`DELETE /files/...` 200 OK). Structured recipe extraction produced (`Restaurant-Style Creamy Palak Paneer Recipe`, full ingredients, preparation/cooking steps, equipment, chef tips, timings `upload_s: 4.88`, `inference_s: 17.42`, `total_ai_s: 24.06`). Extraction row persisted to Staging Supabase (`public.extractions`, `status: completed`, matching title) under temporary `ALLOW_DB_WRITES=true` and immediately deleted via service-role DELETE (`0` rows remaining). Client status polling (`GET /api/v1/extract/status/879bf101-bcba-47f9-8ece-121138d80cfa`) retrieved completed structured result. Managed temporary media inspected (`0` orphaned files). Non-fatal telemetry event: `beta_telemetry_feed` HTTP 403 recorded as `NON-FATAL / KNOWN TELEMETRY PERMISSION ISSUE` (service role table grant hint) without affecting core extraction. Write guard restored to `ALLOW_DB_WRITES=false` (.env mode 600); post-rollback negative guard confirmed zero DB writes (0 rows in DB). Redis & Celery worker containers stopped and removed; API in-memory fallback restored healthy (`/health` HTTP 200). Resource stability clean (587 MiB RAM used, 1.9 GiB free swap, 0 OOM, 0 crashes, 0 unexpected restarts). Gate 9 status: `VERIFIED`. Production (`140.245.214.28`) untouched [EXTERNALLY VERIFIED VIA SSH].
+
+---
+
+## 🚀 Production Promotion & Rollout Runbook (UPA-1225)
+
+This governed runbook specifies the end-to-end, minimal-interruption promotion procedure for deploying approved releases from the `main` branch to the dedicated Oracle Cloud Production VM (`140.245.214.28`).
+
+### 1. Pre-Flight Governance Gates (Mandatory Stop Checks)
+Before initiating any SSH connection or execution on the Production VM, the operator must verify:
+1. **Human Owner Approval**: Explicit, written Owner sign-off is recorded for ticket `UPA-1225`.
+2. **Architecture Dependency (UPA-1224)**: Ticket `UPA-1224` is `🟢 PO Approved`.
+3. **Port Shielding Hard Gate (UPA-1226)**: **Production promotion is strictly BLOCKED** unless the required `UPA-1226` acceptance criteria (FastAPI port 8000 binding restricted to `127.0.0.1:8000`, OCI Security List port 8000 closure, and Swagger disabling) have been completed and independently verified. Code promotion cannot proceed if port 8000 remains publicly accessible.
+4. **Promotion Source Integrity**: The target release is fully approved and merged to the `main` branch following the 3-Layer environment model (`Dev` $\rightarrow$ `staging` $\rightarrow$ `PO Review` $\rightarrow$ `main`). Production must pull only the approved commit SHA on `main`.
+5. **Clean Working Tree**: Local workspace is clean (`git status --short` empty).
+6. **Rollback Target Recorded**: The current live Production commit SHA is recorded on the server prior to pulling any changes (`PREV_PROD_SHA`).
+
+---
+
+### 2. Production VM Pre-Flight (Read-Only Diagnostics)
+Connect via SSH to the Production VM:
+```bash
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28
+```
+Execute read-only environment checks before modifying any files:
+```bash
+# 1. Verify working directory
+cd /home/ubuntu/recipe-extractor && pwd
+
+# 2. Verify git status and capture live running commit SHA
+git status
+export PREV_PROD_SHA=$(git rev-parse HEAD)
+export PREV_PROD_BRANCH=$(git branch --show-current)
+echo "Previous Production SHA: ${PREV_PROD_SHA} (Branch: ${PREV_PROD_BRANCH})"
+
+# 3. Check memory, swap, and disk health (Must have >= 1.5GB free swap for builds)
+free -h
+df -h /
+
+# 4. Check current container runtime status
+docker compose ps
+```
+
+---
+
+### 3. Secret & Environment Configuration Audit (`.env`)
+Verify the `.env` file on the Production VM (Mode 600: `chmod 600 .env`):
+* `ENVIRONMENT=production` (Strict production mode)
+* `ALLOW_DB_WRITES=true` (Authorized exclusively at this production deployment gate)
+* `TRUSTED_PROXY=true` (Enables proxy hop evaluation)
+* `TRUSTED_PROXY_HOPS=2` (Resolves Client IP across Vercel $\rightarrow$ Caddy $\rightarrow$ FastAPI)
+* `API_DOMAIN=<Owner-designated controlled hostname or approved DDNS hostname>` (Must have a verified public DNS A-record pointing to `140.245.214.28` before traffic cutover)
+* `DOCS_URL=""` or `None` (Disables public Swagger UI per UPA-1226)
+* Production credentials (`SECRET_KEY`, `ADMIN_API_KEY`, `SUPABASE_*`, `GEMINI_API_KEY`, `WHATSAPP_*`): Verified present, non-empty, and high-entropy without printing or logging secret values.
+* **Security Invariant**: Never print secret values in terminal output, logs, or documentation.
+
+---
+
+### 4. Code Synchronization from Approved Release
+```bash
+# 1. Fetch latest approved commits from main
+git fetch origin main
+
+# 2. Verify target commit matches approved PO release SHA
+export TARGET_RELEASE_SHA=$(git rev-parse origin/main)
+echo "Target Release SHA: ${TARGET_RELEASE_SHA}"
+git log -1 --oneline origin/main
+
+# 3. Switch to main and fast-forward to approved release
+git checkout main && git pull origin main
+
+# 4. Verify working tree is clean and on exact approved SHA
+git status
+test "$(git rev-parse HEAD)" = "${TARGET_RELEASE_SHA}" && echo "SHA MATCH CONFIRMED [OK]"
+```
+
+---
+
+### 5. Sequential Container Rollout Protocol (Minimal-Interruption Cutover)
+Build and recreate containers sequentially using the security hardening overlay:
+
+```bash
+# Step 1: Recreate Worker first (No inbound HTTP traffic; 0 connection drops)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker
+
+# Step 2: Recreate FastAPI Gateway (~1-2s estimated transient cutover; buffered by Caddy)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps api
+
+# Step 3: Recreate Caddy Reverse Proxy (Container recreated with updated Caddyfile & TLS config)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps caddy
+```
+
+* **Single-Node Availability Invariant**: On a single-node VM (1 CPU, 1 GB RAM), container recreation provides **minimal-interruption cutover** (estimated ~1–2 seconds for API container swap) rather than a redundant zero-downtime cluster. Caddy holds incoming TCP connections during the brief container restart window.
+
+---
+
+### 6. Post-Deployment Smoke Tests & Validation
+Execute systematic validation checks:
+
+#### A. In-VM Local Diagnostics
+```bash
+# Test 1: In-VM Local API Gateway Health
+curl -s http://localhost:8000/health
+# Expected Output: {"status":"healthy","service":"Universal Pro AI - API Gateway", ...}
+
+# Test 2: In-VM Caddy Reverse Proxy Forwarding
+curl -s -H "Host: ${API_DOMAIN}" http://localhost/health
+# Expected Output: HTTP 308/301 Redirect to HTTPS or 200 OK
+```
+
+#### B. External Client Validation (Executed from Operator Workstation)
+```bash
+# Test 3: Public HTTPS Gateway Health
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/health
+# Expected Output: 200
+
+# Test 4: Public Swagger UI Shielding (UPA-1226)
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/docs
+# Expected Output: 404 (or redirect)
+
+# Test 5: External TCP Port 8000 Shielding Verification (UPA-1226)
+curl -m 5 -sI http://140.245.214.28:8000/health
+# Expected Output: Connection refused or timed out (Port 8000 blocked by firewall/binding)
+
+# Test 6: Vercel Edge Frontend Ingress & Dynamic Rewrite Routing
+curl -s -o /dev/null -w "%{http_code}\n" https://universal-pro-ai.vercel.app/api/v1/extract
+# Expected Output: 405 (Method Not Allowed) or 422 (Unprocessable Entity)
+
+# Test 7: Production VM Container Health & Restarts
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28 "docker compose ps"
+# Expected Output: All services 'Up', 0 crash loops, 0 unexpected restarts
+```
+
+---
+
+### 7. Deterministic Rollback Protocol
+If any smoke test fails, container crash loops occur, or TLS handshake fails:
+```bash
+# 1. Verify working tree clean before rollback
+git status --porcelain
+
+# 2. Restore codebase to previous known-good Production SHA
+git checkout ${PREV_PROD_SHA}
+
+# 3. Rebuild and recreate previous stable container stack
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker api caddy
+
+# 4. Verify recovered local health
+curl -s http://localhost:8000/health
+
+# 5. Capture diagnostic logs and failure details
+docker compose logs --tail=100 > ~/deployment_failure_$(date +%s).log
+```
+* **Governance Invariant**: Zero ad-hoc code patching on the Production VM. All bug fixes must be developed and verified on `Dev`, tested on `staging`, and promoted via `main`.
+
+---
+
+### 8. Explicit Stop & Failure Conditions
+Execution must immediately halt and trigger the Rollback Protocol if:
+1. Docker image build fails (e.g., memory exhaustion; verify `/swapfile`).
+2. Any container fails health check or exits with non-zero status (`docker compose ps`).
+3. Caddy fails ACME TLS issuance or certificate validation fails.
+4. Public port 8000 remains accessible from external clients (UPA-1226 failure).
+5. Vercel Edge returns HTTP 502 Bad Gateway on API routes.
+6. Commit SHA mismatch detected on the Production VM.
+
+
 
 ---
 
@@ -270,10 +440,10 @@ End Users (Global Browsers, Mobile PWAs)
       https://universal-pro-ai.vercel.app
                      │
          [Next.js Dynamic Rewrites]
-         /api/:path* ──► http://140.245.214.28/api/:path*
+         /api/:path* ──► https://${API_DOMAIN}/api/:path*
                      │
-                     ▼
-          Oracle Cloud OCI Backend (Hyderabad)
+                     ▼ HTTPS (Port 443 / Caddy Auto-TLS)
+          Oracle Cloud OCI Backend (Hyderabad: 140.245.214.28)
          (Shielded, Always-Free, 24/7 Compute)
 ```
 

@@ -40,6 +40,10 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-032** | 2026-09-15 | UI/UX & Design | Minimalist UI Overhaul, Interior/Gaming Categories, Deprecated Model Pruning & E2E Validation | ✅ Resolved |
 | **ISSUE-045** | 2026-09-20 | Security & Architecture | Security Hardening, Pure Function Refactoring, WCAG Accessibility, Admin Telemetry & Vault Rehydration | ✅ Resolved |
 | **ISSUE-046** | 2026-09-20 | Security & Rule Enforcement | TRUSTED_PROXY Default, Egress Firewall Verification, IP Pinning SNI, Streamlit Admin Removal & Vault Rehydration Wiring | ✅ Resolved |
+| **ISSUE-047** | 2026-09-26 | Security & Network | IP Pinning & PinnedHTTPSConnection Security Hardening (UPA-1205) | ✅ Resolved |
+| **ISSUE-048** | 2026-09-26 | Security & DevOps | Container Egress Firewall Hardening & Rollback Automation (UPA-1206) | ✅ Resolved |
+| **ISSUE-049** | 2026-09-26 | Security & DevOps | Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206) | ✅ Resolved |
+| **ISSUE-050** | 2026-09-27 | Dependencies & Security | Python 3.11 Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207) | ✅ Resolved |
 
 ---
 
@@ -1367,6 +1371,143 @@ Need to execute multi-domain system hardening across SSRF/IP redirect validation
 - Egress Script (`python scripts/verify_egress.py`): **ALL EGRESS FIREWALL CHECKS PASSED [OK]**.
 - Frontend Vitest (`npm test`): **9 / 9 PASSED**.
 - Backend Pytest (`pytest tests/`): **216 / 216 PASSED**.
+
+### 🚨 ISSUE-047: IP Pinning & PinnedHTTPSConnection Security Hardening (UPA-1205)
+- **Date**: 2026-09-26
+- **Affected Files**: `backend/app/services/url_validator.py`, `tests/test_pinned_https.py`
+
+#### 1. What Happened (Symptom):
+Outbound HTTP/HTTPS connections needed protection against DNS rebinding and Time-of-Check-Time-of-Use (TOCTOU) race conditions where DNS resolution changes between validation and connection time. Additionally, DNS lookups could block the asyncio event loop, and redirect validation needed single-resolution fail-closed enforcement.
+
+#### 2. Root Cause:
+1. Standard `http.client.HTTPSConnection` sets TLS SNI `server_hostname` to the socket destination host (the numeric IP when connecting to a pinned address), causing TLS handshake/cert validation failures unless explicitly overridden.
+2. Synchronous DNS calls (`socket.getaddrinfo`) block the main event loop if executed on async routes.
+3. Redirect probes needed to connect directly to the pre-validated pinned IP without issuing secondary unbounded DNS queries.
+
+#### 3. Resolution (Code Changes):
+- `backend/app/services/url_validator.py`:
+  - Created `PinnedHTTPSConnection(http.client.HTTPSConnection)` subclass binding `self.target_host` to `server_hostname` for TLS SNI and certificate verification while connecting socket to `pinned_ip`.
+  - Added fail-closed `connect()` guard verifying `ip.is_global` before establishing the TCP socket.
+  - Implemented `async_resolve_and_validate_hostname` and `async_validate_url_and_follow_redirects` using a dedicated `ThreadPoolExecutor` off the event loop.
+  - Hardened `validate_url_and_follow_redirects` to use single DNS resolution per hop and direct pinned IP probing.
+- `tests/test_pinned_https.py`:
+  - Added comprehensive test suite with `trustme` CA certificate generation, loopback TLS handshakes, SNI verification, cert mismatch rejection, and async helper validation.
+
+#### 4. Testing & Verification:
+- Unit Test Suite (`pytest tests/test_pinned_https.py -v`): **13 / 13 PASSED [MEASURED]**.
+- Security Suite (`pytest tests/test_backend_security_hardening.py tests/test_ssrf_entrypoint.py tests/test_pinned_https.py -v`): **36 / 36 PASSED [MEASURED]**.
+- Full Pytest Regression (`pytest tests/ -q`): **249 PASSED, 3 DESELECTED in 22.24s [MEASURED]**.
+- Frontend Vitest (`npm test`): **12 / 12 PASSED [MEASURED]**.
+- TypeScript Check (`npx tsc --noEmit`): **0 ERRORS [MEASURED]**.
+
+### 🚨 ISSUE-048: Container Egress Firewall Hardening & Rollback Automation (UPA-1206)
+- **Date**: 2026-09-26
+- **Affected Files**: `deploy/setup_egress_firewall.sh`, `deploy/rollback_egress_firewall.sh`, `scripts/verify_egress.py`
+
+#### 1. What Happened (Symptom):
+Docker containers running API and Celery workers required strict host-level egress network filtering to prevent container breakouts or SSRF pivoting to internal cloud instance metadata (169.254.169.254) and RFC 1918 private subnets, while guaranteeing that intra-compose communications (API <-> Redis <-> Caddy) and inbound connections remained undisturbed.
+
+#### 2. Root Cause:
+1. Bare `-d <private range> -j REJECT` rules without source filtering can inadvertently impact other host-level routing.
+2. Compose-to-compose traffic (e.g. `172.28.0.0/16` or `172.16.0.0/12`) requires an explicit `RETURN` rule before RFC 1918 reject rules.
+3. IPv6 egress was unconfigured in `ip6tables`.
+4. An emergency single-command rollback script was required for operator safety.
+
+#### 3. Resolution (Code Changes):
+- `deploy/setup_egress_firewall.sh`:
+  - Enforced `-s <compose subnet>` source binding on all outbound filtering rules.
+  - Inserted compose-to-compose `RETURN` rule before private range blocks.
+  - Added IPv6 filtering with `ip6tables` (`fc00::/7`, `fe80::/10`, `::1/128`).
+  - Added idempotency (flush on start) and reboot persistence via `netfilter-persistent` / `/etc/iptables`.
+- `deploy/rollback_egress_firewall.sh`:
+  - Created automated rollback script flushing `DOCKER-USER` chain and resetting policy to `RETURN`.
+- `scripts/verify_egress.py`:
+  - Verified local and container egress verification suite.
+
+#### 4. Testing & Verification:
+- Egress Script (`python scripts/verify_egress.py`): **ALL CONTAINER EGRESS FIREWALL CHECKS PASSED [OK] [MEASURED]**.
+- Full Pytest Regression (`pytest tests/ -q`): **249 PASSED, 3 DESELECTED in 22.34s [MEASURED]**.
+- Status: **Resolved on Dev**.
+
+---
+
+### 🚨 ISSUE-049: Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206)
+- **Date**: 2026-09-26
+- **Affected Files**: `deploy/setup_egress_firewall.sh`, `scripts/verify_egress.py`, `docs/po-governance/JIRA_BACKLOG.md`
+
+#### 1. What Happened (Symptom):
+During isolated Linux test-host verification, the `DOCKER-USER` chain contained:
+```text
+-A DOCKER-USER -s 172.28.0.0/16 -d 172.28.0.0/16 -j RETURN
+-A DOCKER-USER -s 172.16.0.0/12 -d 172.16.0.0/12 -j RETURN
+...
+-A DOCKER-USER -s 172.28.0.0/16 -d 172.16.0.0/12 -j REJECT
+```
+Because the Compose subnet (`172.28.0.0/16`) is a subset of the RFC 1918 `172.16.0.0/12` block, any packet directed to another private IP in `172.16.0.0/12` matched the broad `172.16.0.0/12 -> 172.16.0.0/12 RETURN` rule early, terminating chain traversal before reaching the intended `-d 172.16.0.0/12 -j REJECT` rule at line 15.
+
+#### 2. Root Cause:
+`deploy/setup_egress_firewall.sh` defined `DOCKER_BRIDGE_RANGE="172.16.0.0/12"` and added an intra-bridge exception rule `iptables -A DOCKER-USER -s 172.16.0.0/12 -d 172.16.0.0/12 -j RETURN`. This allowed broad egress from the Compose subnet to arbitrary private subnets in the `172.16.0.0/12` space.
+
+#### 3. Resolution (Code Changes):
+1. **Removed Broad RETURN Rule**: Removed `DOCKER_BRIDGE_RANGE="172.16.0.0/12"` from `deploy/setup_egress_firewall.sh`. Allowed compose-to-compose communication strictly for the explicitly configured `COMPOSE_SUBNET` (`-s "${COMPOSE_SUBNET}" -d "${COMPOSE_SUBNET}" -j RETURN`).
+2. **Strengthened Verification**: Updated `scripts/verify_egress.py` with explicit test cases for non-compose `172.16.0.0/12` endpoints (`172.16.0.1` and `172.31.255.1`), verifying they are connection refused / rejected.
+
+#### 4. Testing & Verification:
+- **Container Execution**: Executed `scripts/verify_egress.py` inside a container on `universalpro-test-net` (`172.28.0.0/16`) on an isolated DinD Linux host:
+  - `http://169.254.169.254/latest/meta-data/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://10.0.0.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://192.168.1.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://172.16.0.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `http://172.31.255.1/` -> **BLOCKED AS EXPECTED (Connection refused)** [MEASURED]
+  - `https://www.instagram.com/` -> **SUCCESS (HTTP 200)** [MEASURED]
+  - `http://service-peer:8000/` (intra-compose container-to-container) -> **SUCCESS (HTTP 200)** [MEASURED]
+  - DNS resolution -> **RESOLVED (57.144.40.34)** [MEASURED]
+- **Idempotency**: Executed `setup_egress_firewall.sh` twice; verified 0 duplicate rules in `iptables -S DOCKER-USER` and `ip6tables -S DOCKER-USER`.
+- **Rollback**: Executed `rollback_egress_firewall.sh`; verified clean `-A DOCKER-USER -j RETURN` on IPv4 and IPv6.
+- **Pytest**: `pytest tests/ -q` -> **249 PASSED, 3 DESELECTED in 22.28s [MEASURED]**.
+- **Classification**: **VERIFIED — CONTAINER EXECUTION**.
+
+---
+
+### 🚨 ISSUE-050: Python 3.11 Runtime Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207)
+- **Date**: 2026-09-27
+- **Affected Files**: `requirements.txt`, `requirements-dev.txt`, `requirements.lock`, `backend/requirements.txt`, `backend/app/services/llm_council.py`, `backend/app/workers/tasks.py`
+
+#### 1. What Happened (Symptom):
+During repository dependency auditing and Docker containerization:
+1. `requirements.txt` contained dead dependencies (`pypdf`) from earlier prototype iterations and lacked explicit `uvicorn[standard]` for FastAPI container startup.
+2. Developer and test tools (`pytest`, `pytest-asyncio`, `pytest-socket`, `pip-audit`, `trustme`, `fakeredis`) were mixed or unpartitioned.
+3. In Python 3.11, `backend/app/services/llm_council.py` triggered a `SyntaxError: f-string expression part cannot include a backslash` when joining strings inside an f-string expression.
+4. `backend/app/workers/tasks.py` had an import resolution conflict where direct submodule imports bypassed top-level mock patch targets in `tests/test_sprint6_content_payload.py`.
+
+#### 2. Root Cause:
+1. Manifest drift across sprints without strict dev vs. runtime dependency partitioning.
+2. Python 3.11 syntax constraint on f-string inner backslashes (prior to Python 3.12 grammar improvements).
+3. Ambiguity between top-level `import ai_router` vs nested package import in Celery worker context.
+
+#### 3. Resolution (Code Changes):
+1. **Manifest Cleaning & Dev Partitioning**:
+   - `requirements.txt`: Removed dead `pypdf`, added explicit `uvicorn[standard]>=0.34.0`, synced `backend/requirements.txt`.
+   - `requirements-dev.txt`: Added `pytest>=7.0.0`, `pytest-asyncio>=0.23.0`, `pytest-socket>=0.8.1`, `pip-audit>=2.7.0`, `trustme>=1.1.0`, `fakeredis>=2.20.0`, `pip-tools>=7.4.0`.
+2. **Python 3.11 Syntax Fix**:
+   - `backend/app/services/llm_council.py`: Extracted `formatted_anon_outputs = "---".join(...)` before the f-string interpolation.
+3. **Import Robustness**:
+   - `backend/app/workers/tasks.py` & services: Added defensive `try/except ImportError` fallbacks ensuring both top-level and package-level module resolution without breaking existing test mock targets.
+4. **Deterministic Lockfile Generation**:
+   - Generated pinned `requirements.lock` using `pip-compile` inside an isolated Docker `python:3.11-slim` container.
+
+#### 4. Testing & Verification:
+- **Clean Venv Python 3.11 Container**: Built clean environment in Docker container; imported all backend modules (`ALL RUNTIME IMPORTS SUCCESSFUL IN CONTAINER [OK]`) [MEASURED].
+- **Deterministic Lockfile**: Re-ran resolution; verified 1:1 exact byte match (186 lines pinned) [MEASURED].
+- **Security Audit**:
+  - `pip-audit -r requirements.txt` -> **0 known vulnerabilities found [OK] [MEASURED]**.
+  - `pip-audit -r requirements.lock` -> **0 known vulnerabilities found [OK] [MEASURED]**.
+- **Docker Build & Boot**:
+  - Built `universal-pro-ai:upa-1207` from Dockerfile [MEASURED].
+  - Booted container with `docker run -d -p 8000:8000 --name upa1207-test universal-pro-ai:upa-1207` [MEASURED].
+  - `curl http://localhost:8000/health` -> **HTTP 200 `{"status":"healthy",...}` [MEASURED]**.
+- **Full Pytest Suite**: `pytest tests/ -q` -> **249 passed, 3 deselected in 22.33s [MEASURED]**.
+- **Status**: **Resolved on Dev**.
 
 ---
 

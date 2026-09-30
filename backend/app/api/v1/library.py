@@ -56,10 +56,31 @@ async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
             detail="Rate limit exceeded for vault item re-hydration (max 30 requests per minute)."
         )
 
+    item_data = dict(body.item or {})
+
+    # Bounded list & payload validation (max 100 ingredients / 100 products)
+    raw_ingredients = item_data.get("ingredients") or []
+    raw_products = item_data.get("products") or []
+    if len(raw_ingredients) > 100 or len(raw_products) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rehydration payload exceeds maximum allowed item count (max 100 ingredients / products)."
+        )
+
+    # Maximum raw body size guard
+    import json
+    try:
+        if len(json.dumps(item_data)) > 100_000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rehydration payload size exceeds maximum limit of 100KB."
+            )
+    except (TypeError, ValueError):
+        pass
+
     supabase = get_supabase_client()
     affiliate_engine = get_affiliate_engine()
 
-    item_data = dict(body.item or {})
     target_url = body.canonical_url or item_data.get("source_url") or item_data.get("url")
 
     if target_url:
@@ -68,8 +89,11 @@ async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
             url_hash = hashlib.sha256(target_url.strip().encode("utf-8")).hexdigest()
             cached_record = supabase.get_cached_extraction(url_hash)
 
-            if cached_record and cached_record.get("structured_data"):
-                item_data = cached_record["structured_data"]
+            if cached_record:
+                # Reconcile structured_data vs content_payload
+                cached_structured = cached_record.get("structured_data") or cached_record.get("content_payload")
+                if cached_structured and isinstance(cached_structured, dict):
+                    item_data = dict(cached_structured)
                 if "source_url" not in item_data:
                     item_data["source_url"] = target_url
 
@@ -78,7 +102,7 @@ async def rehydrate_vault_item(body: RehydrateRequest, request: Request):
     ext_id = body.extraction_id or item_data.get("id") or "rehydrated_item"
     secret = settings.SECRET_KEY
     if secret:
-        fresh_stream_token = generate_stream_token(ext_id, secret)
+        fresh_stream_token = generate_stream_token(ext_id, secret, media_url=target_url or "")
         item_data["stream_token"] = fresh_stream_token
 
     domain = item_data.get("classified_domain") or item_data.get("domain") or "RECIPE"
@@ -187,31 +211,58 @@ async def export_vault_item(
     current_user: dict = Depends(get_current_user)
 ):
     """Exports structured extraction into Markdown, plain text, or raw JSON."""
+    if current_user.get("is_anonymous"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to export vault items"
+        )
+
     supabase = get_supabase_client()
-    # Query extraction
-    items = supabase.list_extractions(page=1, limit=1)
-    if not items:
-        # Mock payload for testing
-        mock_data = {
-            "id": extraction_id,
-            "title": "Saved Recipe Extraction",
-            "ingredients": ["1 cup flour", "2 eggs"],
-            "steps": ["Mix ingredients", "Bake at 350F"]
-        }
-    else:
-        mock_data = items[0]
+    item_record = supabase.get_extraction_by_id(
+        extraction_id=extraction_id,
+        user_id=current_user.get("id")
+    )
+    if not item_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Extraction '{extraction_id}' not found or access denied."
+        )
+
+    # Reconcile structured payload
+    structured = (
+        item_record.get("structured_data")
+        or item_record.get("content_payload")
+        or item_record
+    )
+    if not isinstance(structured, dict):
+        structured = item_record
+
+    title = structured.get("title") or structured.get("recipe_title") or item_record.get("title") or "Saved Extraction"
+    ingredients = structured.get("ingredients") or []
+    steps = structured.get("steps") or structured.get("instructions") or []
+
+    export_payload = {
+        "id": extraction_id,
+        "title": title,
+        "ingredients": ingredients,
+        "steps": steps,
+        **{k: v for k, v in structured.items() if k not in ("id", "title", "ingredients", "steps")}
+    }
 
     fmt = format.lower()
     if fmt == "json":
-        return JSONResponse(content=mock_data)
+        return JSONResponse(content=export_payload)
     elif fmt == "txt":
-        content = f"{mock_data.get('title', 'Item')}\n\nSteps:\n" + "\n".join(mock_data.get("steps", []))
+        step_lines = [str(s) for s in steps] if isinstance(steps, list) else [str(steps)]
+        content = f"{title}\n\nSteps:\n" + "\n".join(step_lines)
         return PlainTextResponse(content=content, media_type="text/plain")
     else:
         # Markdown default
-        md = f"# {mock_data.get('title', 'Extracted Recipe')}\n\n"
-        if mock_data.get("ingredients"):
-            md += "## Ingredients\n" + "\n".join(f"- {i}" for i in mock_data["ingredients"]) + "\n\n"
-        if mock_data.get("steps"):
-            md += "## Steps\n" + "\n".join(f"{idx}. {s}" for idx, s in enumerate(mock_data["steps"], 1)) + "\n"
+        md = f"# {title}\n\n"
+        if ingredients and isinstance(ingredients, list):
+            md += "## Ingredients\n" + "\n".join(
+                f"- {i.get('name') if isinstance(i, dict) else str(i)}" for i in ingredients
+            ) + "\n\n"
+        if steps and isinstance(steps, list):
+            md += "## Steps\n" + "\n".join(f"{idx}. {s}" for idx, s in enumerate(steps, 1)) + "\n"
         return PlainTextResponse(content=md, media_type="text/markdown")

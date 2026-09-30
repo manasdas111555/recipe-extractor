@@ -65,7 +65,7 @@ The system follows a strict 3-layered environment isolation model:
 | :--- | :--- | :--- | :--- | :--- |
 | **Development** | Localhost (3000) | Localhost (8000) | Local / Supabase Dev | `[VERIFIED IN CURRENT REPOSITORY]` |
 | **Staging** | Vercel Preview | Dedicated OCI VM (Pending) | Supabase Staging (`mzpkd...`) | `[EXTERNAL PLATFORM / INFRASTRUCTURE VERIFICATION REQUIRED]` |
-| **Production** | Vercel Production | OCI Production VM (`140.245.214.28`) | Supabase Production (`scrq...`) | `[VERIFIED IN EXISTING PROJECT DOCUMENTATION]` |
+| **Production** | Vercel Production | OCI Production VM (`140.245.214.28`) / Future HTTPS Gateway (`{$API_DOMAIN}` — OWNER-DESIGNATED / TBD) | Supabase Production (`scrq...`) | `[VERIFIED IN EXISTING PROJECT DOCUMENTATION]` |
 
 ---
 
@@ -240,7 +240,10 @@ graph TD
 ## 21. DETAILED CURRENT PRODUCTION ARCHITECTURE
 
 * **Frontend**: Next.js 15 PWA deployed on Vercel Production [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
-* **Backend**: FastAPI app running in Docker container on OCI VM behind Caddy reverse proxy [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
+* **Backend**: FastAPI app running in Docker container on OCI VM (`140.245.214.28`) behind Caddy reverse proxy [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
+* **Production API Domain**: OWNER-DESIGNATED / TBD (`API_DOMAIN` environment variable required at Production deployment time) [PLANNED / INTENDED ARCHITECTURE].
+* **Intended Ingress Chain**: `Client → Vercel Edge → Caddy (HTTPS:443) → FastAPI (api:8000)` [PLANNED / INTENDED ARCHITECTURE].
+* **Trusted Proxy Contract**: `TRUSTED_PROXY=True`, `TRUSTED_PROXY_HOPS=2` resolving the 2-hop forwarding chain (`Client IP → Vercel Edge → Caddy → FastAPI`) [VERIFIED IN CURRENT REPOSITORY].
 * **Database**: Supabase Production PostgreSQL [VERIFIED IN EXISTING PROJECT DOCUMENTATION].
 * **Status**: `UNTOUCHED` during all staging and development operations [VERIFIED IN CURRENT REPOSITORY].
 
@@ -277,7 +280,8 @@ graph TD
 ## 25. DOCKER & CADDY DEPLOYMENT ARCHITECTURE
 
 * **Containers**: Defined in `docker-compose.yml` (`redis`, `api`, `worker`, `caddy`) [VERIFIED IN CURRENT REPOSITORY].
-* **Caddy Reverse Proxy**: Automatic HTTPS TLS termination and reverse proxying to `api:8000` [VERIFIED IN CURRENT REPOSITORY].
+* **Caddy Reverse Proxy**: Automatic HTTPS TLS termination using parameterized site block `{$API_DOMAIN}` (requiring Owner-designated domain at deployment) and reverse proxying internally to `api:8000` with gzip/zstd compression [VERIFIED IN CURRENT REPOSITORY].
+* **Trusted Proxy Integration**: FastAPI configured with `TRUSTED_PROXY=True` and `TRUSTED_PROXY_HOPS=2` in production settings to resolve the true client IP across the 2-hop Vercel and Caddy proxy chain (`Client -> Vercel -> Caddy -> FastAPI`) [VERIFIED IN CURRENT REPOSITORY].
 
 ---
 
@@ -294,15 +298,15 @@ graph TD
 | Gate | Description | Environment | Status | Evidence Source | Classification |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Gate 1** | Owner authorization & backlog ticket | Governance | `VERIFIED` | `JIRA_BACKLOG.md` ticket entries | `[VERIFIED IN CURRENT REPOSITORY]` |
-| **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment (`06e02d1` on remote staging) | `[VERIFIED IN CURRENT REPOSITORY]` |
+| **Gate 2** | `Dev` -> `staging` promotion | Git Branch | `VERIFIED` | Clean git history & branch alignment (`8fcfdf0` on remote staging) | `[VERIFIED IN CURRENT REPOSITORY]` |
 | **Gate 3** | Vercel Preview frontend build | Vercel | `VERIFIED` | Vercel preview build pipeline | `[EXTERNAL PLATFORM VERIFICATION REQUIRED]` |
-| **Gate 4a** | Staging VM OS Bootstrap, Swap, Docker Setup & Repo Checkout | OCI Staging | `VERIFIED` | Staging VM (`129.225.86.241`) OS updated, 2 GiB swap, Docker 29.8.1, Compose v5.5.1, repo cloned at `staging` `06e02d1` | `[EXTERNALLY VERIFIED VIA SSH]` |
+| **Gate 4a** | Staging VM OS Bootstrap, Swap, Docker Setup & Repo Checkout | OCI Staging | `VERIFIED` | Staging VM (`129.225.86.241`) OS updated, 2 GiB swap, Docker 29.8.1, Compose v5.5.1, repo cloned at `staging` `8fcfdf0` | `[EXTERNALLY VERIFIED VIA SSH]` |
 | **Gate 4b** | Staging `.env` Configuration, Container Runtime & Secret Rotation | OCI Staging | `VERIFIED` | Docker containers (`api` and `caddy`) running, 0 restarts, in-VM `/health` 200 OK. Staging `SECRET_KEY` rotated on 2026-09-25: cryptographically generated on VM, 0 secret exposure, `.env` mode 600, `ALLOW_DB_WRITES=false`, Redis/Celery deferred | `[EXTERNALLY VERIFIED VIA SSH]` |
 | **Gate 5** | Staging FastAPI `/health` endpoint | OCI Staging | `VERIFIED` | External `GET http://129.225.86.241/health` -> HTTP 200 OK (`{"status":"healthy","integrations":{"supabase":true,...}}`) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
 | **Gate 6** | App -> Supabase Staging PostgREST read | Staging App | `VERIFIED` | External `GET http://129.225.86.241/api/v1/public/extractions/non-existent-slug-12345` -> HTTP 404 Not Found (zero DB writes) | `[EXTERNALLY VERIFIED FROM OWNER WORKSTATION]` |
-| **Gate 7** | Governed DB write enablement | Staging App | `NOT VERIFIED` | `ALLOW_DB_WRITES=true` configuration (Initial deployment keeps `ALLOW_DB_WRITES=false`) | `[PLANNED / INTENDED ARCHITECTURE]` |
-| **Gate 8** | Redis / Celery async worker pool | Staging App | `DEFERRED` | Worker task queue processing | `[PLANNED / INTENDED ARCHITECTURE]` |
-| **Gate 9** | Full E2E validation suite | Staging App | `DEFERRED` | End-to-end integration test output | `[PLANNED / INTENDED ARCHITECTURE]` |
+| **Gate 7** | Governed DB write enablement | Staging App | `VERIFIED` | Controlled PostgREST synthetic write/read/delete on Staging (`8fcfdf0`); immediate cleanup verified; post-test runtime restored to `ALLOW_DB_WRITES=false` [EXTERNALLY VERIFIED VIA SSH] | `[EXTERNALLY VERIFIED VIA SSH]` |
+| **Gate 8** | Redis / Celery async worker pool | Staging App | `VERIFIED` | Controlled Redis 7 + Celery worker startup, task consumption, write-guard preservation, and clean rollback to in-memory fallback on Staging (`8fcfdf0`); post-test runtime restored to `ALLOW_DB_WRITES=false` with Redis/worker stopped [EXTERNALLY VERIFIED VIA SSH] | `[EXTERNALLY VERIFIED VIA SSH]` |
+| **Gate 9** | Full E2E validation suite | Staging App | `VERIFIED` | Controlled E2E executed on Staging (`8fcfdf0`); API (`POST /api/v1/extract` -> HTTP 202, job `879bf101-bcba-47f9-8ece-121138d80cfa`), Celery dispatch (`celery_redis_queue`), worker consumption, and media ingestion succeeded; Gemini multimodal AI inference (`gemini-3.8-flash`) succeeded with structured recipe output; extraction persisted to Staging Supabase (`public.extractions`, `status: completed`) and cleaned up (0 rows remaining); status polling verified client retrieval; 0 orphaned media files; `beta_telemetry_feed` 403 recorded as non-fatal telemetry permission issue; write guard restored to `ALLOW_DB_WRITES=false` (.env mode 600) with negative write test passed (0 rows); Redis and Celery stopped/removed; API in-memory fallback restored healthy; 0 OOM, 0 crashes; Production untouched | `[EXTERNALLY VERIFIED VIA SSH]` |
 
 ---
 

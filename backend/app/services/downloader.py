@@ -32,12 +32,11 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 try:
-    from config import get_download_dir, MAX_VIDEO_DURATION, cleanup_old_downloads
+    from backend.app.core.config import get_download_dir, MAX_VIDEO_DURATION, cleanup_old_downloads
 except Exception:
-    import config
-    get_download_dir = getattr(config, "get_download_dir", lambda: Path("downloads"))
-    MAX_VIDEO_DURATION = getattr(config, "MAX_VIDEO_DURATION", 90)
-    cleanup_old_downloads = getattr(config, "cleanup_old_downloads", lambda **kw: None)
+    get_download_dir = lambda: Path("downloads")
+    MAX_VIDEO_DURATION = 90
+    cleanup_old_downloads = lambda **kw: None
 
 
 def detect_platform(url: str) -> str:
@@ -75,10 +74,11 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         for client_list in client_cascades:
             ydl_opts = {
                 'outtmpl': output_template,
-                'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[ext=mp4]/best',
+                'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[height<=360][ext=mp4]/best[height<=360]',
                 'merge_output_format': 'mp4',
                 'quiet': True,
                 'no_warnings': True,
+                'max_filesize': 50 * 1024 * 1024,
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                 'extractor_args': {
                     'youtube': {

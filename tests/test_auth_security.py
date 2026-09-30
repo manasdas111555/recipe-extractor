@@ -41,7 +41,7 @@ class TestAuthSecurity(unittest.TestCase):
         self.assertTrue(user["is_anonymous"])
         self.assertTrue(user["id"].startswith("guest_"))
         self.assertEqual(user["plan_tier"], "free")
-        self.assertEqual(user["daily_quota_limit"], 3)
+        self.assertEqual(user["daily_quota_limit"], 20)
 
     def test_authenticated_user_with_valid_jwt(self):
         """Verify requests with a valid mock Supabase JWT are authenticated correctly."""

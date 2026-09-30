@@ -63,7 +63,8 @@ describe('recipeUtils - Pure Frontend Utilities', () => {
       const preview = resolveMediaPreview(result);
       expect(preview?.type).toBe('instagram');
       expect(preview?.id).toBe('C9876543210');
-      expect(preview?.streamSrc).toContain('/api/v1/extract/stream-video?token=signed_test_token_123');
+      expect(preview?.streamSrc).toBe('/api/v1/extract/stream-video?token=signed_test_token_123&id=job_456');
+      expect(preview?.streamSrc).not.toContain('url=');
     });
 
     it('resolves YouTube Shorts iframe preview', () => {

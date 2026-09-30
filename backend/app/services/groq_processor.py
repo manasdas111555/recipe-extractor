@@ -8,9 +8,14 @@ import mimetypes
 from pathlib import Path
 from typing import Tuple, Dict, Any
 
-from config import get_groq_api_key, ensure_download_dir, get_affiliate_tags
-from media_utils import extract_audio_from_video
-from gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
+try:
+    from backend.app.services.config import get_groq_api_key, ensure_download_dir, get_affiliate_tags
+    from backend.app.services.media_utils import extract_audio_from_video
+    from backend.app.services.gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
+except ImportError:
+    from config import get_groq_api_key, ensure_download_dir, get_affiliate_tags
+    from media_utils import extract_audio_from_video
+    from gemini_processor import get_prompt_for_mode, parse_extracted_content, format_downloadable_txt, safe_print
 
 def _post_multipart_audio(url: str, api_key: str, file_path: Path, model: str = "whisper-large-v3") -> str:
     """Posts an audio file to Groq transcription endpoint using standard library multipart/form-data."""

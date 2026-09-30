@@ -92,12 +92,6 @@ def get_env_var(var_name: str, default: str = "") -> str:
         except Exception:
             pass
     val = os.environ.get(var_name, "").strip()
-    if not val:
-        try:
-            import streamlit as st
-            val = st.secrets.get(var_name, "").strip()
-        except Exception:
-            pass
     return val or default
 
 def set_env_var(var_name: str, value: str):
@@ -121,7 +115,7 @@ def set_env_var(var_name: str, value: str):
     os.environ[var_name] = value
 
 def get_api_key() -> str:
-    """Retrieve Gemini API Key from Streamlit Secrets or environment."""
+    """Retrieve Gemini API Key from environment."""
     return get_env_var("GEMINI_API_KEY")
 
 def save_api_key(api_key: str):
@@ -147,28 +141,13 @@ def get_nvidia_api_key() -> str:
 def get_affiliate_tags() -> dict:
     """
     Retrieve Amazon Associates, Flipkart, Meesho, and aggregator (Cuelinks/EarnKaro) affiliate tags
-    from environment variables, Streamlit secrets, or defaults.
+    from environment variables.
     """
     amazon_tag = os.environ.get("AMAZON_AFFILIATE_TAG", "").strip()
     flipkart_tag = os.environ.get("FLIPKART_AFFILIATE_TAG", "").strip()
     meesho_tag = os.environ.get("MEESHO_AFFILIATE_TAG", "").strip()
     cuelinks_id = os.environ.get("CUELINKS_ID", "").strip()
     earnkaro_id = os.environ.get("EARNKARO_ID", "").strip()
-    
-    try:
-        import streamlit as st
-        if not amazon_tag:
-            amazon_tag = st.secrets.get("AMAZON_AFFILIATE_TAG", "").strip()
-        if not flipkart_tag:
-            flipkart_tag = st.secrets.get("FLIPKART_AFFILIATE_TAG", "").strip()
-        if not meesho_tag:
-            meesho_tag = st.secrets.get("MEESHO_AFFILIATE_TAG", "").strip()
-        if not cuelinks_id:
-            cuelinks_id = st.secrets.get("CUELINKS_ID", "").strip()
-        if not earnkaro_id:
-            earnkaro_id = st.secrets.get("EARNKARO_ID", "").strip()
-    except Exception:
-        pass
 
     return {
         "amazon": amazon_tag,

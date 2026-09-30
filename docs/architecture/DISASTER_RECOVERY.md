@@ -55,10 +55,10 @@ This document details:
 | Component | Platform / Host | Access URL / Identifier | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Production Frontend (Primary)** | Vercel Edge Network | `https://universal-pro-ai.vercel.app` | Next.js 15 PWA web client, global CDN, HTTPS termination & origin IP shield |
-| **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443, 8000) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
+| **Production Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `140.245.214.28` (Ports 80, 443; 8000 remediation per UPA-1226) / Future HTTPS Gateway (`{$API_DOMAIN}` — OWNER-DESIGNATED / TBD) | Always-on 24/7 Docker stack (FastAPI, Celery, Redis, Caddy) |
 | **Staging Node (Dedicated)** | Oracle Cloud (OCI Hyderabad) | `129.225.86.241` (OS Bootstrap, 2 GiB Swap, Docker 29.8.1, Repo Checkout at `staging` `06e02d1`, `.env` Mode 600, Caddy + FastAPI Containers Running with 0 Restarts, External `/health` 200 OK, and External Supabase PostgREST Read 404 Verified; Ports 80, 443 permitted by Security List; No inbound Security List rules for TCP 8000 or TCP 6379) | Dedicated Staging cloud VM (`universal-pro-ai-staging-instance`, Ubuntu 24.04.5 LTS x86_64, `staging-public-subnet` `10.0.2.0/24`, `staging-security-list-universalpro-ai-vcn`, repo at `/home/ubuntu/recipe-extractor` on `staging` `06e02d1`); Caddy+API runtime verified with `ALLOW_DB_WRITES=false`; Redis/Celery deferred to Gate 8 |
-| **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://manas-recipe-extractor.streamlit.app/](https://manas-recipe-extractor.streamlit.app/) | v0 prototype extraction web app (Legacy) |
-| **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[HISTORICAL / DEPRECATED]` | [https://universalpro-stage.streamlit.app/](https://universalpro-stage.streamlit.app/) | Legacy testing sandbox |
+| **Production UI (Legacy Prototype)** | Streamlit Community Cloud `[RETIRED / DECOMMISSIONED]` | `https://manas-recipe-extractor.streamlit.app/` (Decommissioned per UPA-1203) | Retired v0 prototype web app |
+| **Staging UI (Legacy Prototype)** | Streamlit Community Cloud `[RETIRED / DECOMMISSIONED]` | `https://universalpro-stage.streamlit.app/` (Decommissioned per UPA-1203) | Retired legacy testing sandbox |
 | **FastAPI Backend** | Local / Docker Daemon | `http://localhost:8000` (`/docs`, `/health`, `/api/v1/auth/me`) | Decoupled API Gateway for bots and PWAs |
 | **Database** | Supabase (AWS Mumbai) | `https://scrqvbgjybnrvcpxbygf.supabase.co` | Multi-tenant PostgreSQL database with RLS |
 | **Global Skills Root** | Local Agent Environment | `C:\Users\admin\.gemini\config\skills\` | 14 global agent skills (`frontend-design`, `theme-factory`, `shadcn`, `high-end-visual-design`, etc.) |
@@ -68,7 +68,7 @@ This document details:
 
 ## 🛠️ What We Developed & How It Works
 
-### 1. Presentation & Streamlit Runtime (`app.py`, `ui_components.py`)
+### 1. Presentation & Modular UI Components (`ui_components.py`)
 - **Dynamic Platform Detection**: Identifies Instagram Reels, YouTube Shorts, and TikTok URLs on input paste.
 - **Neural Scanner Perception Engine**: Displays dynamic progress states during AI processing to prevent perceived lag.
 - **Multi-Store Affiliate Delivery Shelf**: 
@@ -288,7 +288,7 @@ If the virtual machine was completely corrupted or terminated:
    curl -fsSL https://get.docker.com | sudo sh
    sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
    git clone https://github.com/manasdas111555/recipe-extractor.git
-   cd recipe-extractor && nano .env && docker compose up -d --build
+   cd recipe-extractor && nano .env && docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build
    ```
 3. Update DNS / frontend backend proxy to the new IP. (RTO: $\le 5$ minutes).
 
@@ -304,7 +304,7 @@ If the virtual machine was completely corrupted or terminated:
    - Click **Run workflow** $\rightarrow$ select branch `main` $\rightarrow$ click **Run workflow**.
 
 #### Step 2: Permanent Fix
-Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http://140.245.214.28`) or the global Vercel Edge frontend (`https://universal-pro-ai.vercel.app`), which have zero hibernation timeouts.
+Point users and mobile PWAs to the global Vercel Edge frontend (`https://universal-pro-ai.vercel.app`) or the dedicated Oracle Cloud backend infrastructure (`140.245.214.28`), which have zero hibernation timeouts.
 
 ---
 
@@ -319,8 +319,8 @@ Point users and mobile PWAs to the dedicated Oracle Cloud production node (`http
 
 #### Step 2: Verify or Update Environment Variables
 1. Go to **Project Settings** $\rightarrow$ **Environment Variables**.
-2. Verify `NEXT_PUBLIC_API_URL` points to `http://140.245.214.28`.
-3. If the Oracle Cloud IP ever changes, update this variable and click **Redeploy**.
+2. Verify `NEXT_PUBLIC_API_URL`: for production HTTPS deployment, set `NEXT_PUBLIC_API_URL=https://${API_DOMAIN}` (where `API_DOMAIN` is the Owner-designated domain pointing to `140.245.214.28`). Ensure `TRUSTED_PROXY=true` and `TRUSTED_PROXY_HOPS=2` are configured in the backend environment to accurately resolve client IPs across the Vercel Edge $\rightarrow$ Caddy $\rightarrow$ FastAPI forwarding chain.
+3. If the backend domain or host changes, update `NEXT_PUBLIC_API_URL` and click **Redeploy**.
 
 ---
 
@@ -569,6 +569,86 @@ Verify `whatsapp_service.py` formats Blinkit (`https://blinkit.com/s/?q=...`) an
 
 #### Step 2: Automated Test Suite Verification
 - Run `pytest tests/` to confirm 100% pass rate across category classification and vault item parsing (**191 / 191 PASSED**).
+
+---
+
+### 📘 Runbook 23: Production Promotion, Minimal-Interruption Rollout & Deterministic Rollback (UPA-1225)
+**Symptom**: Deploying approved `main` branch releases to the dedicated Oracle Cloud Production VM (`140.245.214.28`) with minimal disruption and deterministic recovery.
+
+#### Step 1: Pre-Flight Governance & Stop Checks
+1. Ensure explicit human Owner approval is logged for `UPA-1225`.
+2. Confirm `UPA-1224` (HTTPS architecture) is `🟢 PO Approved`.
+3. **Hard Gate on UPA-1226**: Production promotion is strictly **BLOCKED** unless `UPA-1226` (direct port 8000 shielding, OCI port 8000 closure, Swagger disabling) is completed and verified.
+4. Verify local working tree is clean (`git status --short` empty).
+
+#### Step 2: Production VM Pre-Flight (Read-Only)
+Connect via SSH and capture previous running state:
+```bash
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28
+cd /home/ubuntu/recipe-extractor
+git status
+export PREV_PROD_SHA=$(git rev-parse HEAD)
+export PREV_PROD_BRANCH=$(git branch --show-current)
+echo "Previous Production SHA: ${PREV_PROD_SHA} (Branch: ${PREV_PROD_BRANCH})"
+free -h && df -h /
+```
+
+#### Step 3: Secret & Environment Configuration Audit
+Verify `.env` (permissions mode 600 via `chmod 600 .env`):
+- `ENVIRONMENT=production`
+- `ALLOW_DB_WRITES=true` (authorized exclusively during production execution)
+- `TRUSTED_PROXY=true`
+- `TRUSTED_PROXY_HOPS=2`
+- `API_DOMAIN=<Owner-designated controlled hostname or approved DDNS hostname>` (DNS A-record verified pointing to `140.245.214.28`)
+- `DOCS_URL=""` or `None`
+- Verified production API keys present without printing or logging secret values.
+
+#### Step 4: Code Synchronization from Approved Release
+```bash
+git fetch origin main
+export TARGET_RELEASE_SHA=$(git rev-parse origin/main)
+git log -1 --oneline origin/main
+git checkout main && git pull origin main
+test "$(git rev-parse HEAD)" = "${TARGET_RELEASE_SHA}" && echo "SHA MATCH CONFIRMED [OK]"
+```
+
+#### Step 5: Sequential Container Rollout (Minimal-Interruption Cutover)
+Execute sequential builds using the security hardening overlay:
+```bash
+# 1. Recreate background worker first (no HTTP traffic, 0 connection drops)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker
+
+# 2. Recreate API gateway (~1-2s estimated transient cutover buffered by Caddy)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps api
+
+# 3. Recreate Caddy reverse proxy (container recreated with updated config & TLS)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps caddy
+```
+*Single-Node Availability Invariant*: On a single-node VM (1 CPU, 1 GB RAM), container recreation provides **minimal-interruption cutover** (estimated ~1–2s API swap) buffered by Caddy rather than multi-node zero-downtime clustering.
+
+#### Step 6: Smoke Testing & Live Validation
+```bash
+# A. Local in-VM checks
+curl -s http://localhost:8000/health
+curl -s -H "Host: ${API_DOMAIN}" http://localhost/health
+
+# B. External client checks (from operator workstation)
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/health
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/docs  # Must return 404 or redirect
+curl -m 5 -sI http://140.245.214.28:8000/health  # Must be connection refused / timed out
+curl -s -o /dev/null -w "%{http_code}\n" https://universal-pro-ai.vercel.app/api/v1/extract
+docker compose ps
+```
+
+#### Step 7: Deterministic Rollback Protocol
+If any smoke test fails, container crashes occur, or TLS fails:
+```bash
+git status --porcelain
+git checkout ${PREV_PROD_SHA}
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker api caddy
+curl -s http://localhost:8000/health
+docker compose logs --tail=100 > ~/deployment_failure_$(date +%s).log
+```
 
 ---
 

@@ -577,7 +577,7 @@ Please review each module deliverable and provide your official sign-off status 
   - Expanded guest quota from 3 to **20 daily extractions**, and authenticated free tier from 10 to **30 daily extractions** (`backend/app/services/quota_service.py`).
   - Implemented `public.beta_telemetry_feed` in Supabase ([`database/009_beta_telemetry_feed.sql`](file:///d:/Personal%20Projects/recipe-extractor/database/009_beta_telemetry_feed.sql)) and `send_admin_telemetry_alert()` in [`backend/app/services/telemetry_service.py`](file:///d:/Personal%20Projects/recipe-extractor/backend/app/services/telemetry_service.py).
 - **Phase 2 & 3: Hinglish Multimodal Tuning & Mobile Bot Enhancements**:
-  - Fine-tuned Gemini 3.8 Flash system prompt for Indian/Hinglish culinary units (*katori*, *chamach*, *swadanusar*, *Ghee*, *Kasuri Methi*) with precise metric conversion ([`gemini_processor.py`](file:///d:/Personal%20Projects/recipe-extractor/gemini_processor.py)).
+  - Fine-tuned Gemini 3.8 Flash system prompt for Indian/Hinglish culinary units (`[ILLUSTRATIVE]`: *1 katori* -> *1 bowl (~150 ml, approx)*, *1 chamach* -> *1 tbsp (approx)*, *chutki bhar* -> *1 pinch (approx)*, *swadanusar* -> *to taste*, *Ghee*, *Kasuri Methi*) with standardized metric conversions in [`gemini_processor.py`](file:///d:/Personal%20Projects/recipe-extractor/backend/app/services/gemini_processor.py). (Note: Prompt snapshot strings are `[ILLUSTRATIVE]`; live Hinglish golden-set transition benchmark is `[NOT VERIFIED]` until formal evaluation against 3–5 reference reels is conducted).
   - Upgraded Telegram bot (`scripts/run_telegram_bot.py`) with inline feedback buttons (`👍 Good`, `👎 Missing Info`, `🛒 Shopping Cart`, `⚡ Fast`) and retry options.
   - Upgraded WhatsApp bot (`whatsapp_service.py`) with 10-minute delivery quick-commerce links for Blinkit & Zepto.
 - **Phase 4: Safari/WebView Resilient Clipboard & Dual-Bot Mobile Navigation**:
@@ -588,7 +588,7 @@ Please review each module deliverable and provide your official sign-off status 
 #### 2. PO Sign-Off Verification:
 - [x] **Quota Engine**: 20 guest / 30 free daily quota limits active.
 - [x] **Beta Telemetry Feed**: Real-time DB logging and Telegram admin alerts configured.
-- [x] **Hinglish Culinary Prompting**: Imperial & metric translations verified (*katori* $\rightarrow$ 150ml/200g, *chamach* $\rightarrow$ 5ml/15ml).
+- [x] **Hinglish Culinary Prompting**: Metric unit translation guidelines embedded in system prompt (snapshot test verified in `tests/test_hinglish_prompt_snapshot.py`; prompt snapshots `[ILLUSTRATIVE]`, live golden set benchmark `[NOT VERIFIED]`).
 - [x] **Omnichannel Bot Navigation**: Telegram and WhatsApp bot links rendered in top bar pill row.
 - [x] **Clipboard Resiliency**: Checklist copy button functional across desktop and mobile WebViews.
 - [x] **Automated Regression Suite**: 157 / 157 automated unit tests passing cleanly.

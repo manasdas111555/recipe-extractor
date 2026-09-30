@@ -18,17 +18,23 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-# Ensure repository root is on sys.path for ai_router, config, downloader, etc.
+# Ensure repository root and services dir are on sys.path for ai_router, config, downloader, etc.
 ROOT_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
+SERVICES_DIR = str(Path(__file__).resolve().parent.parent / "services")
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+if SERVICES_DIR not in sys.path:
+    sys.path.insert(0, SERVICES_DIR)
 
 from backend.app.workers.celery_app import celery_app
 from backend.app.workers.media_downloader import managed_worker_download
 from backend.app.services.affiliate_engine import get_affiliate_engine
 from backend.app.core.supabase_client import get_supabase_client
 from backend.app.services.job_manager import get_job_manager
-import config
+try:
+    from backend.app.services.config import get_api_key, get_mistral_api_key, get_groq_api_key
+except ImportError:
+    from config import get_api_key, get_mistral_api_key, get_groq_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -99,11 +105,14 @@ def execute_extraction_pipeline(
         update_progress("multimodal_ai_inference", 55)
 
         # Step 2: Multimodal AI Reasoning via Central Router
-        from ai_router import route_video_intelligence
+        try:
+            from ai_router import route_video_intelligence
+        except ImportError:
+            from backend.app.services.ai_router import route_video_intelligence
 
-        gemini_key = config.get_api_key()
-        mistral_key = config.get_mistral_api_key()
-        groq_key = config.get_groq_api_key()
+        gemini_key = get_api_key()
+        mistral_key = get_mistral_api_key()
+        groq_key = get_groq_api_key()
 
         selected_provider = provider if (provider and provider != "auto") else ("gemini" if gemini_key else ("mistral" if mistral_key else "groq"))
 

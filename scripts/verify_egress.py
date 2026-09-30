@@ -99,13 +99,19 @@ def main():
     # 1. AWS/Cloud Metadata Endpoint (169.254.169.254) — MUST FAIL
     results.append(test_egress_target("http://169.254.169.254/latest/meta-data/", is_allowed_target=False))
 
-    # 2. Private Subnet IP (10.0.0.1) — MUST FAIL
+    # 2. Private Subnet IP 10.0.0.0/8 (10.0.0.1) — MUST FAIL
     results.append(test_egress_target("http://10.0.0.1/", is_allowed_target=False))
 
-    # 3. Private Subnet IP (192.168.1.1) — MUST FAIL
+    # 3. Private Subnet IP 192.168.0.0/16 (192.168.1.1) — MUST FAIL
     results.append(test_egress_target("http://192.168.1.1/", is_allowed_target=False))
 
-    # 4. Public Social Host (www.instagram.com) — MUST SUCCEED
+    # 4. Non-Compose Private Subnet IP 172.16.0.0/12 (172.16.0.1) — MUST FAIL
+    results.append(test_egress_target("http://172.16.0.1/", is_allowed_target=False))
+
+    # 5. Non-Compose Private Subnet IP 172.16.0.0/12 (172.31.255.1) — MUST FAIL
+    results.append(test_egress_target("http://172.31.255.1/", is_allowed_target=False))
+
+    # 6. Public Social Host (www.instagram.com) — MUST SUCCEED
     results.append(test_egress_target("https://www.instagram.com/", is_allowed_target=True))
 
     print("-" * 70)

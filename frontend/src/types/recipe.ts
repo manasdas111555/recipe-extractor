@@ -66,4 +66,21 @@ export interface ExtractionResult {
   nutrition?: NutritionInfo;
 }
 
+export interface DomainOption {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export type DomainHint =
+  | 'auto'
+  | 'recipe'
+  | 'kitchen_product'
+  | 'fitness_workout'
+  | 'interior_design'
+  | 'gaming'
+  | 'tech_diy'
+  | 'unboxing'
+  | 'diy';
+
 export type RecipeSchema = ExtractionResult;

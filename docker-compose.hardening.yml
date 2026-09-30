@@ -1,7 +1,5 @@
-# docker-compose.override.yml
-# Universal Pro AI - Deployment Container Egress & Security Configurations
-
-version: '3.8'
+# docker-compose.hardening.yml
+# Universal Pro AI - Hardened Container Security Overlay (Opt-in)
 
 services:
   api:

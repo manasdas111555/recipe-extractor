@@ -25,28 +25,53 @@ security = HTTPBearer(auto_error=False)
 def get_client_ip(request: Request) -> str:
     """
     Extracts the true client IP safely from trusted proxy headers or socket remote host.
-    Prioritizes single-value trusted headers ('cf-connecting-ip', 'x-real-ip') when TRUSTED_PROXY is True.
-    If using 'x-forwarded-for', parses entries and counts trusted hops from the rightmost edge
-    using TRUSTED_PROXY_HOPS, preventing X-Forwarded-For header spoofing attacks.
+    If TRUSTED_PROXY is False: returns request.client.host directly and ignores ALL forwarded headers.
+    If TRUSTED_PROXY is True:
+      - If TRUSTED_PROXY_HEADER is configured, uses that single-value header.
+      - Otherwise checks single-value headers ('cf-connecting-ip', 'x-real-ip') or parses
+        'x-forwarded-for' counting trusted hops from the right (TRUSTED_PROXY_HOPS).
+      - Validates the parsed IP using ipaddress.ip_address(); falls back to request.client.host if invalid.
     """
     settings = get_settings()
-    trusted_proxy = getattr(settings, "TRUSTED_PROXY", True)
+    trusted_proxy = getattr(settings, "TRUSTED_PROXY", False)
+    trusted_header = getattr(settings, "TRUSTED_PROXY_HEADER", None)
     trusted_hops = max(1, getattr(settings, "TRUSTED_PROXY_HOPS", 1))
 
-    if trusted_proxy:
+    if not trusted_proxy:
+        if request.client and request.client.host:
+            return request.client.host
+        return "127.0.0.1"
+
+    # TRUSTED_PROXY is True: evaluate proxy headers
+    candidate_ip: Optional[str] = None
+
+    if trusted_header:
+        val = request.headers.get(trusted_header.lower())
+        if val and val.strip():
+            candidate_ip = val.split(",")[0].strip()
+    else:
         for header_name in ["cf-connecting-ip", "x-real-ip"]:
             val = request.headers.get(header_name)
             if val and val.strip():
-                client_ip = val.split(",")[0].strip()
-                if client_ip:
-                    return client_ip
+                candidate_ip = val.split(",")[0].strip()
+                if candidate_ip:
+                    break
 
-    xff = request.headers.get("x-forwarded-for")
-    if xff and xff.strip():
-        ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
-        if ips:
-            idx = max(0, len(ips) - trusted_hops)
-            return ips[idx]
+        if not candidate_ip:
+            xff = request.headers.get("x-forwarded-for")
+            if xff and xff.strip():
+                ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+                if ips:
+                    idx = max(0, len(ips) - trusted_hops)
+                    candidate_ip = ips[idx]
+
+    if candidate_ip:
+        import ipaddress
+        try:
+            ipaddress.ip_address(candidate_ip)
+            return candidate_ip
+        except ValueError:
+            pass
 
     if request.client and request.client.host:
         return request.client.host
@@ -54,25 +79,22 @@ def get_client_ip(request: Request) -> str:
     return "127.0.0.1"
 
 
-# Sliding window IP timestamp tracker for anonymous clients
-_ANONYMOUS_IP_TIMESTAMPS = defaultdict(list)
-
-def check_anonymous_rate_limit(client_ip: str, max_requests: int = 3, window_seconds: int = 60) -> bool:
+def check_anonymous_rate_limit(client_ip: str, max_requests: Optional[int] = None, window_seconds: int = 60) -> bool:
     """
     Enforces sliding-window rate limit for unauthenticated IP clients (P0 Directive: 3 req/min).
-    Returns True if within quota, False if rate limit exceeded.
+    Uses Redis-backed QuotaManager with in-memory fallback.
     """
-    now = time.time()
-    valid_stamps = [t for t in _ANONYMOUS_IP_TIMESTAMPS[client_ip] if (now - t) < window_seconds]
-    _ANONYMOUS_IP_TIMESTAMPS[client_ip] = valid_stamps
-    if len(valid_stamps) >= max_requests:
-        return False
-    _ANONYMOUS_IP_TIMESTAMPS[client_ip].append(now)
-    return True
+    from backend.app.services.quota_service import get_quota_manager
+    settings = get_settings()
+    limit = max_requests if max_requests is not None else getattr(settings, "ANONYMOUS_RATE_LIMIT_PER_MINUTE", 3)
+    qm = get_quota_manager()
+    allowed, count = qm.check_generic_rate_limit(f"anon_rate:{client_ip}", limit=limit, window_seconds=window_seconds)
+    return allowed
 
 def reset_rate_limits_for_testing():
-    """Helper to reset in-memory timestamps between test executions."""
-    _ANONYMOUS_IP_TIMESTAMPS.clear()
+    """Helper to reset rate limits between test executions."""
+    from backend.app.services.quota_service import get_quota_manager
+    get_quota_manager().reset_rate_limits_for_testing()
 
 _jwks_client: Optional[jwt.PyJWKClient] = None
 
@@ -157,12 +179,13 @@ async def get_current_user(
 
             # Query profile from Supabase (NEVER take role or plan_tier from token claims)
             db_profile = supabase.get_profile(user_id) if supabase.is_configured() else None
+            default_free_limit = getattr(settings, "DAILY_FREE_QUOTA_LIMIT", 30)
 
             return {
                 "id": user_id,
                 "email": email or (db_profile.get("email") if db_profile else "user@universalpro.ai"),
                 "plan_tier": db_profile.get("plan_tier", "free") if db_profile else "free",
-                "daily_quota_limit": (db_profile.get("daily_quota_limit") or (999999 if (db_profile and db_profile.get("plan_tier") in ["pro", "unlimited"]) else 10)) if db_profile else 10,
+                "daily_quota_limit": (db_profile.get("daily_quota_limit") or (999999 if (db_profile and db_profile.get("plan_tier") in ["pro", "unlimited"]) else default_free_limit)) if db_profile else default_free_limit,
                 "extractions_today": db_profile.get("extractions_today", 0) if db_profile else 0,
                 "custom_amazon_tag": db_profile.get("custom_amazon_tag") if db_profile else None,
                 "custom_earnkaro_id": db_profile.get("custom_earnkaro_id") if db_profile else None,
@@ -186,7 +209,7 @@ async def get_current_user(
         "id": guest_id,
         "email": None,
         "plan_tier": "free",
-        "daily_quota_limit": 3,
+        "daily_quota_limit": getattr(settings, "DAILY_GUEST_QUOTA_LIMIT", 20),
         "extractions_today": 0,
         "custom_amazon_tag": None,
         "custom_earnkaro_id": None,
@@ -197,19 +220,20 @@ async def get_current_user(
 
 def get_user_quota_limits(user: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Tiered Quota Helper (Sprint 4 PO Policy):
-    - Guest: 3 daily extractions
-    - Authenticated Free: 10 daily extractions
+    Tiered Quota Helper (UPA-1214):
+    - Guest: settings.DAILY_GUEST_QUOTA_LIMIT (default 20)
+    - Authenticated Free: settings.DAILY_FREE_QUOTA_LIMIT (default 30)
     - Pro: -1 (unlimited)
     """
+    settings = get_settings()
     if not user or user.get("is_anonymous", False) or user.get("tier") == "guest":
-        return {"tier": "guest", "daily_quota_limit": 3}
+        return {"tier": "guest", "daily_quota_limit": getattr(settings, "DAILY_GUEST_QUOTA_LIMIT", 20)}
     
     tier = user.get("plan_tier") or user.get("role") or user.get("tier", "free")
     if tier in ["pro", "unlimited"]:
         return {"tier": "pro", "daily_quota_limit": -1}
     
-    return {"tier": "free", "daily_quota_limit": 10}
+    return {"tier": "free", "daily_quota_limit": getattr(settings, "DAILY_FREE_QUOTA_LIMIT", 30)}
 
 
 def require_admin_user(
@@ -221,7 +245,17 @@ def require_admin_user(
     Requirement D.1: Define 'admin' explicitly (ADMIN_API_KEY header or explicit role == 'admin').
     Fails closed (401/403) if ADMIN_API_KEY is unset or invalid.
     Does NOT accept plan_tier == 'pro' as admin.
+    Rate limits admin authentication attempts using client IP (max 5 attempts per minute).
     """
+    client_ip = get_client_ip(request)
+    from backend.app.services.quota_service import get_quota_manager
+    allowed, count = get_quota_manager().check_generic_rate_limit(f"admin_auth:{client_ip}", limit=5, window_seconds=60)
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many admin authentication attempts. Please retry later."
+        )
+
     settings = get_settings()
     admin_key_header = request.headers.get("X-Admin-Api-Key") or request.headers.get("x-admin-api-key")
     expected_admin_key = getattr(settings, "ADMIN_API_KEY", None) or os.environ.get("ADMIN_API_KEY")
@@ -232,7 +266,8 @@ def require_admin_user(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Admin authentication failed: ADMIN_API_KEY is not configured on the server."
             )
-        if not hmac.compare_digest(admin_key_header, expected_admin_key):
+        # Compare admin key as bytes using hmac.compare_digest
+        if not hmac.compare_digest(admin_key_header.encode("utf-8"), expected_admin_key.encode("utf-8")):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid Admin API Key"
