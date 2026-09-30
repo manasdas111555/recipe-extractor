@@ -24,6 +24,7 @@
 | **Sprint 10** | **Beta Testing Feedback, Resilient Ingestion & Multilingual AI Engine** (Downloader Fallback + Song ID + Language Toggle + Travel Maps + Vault Fix + Mobile UX + Recipe Formatting) | 46 pts | 🎉 **COMPLETED (100%)** | Weeks 19–20 |
 | **Sprint 11** | **Security, Accessibility & Governance Hardening** (TRUSTED_PROXY + Egress Firewall + IP Pinning SNI + Vault Re-hydration Rate Limit + Rule 17 Contract) | 42 pts | 🧪 **Ready for PO Review** | Weeks 21–22 |
 | **Sprint 12** | **Security, Secret Hygiene & Egress Refinement** (JWT Signature Verification + Stream Proxy Token + Trusted Proxy IP + Egress Firewall + Pinned Connection + Lockfile) | 58 pts | 📋 **Planned** | Weeks 23–24 |
+| **Sprint 13** | **Administrative Access Hardening & Universal Routing Architecture** (Private Staging Admin Access + Reverse Proxy & Public Route Validation) | TBD | 📋 **Planned** | Weeks 25–26 |
 
 ---
 
@@ -212,6 +213,35 @@ Every sprint MUST be structured using the following standard template:
 | **UPA-1239** | Dedicated OCI Staging Backend Infrastructure & Environment Isolation | DevOps / Infrastructure / Security | P0 | Governs dedicated OCI Staging backend VM setup (`universal-pro-ai-staging-instance`, VM.Standard.E2.1.Micro, AMD x86_64, 1 GB RAM, Ubuntu 24.04.5 LTS, Public IP `129.225.86.241`, Private IP `10.0.2.242` in `ap-hyderabad-1` AD `HJag:AP-HYDERABAD-1-AD-1` — ACTUALLY PROVISIONED / RUNNING; SSH access EXTERNALLY VERIFIED by Owner), ~47 GB default boot volume, 1 GB RAM with proposed 2 GB `/swapfile` for memory-pressure mitigation only, Network topology reusing existing VCN (`universalpro-ai-vcn`) with DEDICATED STAGING SUBNET (`staging-public-subnet` `10.0.2.0/24`), VNIC `universal-pro-ai-staging-vnic`, and DEDICATED STAGING SECURITY LIST (`staging-security-list-universalpro-ai-vcn` with Public inbound 80/443; restricted SSH port 22; NO public 8000; NO public 6379; explaining OCI NSGs are additive and cannot override permissive security-list rules, preserving Production subnet unchanged), Docker Engine/Compose initial runtime limited strictly to Caddy reverse proxy (`caddy:2-alpine`) and FastAPI gateway (`api`) with `ALLOW_DB_WRITES=false` initially (Application deployment, Docker, Caddy, FastAPI runtime, Supabase connectivity, DNS/TLS, Redis/Celery, and E2E NOT YET VERIFIED / NOT YET DEPLOYED), Redis/Celery background workers explicitly DEFERRED to Gate 8, Staging credentials (`ENVIRONMENT=staging`), Supabase Staging target (`mzpkdmaxsuhwezsooidu.supabase.co`), zero Production DB contact, E2E execution deferred, Caddy TLS termination, container rollback strategy, PostgREST 404 verification evidence, and Rule 21 documentation synchronization across `SYSTEM_ARCHITECTURE.md`, `ENVIRONMENTS.md`, `ORACLE_CLOUD_DEPLOYMENT.md`, `DISASTER_RECOVERY.md`, `JIRA_BACKLOG.md`. | 🟢 PO Approved | `8fcfdf0` | [MEASURED] OCI Staging VM provisioned and SSH access externally verified by Owner (129.225.86.241); staging subnet and security list active; 2.0 GiB swap, Docker 29.8.1, Compose v5.5.1 configured; .env mode 600 with ALLOW_DB_WRITES=false; Caddy and API gateway verified (0 restarts); external /health 200 OK and Staging Supabase read 404 verified; Production untouched; governed under UPA-1233. | PO Approved |
 
 ---
+
+---
+
+## 📌 Sprint 13: Administrative Access Hardening & Universal Routing Architecture (Planned)
+
+> **Sprint Goal:** Harden remote cloud administrative access via stable private access mechanisms (eliminating dynamic public IP dependencies on SSH) and execute comprehensive verification of the end-to-end universal routing architecture (Client -> Vercel -> Caddy -> FastAPI, SSR routes, and public dynamic paths).
+
+| Sprint Metadata | Details |
+| :--- | :--- |
+| **Sprint Number** | Sprint 13 |
+| **Target Timeline** | Weeks 25–26 |
+| **Total Story Points** | TBD |
+| **Sprint Status** | 📋 **Planned** |
+| **Showcase Document** | `docs/po-governance/showcases/SPRINT_13_PO_SHOWCASE.md` (To be initialized upon sprint activation) |
+
+### 🎫 Sprint 13 Ticket Backlog
+
+| ID | Title | Type | Priority | Acceptance criteria | Status | Commits | Evidence | PO verdict |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **UPA-1301** | Staging Administrative Access Hardening & Private Management Access | Security / DevOps / Infrastructure | P1 | (1) Evaluate private administrative access options (including Tailscale / VPN / bastion-style approaches) against OCI Staging and future Production architecture without committing to vendor lock-in; (2) maintain least-privilege administrative access and define verified recovery/bootstrap procedures; (3) verify administrative connectivity from the owner workstation; (4) verify administrative access survives workstation public IPv4 changes and network transitions without requiring manual OCI Security List edits; (5) only after successful, verified private access is established and confirmed, remove reliance on direct public TCP/22 ingress; (6) under no circumstances weaken security by opening SSH / TCP 22 to `0.0.0.0/0`; (7) keep public application ingress ports 80/443 unchanged; (8) keep internal backend ports 8000 and 6379 externally inaccessible from the public internet.<br>**Affected files**: `docs/architecture/ORACLE_CLOUD_DEPLOYMENT.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, `docs/architecture/ENVIRONMENTS.md`.<br>**Applicable AGENTS.md rules**: Rules 2, 5, 6, 14, 16, 17, 21.<br>**Risks & Rollback**: Misconfiguration could lock out SSH access. Rollback: OCI Cloud Shell / console connection or emergency OCI Security List update to current workstation IP.<br>**Test Plan**: 1. Deploy candidate private access agent in Staging test mode. 2. Verify private SSH session from owner workstation. 3. Test connectivity across workstation network IP switch. 4. Verify external public TCP 22 removal. 5. Confirm ports 80/443 remain publicly accessible and 8000/6379 remain shielded.<br>**Governance & Deferral Note**: Deferral to Sprint 13 is intentional. Current Gate 9 Staging verification remains separate. Current Production gate remains HOLD. This is future work; zero implementation begins as part of this backlog planning update. | 📋 Planned | Pending | Pending | Pending PO |
+| **UPA-1302** | Universal Routing Architecture & End-to-End Path Verification | Architecture / Feature / DevOps | P1 | (1) Map and audit all active route definitions across Next.js rewrites (`frontend/next.config.mjs`), Vercel edge routing, Caddy reverse proxy (`Caddyfile`: `{$API_DOMAIN}` -> `reverse_proxy api:8000`), and FastAPI endpoint routing (`/api/v1/*`, `/health`, `/docs`); (2) validate the complete end-to-end request path flow (`Client -> Vercel Edge -> Caddy -> FastAPI`) with client IP preservation (`TRUSTED_PROXY=True`, `TRUSTED_PROXY_HOPS=2`); (3) verify public SSR recipe routes (`/r/[slug]`) and dynamic sitemap routing (`/sitemap.xml` / `/api/v1/public/sitemap`) against Staging Supabase without routing loops or proxy drops; (4) verify API routing under both direct API domain access and Next.js frontend proxy rewrites; (5) execute Staging-first validation across all routes before any Production rollout; (6) Production promotion strictly gated upon explicit Product Owner approval under Rule 17.<br>**Affected files**: `frontend/next.config.mjs`, `Caddyfile`, `frontend/src/app/r/[slug]/page.tsx`, `frontend/src/app/sitemap.ts`, `backend/app/api/v1/public_hub.py`, `docs/architecture/SYSTEM_ARCHITECTURE.md`, `docs/architecture/ORACLE_CLOUD_DEPLOYMENT.md`.<br>**Applicable AGENTS.md rules**: Rules 2, 5, 7, 14, 16, 17, 21.<br>**Risks & Rollback**: Incorrect proxy rewrite rules could break client-to-API requests or SSR pages. Rollback: Revert `next.config.mjs` / `Caddyfile` to previous verified commit.<br>**Test Plan**: 1. Audit route tables in Dev. 2. Verify all API and SSR routes in Staging environment. 3. Validate proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `Host`). 4. Run automated routing test suite in Staging.<br>**Governance & Deferral Note**: Deferral to Sprint 13 is intentional. Current Gate 9 Staging verification remains separate. Current Production gate remains HOLD. This is future work; zero implementation begins as part of this backlog planning update. | 📋 Planned | Pending | Pending | Pending PO |
+
+---
+
+## 📌 Sprint 13 Kanban Board (Planned)
+
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (0 pts) |
+| :--- | :--- | :--- | :--- |
+| `UPA-1301` Staging Administrative Access Hardening & Private Management Access<br>`UPA-1302` Universal Routing Architecture & End-to-End Path Verification | None | None | None |
 
 ## 📌 Sprint 10 Kanban Board (Completed)
 
