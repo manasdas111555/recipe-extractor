@@ -1,4 +1,7 @@
 .env
+.env.operator.local
+.env*.local
+
 __pycache__/
 *.py[cod]
 downloads/
