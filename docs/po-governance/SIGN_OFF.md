@@ -53,18 +53,21 @@
 ## Production Runbook Sign-Off — UPA-1225
 
 ### 1. Scope of Review
-- **UPA-1225: Production VM Zero-Downtime Promotion Runbook**
+- **UPA-1225: Production VM Zero-Downtime Promotion Runbook & Execution**
   - Minimal-interruption sequential container promotion protocol (`worker` $\rightarrow$ `api` $\rightarrow$ `caddy`) on single-node OCI Production VM (`140.245.214.28`).
-  - Pre-flight governance checks (Owner sign-off, UPA-1224 approval, UPA-1226 hard blocking gate).
-  - Pre-deployment live `PREV_PROD_SHA` capture and deterministic container rollback protocol using `docker-compose.hardening.yml`.
-  - Secret & environment audit (`chmod 600 .env`, zero secret leakage, `ALLOW_DB_WRITES=true` isolated exclusively to authorized production deployment gate).
-  - Living architecture documentation synchronized in `ORACLE_CLOUD_DEPLOYMENT.md` and `DISASTER_RECOVERY.md`.
-  - Verified Dev implementation (commit `fd11a02`, backlog sync `c62bd7c`, git diff check clean).
-  - Important limitation: Production deployment has not yet occurred; Production execution is strictly blocked until UPA-1226 is completed and verified.
+  - Pre-flight governance checks (Owner sign-off, UPA-1224 dependency isolation, UPA-1226 hard blocking gate completed).
+  - Pre-deployment live `PREV_PROD_SHA` capture (`1ada5015959d1674d05a9af0062bcefbd943252c`) and local state stash (`stash@{0}`).
+  - Production code synchronized to protected `main` branch merge commit `82623d7186055cf8c4569a9dac449167945cc17f` containing approved candidate `4a3f81d549c9e540f61b31fb0701cced4b8ab805`.
+  - Sequential container promotion executed: Worker rebuilt & running (`universalpro-worker`, Celery ready, 4 threads, Redis connected); API rebuilt & running (`universalpro-api`, healthy on loopback `127.0.0.1:8000:8000`); Caddy preserved (`universalpro-caddy`, 0 restarts, reverse proxy active); Redis preserved (`universalpro-redis`, healthy).
+  - Public smoke tests: `GET /health` returning HTTP 200 OK (`{"status":"healthy",...}`); `/docs`, `/redoc`, `/openapi.json` returning HTTP 404 Not Found.
+  - Port isolation: External TCP 8000 and TCP 6379 100% blocked (`connect_ex == 10035` / `ConnectTimeout`).
+  - Secret & environment audit: `.env` mode `600`, `SECRET_KEY` verified present/non-empty with zero secret leakage; `ALLOW_DB_WRITES` effectively unset/false; Production database (`scrqvbgjybnrvcpxbygf`) 100% untouched (0 migrations, 0 writes).
+  - Celery Superuser Warning: Recorded as **WARNING ONLY** (remediation scheduled for Sprint 13 container non-root user hardening).
+  - External Dependency Note: UPA-1224 HTTPS/TLS remains pending external Owner DNS A-record / FQDN provisioning.
 
 ### 2. Human Product Owner / Repository Owner Verdict
 - **Verdict:** Approved ("I approve UPA-1225.")
-- **Status:** 🟢 PO Approved
+- **Status:** 🟢 PO Approved (Production Verified & Closed)
 - **Date:** 2026-09-30
 
 ---
