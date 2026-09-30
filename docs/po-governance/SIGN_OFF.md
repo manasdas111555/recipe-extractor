@@ -28,4 +28,22 @@
 ### 2. Human Product Owner / Repository Owner Verdict
 - **Verdict:** Approved
 - **Status:** PO Approved
-- **Scope Note:** Applies to the consolidated Dev implementation package (UPA-1201 through UPA-1217) and Staging infrastructure package (UPA-1230, UPA-1233, UPA-1239). Production tickets (UPA-1224, UPA-1225, UPA-1226) remain in their separate planning/governance state.
+- **Scope Note:** Applies to the consolidated Dev implementation package (UPA-1201 through UPA-1217) and Staging infrastructure package (UPA-1230, UPA-1233, UPA-1239). Production tickets (UPA-1225, UPA-1226) remain in their separate planning/governance state.
+
+---
+
+## Production Architecture Sign-Off — UPA-1224
+
+### 1. Scope of Review
+- **UPA-1224: Production API HTTPS & Proxy IP Architecture**
+  - Parameterized Caddy HTTPS configuration (`{$API_DOMAIN}`) with `encode gzip zstd` and `reverse_proxy api:8000`.
+  - Ingress proxy architecture: `Client IP → Vercel Edge → Caddy (HTTPS:443) → FastAPI (api:8000)`.
+  - Proxy contract: `TRUSTED_PROXY=True`, `TRUSTED_PROXY_HOPS=2`.
+  - Living architecture documentation synchronized across `SYSTEM_ARCHITECTURE.md`, `ORACLE_CLOUD_DEPLOYMENT.md`, and `DISASTER_RECOVERY.md`.
+  - Verified Dev implementation (commit `8fe06e1`, backlog sync `c117ac5`, Caddy validation 0 errors, full backend test suite 330 passed / 3 deselected, frontend test suite 19 passed, Next.js production build clean).
+  - Production domain designated as `OWNER-DESIGNATED / TBD`. Zero direct-to-production or external infrastructure changes.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Verdict:** Approved ("I approve UPA-1224")
+- **Status:** 🟢 PO Approved
+- **Date:** 2026-09-30
