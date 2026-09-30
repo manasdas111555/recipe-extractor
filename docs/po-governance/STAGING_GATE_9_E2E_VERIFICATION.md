@@ -161,3 +161,9 @@
 # **GATE-9-CONDITIONAL**
 
 *(All 39 core SaaS application features, social video extraction to terminal completion, controlled database lifecycle with profile updates and post-rollback write guard, Playwright frontend journeys, port shielding, and security boundaries are 100% verified on Staging with measured empirical evidence; external paid payment card rails and live WhatsApp Meta business subscriptions are formally cataloged as blocked third-party dependencies.)*
+
+### Product Owner Closure Verdict:
+- **PO Verdict**: **🟢 APPROVED (CONDITIONAL)**
+- **Recorded in**: `docs/po-governance/SIGN_OFF.md`
+- **Owner Statement**: *"I acknowledge the three documented external Staging blockers (Razorpay sandbox, Stripe sandbox, and WhatsApp Meta Business inbound testing) and approve Gate 9 closure as CONDITIONAL, with these blockers explicitly retained as external dependencies."*
+- **Date**: 2026-09-30
