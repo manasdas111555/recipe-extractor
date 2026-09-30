@@ -47,3 +47,23 @@
 - **Verdict:** Approved ("I approve UPA-1224")
 - **Status:** 🟢 PO Approved
 - **Date:** 2026-09-30
+
+---
+
+## Production Runbook Sign-Off — UPA-1225
+
+### 1. Scope of Review
+- **UPA-1225: Production VM Zero-Downtime Promotion Runbook**
+  - Minimal-interruption sequential container promotion protocol (`worker` $\rightarrow$ `api` $\rightarrow$ `caddy`) on single-node OCI Production VM (`140.245.214.28`).
+  - Pre-flight governance checks (Owner sign-off, UPA-1224 approval, UPA-1226 hard blocking gate).
+  - Pre-deployment live `PREV_PROD_SHA` capture and deterministic container rollback protocol using `docker-compose.hardening.yml`.
+  - Secret & environment audit (`chmod 600 .env`, zero secret leakage, `ALLOW_DB_WRITES=true` isolated exclusively to authorized production deployment gate).
+  - Living architecture documentation synchronized in `ORACLE_CLOUD_DEPLOYMENT.md` and `DISASTER_RECOVERY.md`.
+  - Verified Dev implementation (commit `fd11a02`, backlog sync `c62bd7c`, git diff check clean).
+  - Important limitation: Production deployment has not yet occurred; Production execution is strictly blocked until UPA-1226 is completed and verified.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Verdict:** Approved ("I approve UPA-1225.")
+- **Status:** 🟢 PO Approved
+- **Date:** 2026-09-30
+
