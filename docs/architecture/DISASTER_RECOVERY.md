@@ -572,6 +572,86 @@ Verify `whatsapp_service.py` formats Blinkit (`https://blinkit.com/s/?q=...`) an
 
 ---
 
+### 📘 Runbook 23: Production Promotion, Minimal-Interruption Rollout & Deterministic Rollback (UPA-1225)
+**Symptom**: Deploying approved `main` branch releases to the dedicated Oracle Cloud Production VM (`140.245.214.28`) with minimal disruption and deterministic recovery.
+
+#### Step 1: Pre-Flight Governance & Stop Checks
+1. Ensure explicit human Owner approval is logged for `UPA-1225`.
+2. Confirm `UPA-1224` (HTTPS architecture) is `🟢 PO Approved`.
+3. **Hard Gate on UPA-1226**: Production promotion is strictly **BLOCKED** unless `UPA-1226` (direct port 8000 shielding, OCI port 8000 closure, Swagger disabling) is completed and verified.
+4. Verify local working tree is clean (`git status --short` empty).
+
+#### Step 2: Production VM Pre-Flight (Read-Only)
+Connect via SSH and capture previous running state:
+```bash
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28
+cd /home/ubuntu/recipe-extractor
+git status
+export PREV_PROD_SHA=$(git rev-parse HEAD)
+export PREV_PROD_BRANCH=$(git branch --show-current)
+echo "Previous Production SHA: ${PREV_PROD_SHA} (Branch: ${PREV_PROD_BRANCH})"
+free -h && df -h /
+```
+
+#### Step 3: Secret & Environment Configuration Audit
+Verify `.env` (permissions mode 600 via `chmod 600 .env`):
+- `ENVIRONMENT=production`
+- `ALLOW_DB_WRITES=true` (authorized exclusively during production execution)
+- `TRUSTED_PROXY=true`
+- `TRUSTED_PROXY_HOPS=2`
+- `API_DOMAIN=<Owner-designated controlled hostname or approved DDNS hostname>` (DNS A-record verified pointing to `140.245.214.28`)
+- `DOCS_URL=""` or `None`
+- Verified production API keys present without printing or logging secret values.
+
+#### Step 4: Code Synchronization from Approved Release
+```bash
+git fetch origin main
+export TARGET_RELEASE_SHA=$(git rev-parse origin/main)
+git log -1 --oneline origin/main
+git checkout main && git pull origin main
+test "$(git rev-parse HEAD)" = "${TARGET_RELEASE_SHA}" && echo "SHA MATCH CONFIRMED [OK]"
+```
+
+#### Step 5: Sequential Container Rollout (Minimal-Interruption Cutover)
+Execute sequential builds using the security hardening overlay:
+```bash
+# 1. Recreate background worker first (no HTTP traffic, 0 connection drops)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker
+
+# 2. Recreate API gateway (~1-2s estimated transient cutover buffered by Caddy)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps api
+
+# 3. Recreate Caddy reverse proxy (container recreated with updated config & TLS)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps caddy
+```
+*Single-Node Availability Invariant*: On a single-node VM (1 CPU, 1 GB RAM), container recreation provides **minimal-interruption cutover** (estimated ~1–2s API swap) buffered by Caddy rather than multi-node zero-downtime clustering.
+
+#### Step 6: Smoke Testing & Live Validation
+```bash
+# A. Local in-VM checks
+curl -s http://localhost:8000/health
+curl -s -H "Host: ${API_DOMAIN}" http://localhost/health
+
+# B. External client checks (from operator workstation)
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/health
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/docs  # Must return 404 or redirect
+curl -m 5 -sI http://140.245.214.28:8000/health  # Must be connection refused / timed out
+curl -s -o /dev/null -w "%{http_code}\n" https://universal-pro-ai.vercel.app/api/v1/extract
+docker compose ps
+```
+
+#### Step 7: Deterministic Rollback Protocol
+If any smoke test fails, container crashes occur, or TLS fails:
+```bash
+git status --porcelain
+git checkout ${PREV_PROD_SHA}
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker api caddy
+curl -s http://localhost:8000/health
+docker compose logs --tail=100 > ~/deployment_failure_$(date +%s).log
+```
+
+---
+
 
 
 

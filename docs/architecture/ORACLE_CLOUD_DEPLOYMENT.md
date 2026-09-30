@@ -264,6 +264,172 @@ Access from web browser / client:
 
 ---
 
+## 🚀 Production Promotion & Rollout Runbook (UPA-1225)
+
+This governed runbook specifies the end-to-end, minimal-interruption promotion procedure for deploying approved releases from the `main` branch to the dedicated Oracle Cloud Production VM (`140.245.214.28`).
+
+### 1. Pre-Flight Governance Gates (Mandatory Stop Checks)
+Before initiating any SSH connection or execution on the Production VM, the operator must verify:
+1. **Human Owner Approval**: Explicit, written Owner sign-off is recorded for ticket `UPA-1225`.
+2. **Architecture Dependency (UPA-1224)**: Ticket `UPA-1224` is `🟢 PO Approved`.
+3. **Port Shielding Hard Gate (UPA-1226)**: **Production promotion is strictly BLOCKED** unless the required `UPA-1226` acceptance criteria (FastAPI port 8000 binding restricted to `127.0.0.1:8000`, OCI Security List port 8000 closure, and Swagger disabling) have been completed and independently verified. Code promotion cannot proceed if port 8000 remains publicly accessible.
+4. **Promotion Source Integrity**: The target release is fully approved and merged to the `main` branch following the 3-Layer environment model (`Dev` $\rightarrow$ `staging` $\rightarrow$ `PO Review` $\rightarrow$ `main`). Production must pull only the approved commit SHA on `main`.
+5. **Clean Working Tree**: Local workspace is clean (`git status --short` empty).
+6. **Rollback Target Recorded**: The current live Production commit SHA is recorded on the server prior to pulling any changes (`PREV_PROD_SHA`).
+
+---
+
+### 2. Production VM Pre-Flight (Read-Only Diagnostics)
+Connect via SSH to the Production VM:
+```bash
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28
+```
+Execute read-only environment checks before modifying any files:
+```bash
+# 1. Verify working directory
+cd /home/ubuntu/recipe-extractor && pwd
+
+# 2. Verify git status and capture live running commit SHA
+git status
+export PREV_PROD_SHA=$(git rev-parse HEAD)
+export PREV_PROD_BRANCH=$(git branch --show-current)
+echo "Previous Production SHA: ${PREV_PROD_SHA} (Branch: ${PREV_PROD_BRANCH})"
+
+# 3. Check memory, swap, and disk health (Must have >= 1.5GB free swap for builds)
+free -h
+df -h /
+
+# 4. Check current container runtime status
+docker compose ps
+```
+
+---
+
+### 3. Secret & Environment Configuration Audit (`.env`)
+Verify the `.env` file on the Production VM (Mode 600: `chmod 600 .env`):
+* `ENVIRONMENT=production` (Strict production mode)
+* `ALLOW_DB_WRITES=true` (Authorized exclusively at this production deployment gate)
+* `TRUSTED_PROXY=true` (Enables proxy hop evaluation)
+* `TRUSTED_PROXY_HOPS=2` (Resolves Client IP across Vercel $\rightarrow$ Caddy $\rightarrow$ FastAPI)
+* `API_DOMAIN=<Owner-designated controlled hostname or approved DDNS hostname>` (Must have a verified public DNS A-record pointing to `140.245.214.28` before traffic cutover)
+* `DOCS_URL=""` or `None` (Disables public Swagger UI per UPA-1226)
+* Production credentials (`SECRET_KEY`, `ADMIN_API_KEY`, `SUPABASE_*`, `GEMINI_API_KEY`, `WHATSAPP_*`): Verified present, non-empty, and high-entropy without printing or logging secret values.
+* **Security Invariant**: Never print secret values in terminal output, logs, or documentation.
+
+---
+
+### 4. Code Synchronization from Approved Release
+```bash
+# 1. Fetch latest approved commits from main
+git fetch origin main
+
+# 2. Verify target commit matches approved PO release SHA
+export TARGET_RELEASE_SHA=$(git rev-parse origin/main)
+echo "Target Release SHA: ${TARGET_RELEASE_SHA}"
+git log -1 --oneline origin/main
+
+# 3. Switch to main and fast-forward to approved release
+git checkout main && git pull origin main
+
+# 4. Verify working tree is clean and on exact approved SHA
+git status
+test "$(git rev-parse HEAD)" = "${TARGET_RELEASE_SHA}" && echo "SHA MATCH CONFIRMED [OK]"
+```
+
+---
+
+### 5. Sequential Container Rollout Protocol (Minimal-Interruption Cutover)
+Build and recreate containers sequentially using the security hardening overlay:
+
+```bash
+# Step 1: Recreate Worker first (No inbound HTTP traffic; 0 connection drops)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker
+
+# Step 2: Recreate FastAPI Gateway (~1-2s estimated transient cutover; buffered by Caddy)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps api
+
+# Step 3: Recreate Caddy Reverse Proxy (Container recreated with updated Caddyfile & TLS config)
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps caddy
+```
+
+* **Single-Node Availability Invariant**: On a single-node VM (1 CPU, 1 GB RAM), container recreation provides **minimal-interruption cutover** (estimated ~1–2 seconds for API container swap) rather than a redundant zero-downtime cluster. Caddy holds incoming TCP connections during the brief container restart window.
+
+---
+
+### 6. Post-Deployment Smoke Tests & Validation
+Execute systematic validation checks:
+
+#### A. In-VM Local Diagnostics
+```bash
+# Test 1: In-VM Local API Gateway Health
+curl -s http://localhost:8000/health
+# Expected Output: {"status":"healthy","service":"Universal Pro AI - API Gateway", ...}
+
+# Test 2: In-VM Caddy Reverse Proxy Forwarding
+curl -s -H "Host: ${API_DOMAIN}" http://localhost/health
+# Expected Output: HTTP 308/301 Redirect to HTTPS or 200 OK
+```
+
+#### B. External Client Validation (Executed from Operator Workstation)
+```bash
+# Test 3: Public HTTPS Gateway Health
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/health
+# Expected Output: 200
+
+# Test 4: Public Swagger UI Shielding (UPA-1226)
+curl -fsS -o /dev/null -w "%{http_code}\n" https://${API_DOMAIN}/docs
+# Expected Output: 404 (or redirect)
+
+# Test 5: External TCP Port 8000 Shielding Verification (UPA-1226)
+curl -m 5 -sI http://140.245.214.28:8000/health
+# Expected Output: Connection refused or timed out (Port 8000 blocked by firewall/binding)
+
+# Test 6: Vercel Edge Frontend Ingress & Dynamic Rewrite Routing
+curl -s -o /dev/null -w "%{http_code}\n" https://universal-pro-ai.vercel.app/api/v1/extract
+# Expected Output: 405 (Method Not Allowed) or 422 (Unprocessable Entity)
+
+# Test 7: Production VM Container Health & Restarts
+ssh -i "path/to/ssh-key.key" ubuntu@140.245.214.28 "docker compose ps"
+# Expected Output: All services 'Up', 0 crash loops, 0 unexpected restarts
+```
+
+---
+
+### 7. Deterministic Rollback Protocol
+If any smoke test fails, container crash loops occur, or TLS handshake fails:
+```bash
+# 1. Verify working tree clean before rollback
+git status --porcelain
+
+# 2. Restore codebase to previous known-good Production SHA
+git checkout ${PREV_PROD_SHA}
+
+# 3. Rebuild and recreate previous stable container stack
+docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker api caddy
+
+# 4. Verify recovered local health
+curl -s http://localhost:8000/health
+
+# 5. Capture diagnostic logs and failure details
+docker compose logs --tail=100 > ~/deployment_failure_$(date +%s).log
+```
+* **Governance Invariant**: Zero ad-hoc code patching on the Production VM. All bug fixes must be developed and verified on `Dev`, tested on `staging`, and promoted via `main`.
+
+---
+
+### 8. Explicit Stop & Failure Conditions
+Execution must immediately halt and trigger the Rollback Protocol if:
+1. Docker image build fails (e.g., memory exhaustion; verify `/swapfile`).
+2. Any container fails health check or exits with non-zero status (`docker compose ps`).
+3. Caddy fails ACME TLS issuance or certificate validation fails.
+4. Public port 8000 remains accessible from external clients (UPA-1226 failure).
+5. Vercel Edge returns HTTP 502 Bad Gateway on API routes.
+6. Commit SHA mismatch detected on the Production VM.
+
+
+
+---
+
 ## 🌐 Layer 7 Shield & Global CDN: Vercel Edge Frontend
 
 To protect the Oracle Cloud raw IP from DDoS attacks, scraping, and brute force attempts, we placed a **Vercel Edge Next.js 15 PWA frontend** in front of the Oracle Cloud VM:
