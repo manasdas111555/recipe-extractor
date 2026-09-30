@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     TRUSTED_PROXY_HOPS: int = 1
     ALLOW_DB_WRITES: bool = False
 
+    # API Documentation & Schema Exposure (Sprint 12 - UPA-1226)
+    DOCS_URL: Optional[str] = "/docs"
+    REDOC_URL: Optional[str] = "/redoc"
+    OPENAPI_URL: Optional[str] = "/openapi.json"
+
     # Supabase Data Layer
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
@@ -123,6 +128,12 @@ class Settings(BaseSettings):
             for key_name, val in required_secrets.items():
                 if not val:
                     raise ValueError(f"Production environment setup failure: Missing required secret environment variable '{key_name}'")
+
+        # Normalize empty or "none"/"null" string literals from .env to Python None (UPA-1226)
+        for field in ["DOCS_URL", "REDOC_URL", "OPENAPI_URL"]:
+            val = getattr(self, field, None)
+            if isinstance(val, str) and val.strip().lower() in ("", "none", "null", "false"):
+                setattr(self, field, None)
 
 
 _settings_instance: Optional[Settings] = None

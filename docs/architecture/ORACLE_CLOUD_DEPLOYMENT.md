@@ -113,9 +113,9 @@ In **Default Security List for universalpro-ai-vcn**, added the following Ingres
 | Stateless | Source CIDR | IP Protocol | Destination Port Range | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
 | No | `0.0.0.0/0` | TCP | `22` | SSH Remote Login |
-| No | `0.0.0.0/0` | TCP | `80` | HTTP Web Traffic |
-| No | `0.0.0.0/0` | TCP | `443` | HTTPS Encrypted Web Traffic |
-| No | `0.0.0.0/0` | TCP | `8000` | FastAPI Direct API Gateway |
+| No | `0.0.0.0/0` | TCP | `80` | HTTP Web Traffic (Caddy redirect) |
+| No | `0.0.0.0/0` | TCP | `443` | HTTPS Encrypted Web Traffic (Caddy TLS) |
+| *Removed* | `0.0.0.0/0` | TCP | `8000` | *Deprecated / Removed per UPA-1226 (Loopback bound `127.0.0.1:8000`)* |
 
 ### Step 4: Compute VM Instance Creation
 1. **Name**: `universal-pro-ai-instance`
@@ -209,10 +209,9 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 4. Open Ubuntu OS internal firewall
+# 4. Open Ubuntu OS internal firewall (Only Ports 80 and 443; Port 8000 blocked per UPA-1226)
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8000 -j ACCEPT
 sudo apt install -y iptables-persistent
 sudo netfilter-persistent save
 
