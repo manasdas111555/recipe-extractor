@@ -18,17 +18,23 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-# Ensure repository root is on sys.path for ai_router, config, downloader, etc.
+# Ensure repository root and services dir are on sys.path for ai_router, config, downloader, etc.
 ROOT_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
+SERVICES_DIR = str(Path(__file__).resolve().parent.parent / "services")
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+if SERVICES_DIR not in sys.path:
+    sys.path.insert(0, SERVICES_DIR)
 
 from backend.app.workers.celery_app import celery_app
 from backend.app.workers.media_downloader import managed_worker_download
 from backend.app.services.affiliate_engine import get_affiliate_engine
 from backend.app.core.supabase_client import get_supabase_client
 from backend.app.services.job_manager import get_job_manager
-import config
+try:
+    from backend.app.services.config import get_api_key, get_mistral_api_key, get_groq_api_key
+except ImportError:
+    from config import get_api_key, get_mistral_api_key, get_groq_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +57,7 @@ def execute_extraction_pipeline(
     Step 3: Enrich with multi-store affiliate & 10-minute quick-commerce cart deep links
     Step 4: Persist structured payload to Supabase database & update user daily quota
     """
+    start_time = time.time()
     manager = get_job_manager()
     supabase = get_supabase_client()
     affiliate_engine = get_affiliate_engine()
@@ -62,6 +69,15 @@ def execute_extraction_pipeline(
                 progress_callback(stage, percent, error, data)
             except Exception:
                 pass
+
+    # Re-validate video URL against allowlist and SSRF rules before download
+    from backend.app.services.url_validator import validate_social_url
+    valid_url, url_err, _, _ = validate_social_url(video_url)
+    if not valid_url:
+        err_msg = f"URL validation failed in worker: {url_err}"
+        logger.error("[%s] %s", job_id, err_msg)
+        update_progress("failed", 100, error=err_msg)
+        return {"status": "failed", "error": err_msg}
 
     update_progress("downloading_media", 20)
 
@@ -89,11 +105,14 @@ def execute_extraction_pipeline(
         update_progress("multimodal_ai_inference", 55)
 
         # Step 2: Multimodal AI Reasoning via Central Router
-        from ai_router import route_video_intelligence
+        try:
+            from ai_router import route_video_intelligence
+        except ImportError:
+            from backend.app.services.ai_router import route_video_intelligence
 
-        gemini_key = config.get_api_key()
-        mistral_key = config.get_mistral_api_key()
-        groq_key = config.get_groq_api_key()
+        gemini_key = get_api_key()
+        mistral_key = get_mistral_api_key()
+        groq_key = get_groq_api_key()
 
         selected_provider = provider if (provider and provider != "auto") else ("gemini" if gemini_key else ("mistral" if mistral_key else "groq"))
 
@@ -178,6 +197,7 @@ def execute_extraction_pipeline(
 
         # Step 4: Persist in Supabase PostgreSQL & Increment Daily Quota (UPA-205)
         update_progress("persisting_to_database", 90)
+        processing_time_ms = int((time.time() - start_time) * 1000)
         try:
             supabase.save_extraction({
                 "id": job_id,
@@ -187,6 +207,7 @@ def execute_extraction_pipeline(
                 "title": meta.get("title", "Extracted Content"),
                 "domain_category": meta.get("category", "RECIPE"),
                 "content_payload": content_payload,
+                "processing_time_ms": processing_time_ms,
                 "status": "completed"
             })
             supabase.increment_daily_quota(user_id)
@@ -194,7 +215,7 @@ def execute_extraction_pipeline(
                 source_platform="web",
                 source_url=video_url,
                 classified_domain=meta.get("category", "RECIPE"),
-                turnaround_time_ms=2500,
+                turnaround_time_ms=processing_time_ms,
                 status="completed"
             )
             logger.info("[%s] Saved extraction & updated quota for user %s", job_id, user_id)

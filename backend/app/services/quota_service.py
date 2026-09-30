@@ -5,6 +5,7 @@ Enforces daily extraction limits for anonymous users and free-tier accounts.
 UPA-601: Redis-backed Daily Quota Middleware with In-Memory Dual-Mode Fallback.
 """
 
+import time
 import logging
 import datetime
 import threading
@@ -15,10 +16,9 @@ from backend.app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-
-# BETA OVERRIDE: Temporarily raised from 3/10 to 20/30 for Friends & Family testing
-GUEST_DAILY_LIMIT = 20
-FREE_AUTH_DAILY_LIMIT = 30
+# Single source of truth aliases resolving from Settings (UPA-1214)
+GUEST_DAILY_LIMIT = getattr(get_settings(), "DAILY_GUEST_QUOTA_LIMIT", 20)
+FREE_AUTH_DAILY_LIMIT = getattr(get_settings(), "DAILY_FREE_QUOTA_LIMIT", 30)
 PRO_DAILY_LIMIT = 999999
 
 
@@ -32,24 +32,41 @@ class QuotaManager:
         self.settings = get_settings()
         self._redis_client: Optional[redis.Redis] = None
         self._redis_checked = False
+        self._last_redis_attempt = 0.0
+        self._retry_cooldown = 5.0
         self._in_memory_lock = threading.Lock()
-        self._in_memory_quotas: Dict[str, int] = {}
+        self._in_memory_quotas: Dict[str, Any] = {}
         self._current_day_str: str = datetime.date.today().isoformat()
 
-    def _get_redis(self) -> Optional[redis.Redis]:
-        """Lazy-connects to Redis; returns None if Redis is unreachable."""
-        if not self._redis_checked:
-            self._redis_checked = True
-            redis_url = self.settings.REDIS_URL or "redis://localhost:6379/0"
+    def _get_redis(self, max_retries: int = 2, initial_backoff: float = 0.05) -> Optional[redis.Redis]:
+        """Lazy-connects to Redis with bounded retry/backoff; returns None if Redis is unreachable."""
+        if self._redis_client is not None:
+            return self._redis_client
+
+        now = time.time()
+        # If recently failed, respect bounded cooldown before retrying to prevent thrashing
+        if self._redis_checked and (now - self._last_redis_attempt < self._retry_cooldown):
+            return None
+
+        self._last_redis_attempt = now
+        self._redis_checked = True
+        redis_url = self.settings.REDIS_URL or "redis://localhost:6379/0"
+
+        for attempt in range(1, max_retries + 1):
             try:
                 client = redis.Redis.from_url(redis_url, socket_timeout=1.5, socket_connect_timeout=1.5)
                 client.ping()
                 self._redis_client = client
                 logger.info("[QuotaManager] Connected to Redis for distributed quota tracking.")
+                return self._redis_client
             except Exception as e:
-                logger.warning(f"[QuotaManager] Redis unavailable ({e}). Using in-memory fallback quota store.")
-                self._redis_client = None
-        return self._redis_client
+                logger.warning(f"[QuotaManager] Redis connection attempt {attempt}/{max_retries} failed: {e}")
+                if attempt < max_retries:
+                    time.sleep(initial_backoff * attempt)
+
+        logger.warning("[QuotaManager] Redis unavailable after retries. Using in-memory fallback quota store.")
+        self._redis_client = None
+        return None
 
     def _format_key(self, identifier: str) -> str:
         """Constructs daily partition key: quota:{identifier}:{YYYY-MM-DD}"""
@@ -63,9 +80,9 @@ class QuotaManager:
         if clean_tier in ["pro", "creator", "business", "enterprise"]:
             return PRO_DAILY_LIMIT
         elif clean_tier in ["free", "user", "authenticated"]:
-            return getattr(self.settings, "DAILY_FREE_QUOTA_LIMIT", FREE_AUTH_DAILY_LIMIT)
+            return getattr(self.settings, "DAILY_FREE_QUOTA_LIMIT", 30)
         else:  # guest / anonymous
-            return getattr(self.settings, "DAILY_GUEST_QUOTA_LIMIT", GUEST_DAILY_LIMIT)
+            return getattr(self.settings, "DAILY_GUEST_QUOTA_LIMIT", 20)
 
     def check_and_consume_quota(
         self,
@@ -179,6 +196,43 @@ class QuotaManager:
                 pass
         with self._in_memory_lock:
             self._in_memory_quotas.pop(key, None)
+
+    def check_generic_rate_limit(self, key: str, limit: int = 30, window_seconds: int = 60) -> Tuple[bool, int]:
+        """
+        Generic sliding-window rate limiter utilizing Redis with in-memory fallback.
+        Returns (is_allowed, current_count).
+        """
+        import time
+        r = self._get_redis()
+        bucket = int(time.time() // window_seconds)
+        redis_key = f"rate_limit:{key}:{bucket}"
+
+        if r:
+            try:
+                pipeline = r.pipeline()
+                pipeline.incr(redis_key)
+                pipeline.expire(redis_key, window_seconds + 5)
+                results = pipeline.execute()
+                count = int(results[0])
+                return count <= limit, count
+            except Exception as e:
+                logger.warning(f"[QuotaManager] Redis rate limit error ({e}). Falling back to memory.")
+
+        with self._in_memory_lock:
+            now = time.time()
+            cutoff = now - window_seconds
+            raw_ts = self._in_memory_quotas.get(redis_key, [])
+            timestamps = raw_ts if isinstance(raw_ts, list) else []
+            timestamps = [t for t in timestamps if t > cutoff]
+            timestamps.append(now)
+            self._in_memory_quotas[redis_key] = timestamps
+            count = len(timestamps)
+            return count <= limit, count
+
+    def reset_rate_limits_for_testing(self):
+        """Helper to clear in-memory rate limits and quota state for testing."""
+        with self._in_memory_lock:
+            self._in_memory_quotas.clear()
 
 
 _quota_manager: Optional[QuotaManager] = None

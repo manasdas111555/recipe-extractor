@@ -29,9 +29,9 @@ app = FastAPI(
         "(Instagram Reels, YouTube Shorts, TikTok) into structured, persistent, "
         "and commercially actionable utility."
     ),
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    docs_url=settings.DOCS_URL,
+    redoc_url=settings.REDOC_URL,
+    openapi_url=settings.OPENAPI_URL
 )
 
 # CORS Middleware Configuration

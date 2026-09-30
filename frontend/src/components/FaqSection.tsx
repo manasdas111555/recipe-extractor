@@ -58,7 +58,7 @@ const FAQ_DATA: FaqItem[] = [
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
             <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34D399', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>4</span>
             <div>
-              <strong style={{ color: 'var(--text-primary)' }}>Click "Extract Anything":</strong> Universal Pro AI processes video keyframes & audio transcripts in sub-3s to produce interactive recipe cards, ingredient lists, or product find links!
+              <strong style={{ color: 'var(--text-primary)' }}>Click "Extract Anything":</strong> Universal Pro AI extracts structured recipe cards, ingredient lists, or product find links instantly!
             </div>
           </div>
         </div>
@@ -102,7 +102,7 @@ const FAQ_DATA: FaqItem[] = [
           </div>
         </div>
         <p style={{ marginTop: '0.25rem', fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>
-          Clicking any store badge opens the exact pre-filled search query so you can add ingredients or products straight to your cart in seconds!
+          Clicking any store badge opens the pre-filled search query so you can add ingredients or products straight to your cart in seconds!
         </p>
       </div>
     ),
@@ -118,7 +118,7 @@ const FAQ_DATA: FaqItem[] = [
           Every extracted cooking recipe includes an interactive <strong style={{ color: '#34D399' }}>Serving Adjuster</strong> card.
         </p>
         <p>
-          Click the <strong>+</strong> or <strong>-</strong> buttons to increase or decrease the portion size. The AI dynamically recalculates ingredient quantities (grams, cups, tablespoons, teaspoons, pieces) in real-time without losing formatting!
+          Click the <strong>+</strong> or <strong>-</strong> buttons to increase or decrease the portion size. The ingredient quantities recalculate automatically in real-time for your chosen portion!
         </p>
       </div>
     ),
@@ -150,7 +150,7 @@ const FAQ_DATA: FaqItem[] = [
           All your extractions are saved in your local browser's <strong style={{ color: '#34D399' }}>Intelligence Vault Library</strong>.
         </p>
         <p>
-          Click the <strong style={{ color: 'var(--accent-emerald)' }}>Intelligence Vault</strong> button in the top navigation bar at any time to browse, search, or reload past recipe cards and product extractions—even without internet connection!
+          Click the <strong style={{ color: 'var(--accent-emerald)' }}>Intelligence Vault</strong> button in the top navigation bar at any time to browse, search, or reload past recipe cards and product extractions.
         </p>
       </div>
     ),
@@ -159,23 +159,20 @@ const FAQ_DATA: FaqItem[] = [
   {
     id: 'troubleshooting-bot-check',
     category: 'troubleshooting',
-    question: 'What should I do if a YouTube Short or Instagram Reel fails to load?',
+    question: 'What should I do if a video link fails to load?',
     answer: (
       <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <p>
-          Universal Pro AI includes an automated <strong>Resilient Dual-Fallback Engine</strong>:
+          If a video link does not load properly, follow these user checks:
         </p>
         <ol style={{ paddingLeft: '1.25rem', lineHeight: '1.6' }}>
-          <li>If YouTube or Instagram temporarily restricts cloud datacenter IP downloads with a bot sign-in prompt, our fallback engine automatically detects the restriction within milliseconds.</li>
-          <li>It instantly switches to pulling high-resolution keyframe snapshots and oEmbed metadata.</li>
-          <li>The AI model processes visual frames and description context to generate complete extraction cards without failing.</li>
+          <li>Ensure the video is <strong>Public</strong> (not set to Private or Unlisted on YouTube/Instagram).</li>
+          <li>Copy the direct URL from your browser address bar or the official Share button in the app.</li>
+          <li>Paste the link back into the input bar and click <strong>Extract Anything</strong> again.</li>
         </ol>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-          If a URL fails twice, ensure the video is <strong>Public</strong> (not Private or Unlisted) and try re-submitting.
-        </p>
       </div>
     ),
-    tags: ['error', 'bot check', 'youtube shorts error', 'instagram reel fail', 'fallback']
+    tags: ['error', 'troubleshooting', 'youtube shorts error', 'instagram reel fail', 'link help']
   },
   {
     id: 'mobile-chat-bots',
@@ -203,12 +200,19 @@ const FAQ_DATA: FaqItem[] = [
 interface FaqSectionProps {
   isOpen?: boolean;
   onClose?: () => void;
+  initialCategory?: string;
 }
 
-export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+export default function FaqSection({ isOpen, onClose, initialCategory = 'all' }: FaqSectionProps = {}) {
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [openId, setOpenId] = useState<string | null>('how-to-extract');
+
+  React.useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory, isOpen]);
 
   const toggleAccordion = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
@@ -230,16 +234,14 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
       id="faq-section"
       style={{
         width: '100%',
-        maxWidth: '900px',
+        maxWidth: '920px',
         maxHeight: '90vh',
         overflowY: 'auto',
         padding: '2.5rem 1.5rem',
-        background: '#0D111D',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'var(--bg-surface-solid)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-lg)',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         position: 'relative'
       }}
     >
@@ -250,7 +252,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
             position: 'absolute',
             top: '1.25rem',
             right: '1.25rem',
-            background: 'rgba(255, 255, 255, 0.08)',
+            background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
             color: 'var(--text-primary)',
             borderRadius: '50%',
@@ -270,7 +272,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
       )}
 
       {/* Header Badge & Title */}
-      <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+      <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
         <div
           className="badge-pill badge-emerald"
           style={{ marginBottom: '0.75rem', padding: '0.35rem 0.85rem', fontSize: '0.75rem' }}
@@ -285,332 +287,461 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
             fontWeight: 800,
             letterSpacing: '-0.02em',
             color: 'var(--text-primary)',
-            marginBottom: '0.75rem'
+            marginBottom: '0.5rem'
           }}
         >
           How to Use <span className="gradient-text">Universal Pro AI</span>
         </h2>
 
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '640px', margin: '0 auto 1.25rem' }}>
           Everything you need to know about extracting cooking recipes, workout plans, product finds, and quick-commerce shopping links from social media videos.
         </p>
-      </div>
 
-      {/* Visual 4-Step Quick Start Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '1rem',
-          marginBottom: '3rem'
-        }}
-      >
-        <div
-          style={{
-            padding: '1.25rem',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                color: '#059669',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '1.1rem'
-              }}
-            >
-              01
-            </div>
-            <Play size={20} color="#059669" />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              Copy Video Link
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Copy any URL from YouTube Shorts, Instagram Reels, TikTok, or Facebook Reels.
-            </p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '1.25rem',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(2, 132, 199, 0.15)',
-                color: '#0284C7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '1.1rem'
-              }}
-            >
-              02
-            </div>
-            <Zap size={20} color="#0284C7" />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              Sub-3s AI Analysis
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Our multimodal neural engine samples video frames and transcribes audio narration.
-            </p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '1.25rem',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(217, 119, 6, 0.15)',
-                color: '#D97706',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '1.1rem'
-              }}
-            >
-              03
-            </div>
-            <ShoppingCart size={20} color="#D97706" />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              1-Click Buy & Store Search
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Get direct 1-click buy links for Amazon, Blinkit, Zepto, Swiggy Instamart, and Flipkart.
-            </p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '1.25rem',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: 'rgba(192, 38, 211, 0.15)',
-                color: '#C026D3',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '1.1rem'
-              }}
-            >
-              04
-            </div>
-            <Smartphone size={20} color="#C026D3" />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              Export to WhatsApp & Vault
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-              Send formatted notes straight to WhatsApp or save extractions offline in your Vault.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Tabs & Search Bar */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '1.5rem'
-        }}
-      >
-        {/* Category Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {[
-            { id: 'all', label: 'All Questions' },
-            { id: 'getting_started', label: '🚀 Getting Started' },
-            { id: 'features', label: '✨ Features & Shopping' },
-            { id: 'platforms', label: '📱 Platforms' },
-            { id: 'troubleshooting', label: '🛠️ Troubleshooting' }
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              style={{
-                padding: '0.45rem 0.85rem',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.825rem',
-                fontWeight: 700,
-                border: activeCategory === cat.id ? '1px solid #059669' : '1px solid var(--border-subtle)',
-                background: activeCategory === cat.id ? '#10B981' : 'var(--bg-surface-elevated)',
-                color: activeCategory === cat.id ? '#FFFFFF' : 'var(--text-secondary)',
-                boxShadow: activeCategory === cat.id ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        {/* FAQ Search Bar */}
-        <div style={{ position: 'relative', width: '100%', maxWidth: '280px' }}>
-          <Search
-            size={16}
-            color="var(--text-muted)"
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
-          />
-          <input
-            type="text"
-            placeholder="Search FAQs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Prominent Primary Mode Switcher Bar (FAQ vs User Manual) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveCategory('all')}
             style={{
-              width: '100%',
-              padding: '0.45rem 0.75rem 0.45rem 2.2rem',
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              color: 'var(--text-primary)',
-              fontSize: '0.85rem',
-              outline: 'none'
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Accordion FAQ Items List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {filteredFaqs.length > 0 ? (
-          filteredFaqs.map((faq) => {
-            const isOpen = openId === faq.id;
-            return (
-              <div
-                key={faq.id}
-                style={{
-                  background: 'var(--bg-card)',
-                  border: isOpen ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
-                  overflow: 'hidden',
-                  transition: 'all 0.2s ease-in-out'
-                }}
-              >
-                <button
-                  onClick={() => toggleAccordion(faq.id)}
-                  style={{
-                    width: '100%',
-                    padding: '1.1rem 1.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.975rem',
-                    fontWeight: 600,
-                    textAlign: 'left',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <HelpCircle size={18} color={isOpen ? '#34D399' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
-                    <span>{faq.question}</span>
-                  </div>
-                  {isOpen ? (
-                    <ChevronUp size={18} color="#34D399" style={{ flexShrink: 0 }} />
-                  ) : (
-                    <ChevronDown size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
-                  )}
-                </button>
-
-                {isOpen && (
-                  <div
-                    style={{
-                      padding: '0 1.25rem 1.25rem 3rem',
-                      borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-                      marginTop: '0.25rem',
-                      paddingTop: '1rem'
-                    }}
-                  >
-                    {faq.answer}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        ) : (
-          <div
-            style={{
-              padding: '2rem',
-              textAlign: 'center',
-              color: 'var(--text-muted)',
-              fontSize: '0.9rem'
+              padding: '0.65rem 1.35rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              border: activeCategory !== 'user_manual' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
+              background: activeCategory !== 'user_manual' ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-card-solid)',
+              color: activeCategory !== 'user_manual' ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease',
+              boxShadow: activeCategory !== 'user_manual' ? '0 4px 14px rgba(16, 185, 129, 0.2)' : 'none'
             }}
           >
-            No FAQs matching "{searchQuery}". Try searching for terms like "recipe", "YouTube", "Blinkit", or "servings".
-          </div>
-        )}
+            <HelpCircle size={18} />
+            <span>❓ Frequently Asked Questions</span>
+          </button>
+          <button
+            onClick={() => setActiveCategory('user_manual')}
+            style={{
+              padding: '0.65rem 1.35rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              border: activeCategory === 'user_manual' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
+              background: activeCategory === 'user_manual' ? 'rgba(16, 185, 129, 0.14)' : 'var(--bg-card-solid)',
+              color: activeCategory === 'user_manual' ? 'var(--accent-emerald)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease',
+              boxShadow: activeCategory === 'user_manual' ? '0 4px 14px rgba(16, 185, 129, 0.2)' : 'none'
+            }}
+          >
+            <BookOpen size={18} />
+            <span>📘 Full User Manual & Guide</span>
+          </button>
+        </div>
       </div>
+
+      {activeCategory === 'user_manual' ? (
+        /* Full User Guide Deck Panel */
+        <div
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid rgba(16, 185, 129, 0.35)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
+          }}
+        >
+          <div style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 0 0.5rem' }}>
+              <BookOpen size={20} /> Universal Pro AI — Complete User Manual & Feature Guide
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+              End-to-end user manual explaining all capabilities, interactive tools, and channel integrations.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#10B981', margin: '0 0 0.35rem' }}>
+                1. ⚡ Sub-3s Video Extraction
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
+                Paste links from YouTube Shorts, Instagram Reels, TikTok, or Facebook Reels. AI extracts ingredients, cookware, equipment, and step-by-step instructions.
+              </p>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0284C7', margin: '0 0 0.35rem' }}>
+                2. 🧑‍🍳 Interactive Hands-Free Cooking Mode
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
+                Automatic Screen Wake Lock prevents display sleep. Voice navigation ("Next", "Back", "Timer") and countdown chimes enable hands-free cooking in the kitchen.
+              </p>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#D97706', margin: '0 0 0.35rem' }}>
+                3. 📊 Smart Recipe Yield Scaling (1–12x)
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
+                Scale recipes from 1 to 12 servings with clean fraction formatting (½, ¾, ⅓) and native metric unit preservation (e.g. 1 katori → 2 katori).
+              </p>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#C026D3', margin: '0 0 0.35rem' }}>
+                4. 🛒 10-Minute Grocery Delivery & E-Commerce
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
+                1-click cart links for Blinkit, Zepto, Swiggy Instamart, BigBasket, Amazon India, and EarnKaro partners.
+              </p>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#25D366', margin: '0 0 0.35rem' }}>
+                5. 💬 WhatsApp & Telegram Bots
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
+                Send clean formatted notes to WhatsApp or chat with our Telegram bot (@UniversalProAIBot) with 1-click interactive cooking mode launch.
+              </p>
+            </div>
+
+            <div style={{ padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#4F46E5', margin: '0 0 0.35rem' }}>
+                6. 📚 Intelligence Vault
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45, margin: 0 }}>
+                Auto-saves extractions locally in browser storage for offline viewing, bookmarking, and instant searching.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Visual 4-Step Quick Start Grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '1rem',
+              marginBottom: '3rem'
+            }}
+          >
+            <div
+              style={{
+                padding: '1.25rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#059669',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1.1rem'
+                  }}
+                >
+                  01
+                </div>
+                <Play size={20} color="#059669" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                  Copy Video Link
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  Copy any URL from YouTube Shorts, Instagram Reels, TikTok, or Facebook Reels.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '1.25rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(2, 132, 199, 0.15)',
+                    color: '#0284C7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1.1rem'
+                  }}
+                >
+                  02
+                </div>
+                <Zap size={20} color="#0284C7" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                  Instant AI Extraction
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  AI automatically extracts ingredients, cookware, steps, and shopping links from your video link.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '1.25rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(217, 119, 6, 0.15)',
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1.1rem'
+                  }}
+                >
+                  03
+                </div>
+                <ShoppingCart size={20} color="#D97706" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                  1-Click Buy & Store Search
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  Get direct 1-click buy links for Amazon, Blinkit, Zepto, Swiggy Instamart, and Flipkart.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '1.25rem',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(192, 38, 211, 0.15)',
+                    color: '#C026D3',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: '1.1rem'
+                  }}
+                >
+                  04
+                </div>
+                <Smartphone size={20} color="#C026D3" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                  Export to WhatsApp & Vault
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  Send formatted notes straight to WhatsApp or save extractions offline in your Vault.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Tabs & Search Bar */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+              marginBottom: '1.5rem'
+            }}
+          >
+            {/* Category Pills */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: 'All Questions' },
+                { id: 'getting_started', label: '🚀 Getting Started' },
+                { id: 'features', label: '✨ Features & Shopping' },
+                { id: 'platforms', label: '📱 Platforms' },
+                { id: 'troubleshooting', label: '🛠️ Troubleshooting' }
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.825rem',
+                    fontWeight: 700,
+                    border: activeCategory === cat.id ? '1px solid #059669' : '1px solid var(--border-subtle)',
+                    background: activeCategory === cat.id ? '#10B981' : 'var(--bg-surface-elevated)',
+                    color: activeCategory === cat.id ? '#FFFFFF' : 'var(--text-secondary)',
+                    boxShadow: activeCategory === cat.id ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* FAQ Search Bar */}
+            <div style={{ position: 'relative', width: '100%', maxWidth: '280px' }}>
+              <Search
+                size={16}
+                color="var(--text-muted)"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }}
+              />
+              <input
+                type="text"
+                placeholder="Search FAQs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem 0.75rem 0.45rem 2.2rem',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem',
+                  outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* FAQ Accordions List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {filteredFaqs.length > 0 ? (
+              filteredFaqs.map((faq) => {
+                const isOpen = openId === faq.id;
+                return (
+                  <div
+                    key={faq.id}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: isOpen ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                  >
+                    <button
+                      onClick={() => toggleAccordion(faq.id)}
+                      style={{
+                        width: '100%',
+                        padding: '1.1rem 1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '1rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.975rem',
+                        fontWeight: 600,
+                        textAlign: 'left',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <HelpCircle size={18} color={isOpen ? '#34D399' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
+                        <span>{faq.question}</span>
+                      </div>
+                      {isOpen ? (
+                        <ChevronUp size={18} color="#34D399" style={{ flexShrink: 0 }} />
+                      ) : (
+                        <ChevronDown size={18} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                      )}
+                    </button>
+
+                    {isOpen && (
+                      <div
+                        style={{
+                          padding: '0 1.25rem 1.25rem 3rem',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                          marginTop: '0.25rem',
+                          paddingTop: '1rem'
+                        }}
+                      >
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div
+                style={{
+                  padding: '2rem',
+                  textAlign: 'center',
+                  color: 'var(--text-muted)',
+                  fontSize: '0.9rem'
+                }}
+              >
+                No FAQs matching "{searchQuery}". Try searching for terms like "recipe", "YouTube", "Blinkit", or "servings".
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 
   if (onClose) {
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
     return (
       <div
         style={{
@@ -619,7 +750,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backgroundColor: isDark ? 'rgba(4, 7, 17, 0.85)' : 'rgba(241, 245, 249, 0.88)',
           backdropFilter: 'blur(12px)',
           zIndex: 1000,
           display: 'flex',
@@ -629,7 +760,7 @@ export default function FaqSection({ isOpen, onClose }: FaqSectionProps = {}) {
         }}
         onClick={onClose}
       >
-        <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '900px' }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '920px' }}>
           {contentNode}
         </div>
       </div>

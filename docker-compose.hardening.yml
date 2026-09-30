@@ -1,0 +1,17 @@
+# docker-compose.hardening.yml
+# Universal Pro AI - Hardened Container Security Overlay (Opt-in)
+
+services:
+  api:
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+  worker:
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

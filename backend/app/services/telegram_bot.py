@@ -137,12 +137,18 @@ def format_telegram_markdown(result: Dict[str, Any], canonical_url: str) -> Tupl
 
     inline_keyboard.append(action_row)
 
-    # 2. Web View Button (PO Directive: Option A - Bridge into Web App)
-    web_app_url = "https://universalpro-stage.streamlit.app"
-    inline_keyboard.append([{
-        "text": "🌐 View Full Interactive Recipe",
-        "url": web_app_url
-    }])
+    # 2. Web View Buttons (PO Directive: Option A - Bridge into Web App & Cooking Mode)
+    web_app_url = "https://universal-pro-ai.vercel.app"
+    inline_keyboard.append([
+        {
+            "text": "🧑‍🍳 Start Cooking Mode",
+            "url": f"{web_app_url}?mode=cook"
+        },
+        {
+            "text": "🌐 View Full Interactive Recipe",
+            "url": web_app_url
+        }
+    ])
 
     return text_content, inline_keyboard
 
@@ -283,6 +289,13 @@ def handle_telegram_update(update: Dict[str, Any], background_tasks = None) -> D
         )
         logger.info(f"[Telegram Non-URL] Dispatch to chat {chat_id} result: {send_ok}")
         return {"status": "ignored", "reason": "no_valid_url", "send_ok": send_ok}
+
+    # Security URL Allowlist & SSRF Check
+    from backend.app.services.url_validator import validate_social_url
+    valid, url_err, _, _ = validate_social_url(video_url)
+    if not valid:
+        send_telegram_message(chat_id, f"❌ *Invalid URL:* {url_err}")
+        return {"status": "ignored", "reason": "url_validation_failed", "error": url_err}
 
     # Dispatch extraction asynchronously
     if background_tasks:

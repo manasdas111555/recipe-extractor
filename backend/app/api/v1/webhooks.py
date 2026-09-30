@@ -53,9 +53,25 @@ async def receive_whatsapp_event(
 ):
     """
     Receives incoming WhatsApp Cloud API webhooks.
-    Acknowledges within 2000ms with HTTP 200 to satisfy Meta webhook SLA,
-    while processing video extraction asynchronously in the background.
+    Validates HMAC-SHA256 X-Hub-Signature-256 signature when provided or in production.
     """
+    settings = get_settings()
+    sig_header = request.headers.get("X-Hub-Signature-256")
+    if sig_header or (settings.WHATSAPP_APP_SECRET and settings.ENVIRONMENT == "production"):
+        import hmac, hashlib
+        raw_body = await request.body()
+        expected_sig = "sha256=" + hmac.new(
+            (settings.WHATSAPP_APP_SECRET or "").encode("utf-8"),
+            raw_body,
+            hashlib.sha256
+        ).hexdigest()
+
+        if not sig_header or not settings.WHATSAPP_APP_SECRET or not hmac.compare_digest(sig_header, expected_sig):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or missing WhatsApp webhook signature (X-Hub-Signature-256)"
+            )
+
     try:
         payload = await request.json()
     except Exception:
@@ -72,8 +88,18 @@ async def receive_telegram_event(
 ):
     """
     Receives incoming Telegram updates from Telegram Bot API webhook.
-    Dispatches video extraction in background tasks.
+    Validates X-Telegram-Bot-Api-Secret-Token header when provided or in production.
     """
+    settings = get_settings()
+    secret_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+    if secret_header or (settings.TELEGRAM_WEBHOOK_SECRET and settings.ENVIRONMENT == "production"):
+        import hmac
+        if not secret_header or not settings.TELEGRAM_WEBHOOK_SECRET or not hmac.compare_digest(secret_header, settings.TELEGRAM_WEBHOOK_SECRET):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or missing Telegram webhook secret token (X-Telegram-Bot-Api-Secret-Token)"
+            )
+
     try:
         update = await request.json()
     except Exception:

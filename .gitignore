@@ -6,9 +6,12 @@ downloads/
 *.txt
 !packages.txt
 !requirements.txt
+!requirements-dev.txt
 scratch/
 node_modules/
 .next/
 frontend/node_modules/
 frontend/.next/
+frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
 

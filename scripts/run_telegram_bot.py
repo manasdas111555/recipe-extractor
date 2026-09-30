@@ -37,10 +37,11 @@ def get_feedback_keyboard(extraction_id: str, public_url: str = None) -> dict:
     target_url = public_url or "https://universalpro.ai"
     keyboard = [
         [
-            {"text": "📋 Copy Ingredients", "callback_data": f"copy_{extraction_id}"},
+            {"text": "🧑‍🍳 Start Cooking Mode", "url": f"{target_url}?mode=cook"},
             {"text": "🌐 View in App", "url": target_url},
         ],
         [
+            {"text": "📋 Copy Ingredients", "callback_data": f"copy_{extraction_id}"},
             {"text": "👍 Accurate", "callback_data": f"fb_ok_{extraction_id}"},
             {"text": "👎 Missed Details", "callback_data": f"fb_bad_{extraction_id}"},
         ],

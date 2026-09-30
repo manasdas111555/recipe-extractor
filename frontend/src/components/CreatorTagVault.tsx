@@ -143,7 +143,7 @@ export default function CreatorTagVault({ isOpen, onClose }: CreatorTagVaultProp
             </label>
             <input
               type="text"
-              placeholder="e.g. 5608766"
+              placeholder="e.g. 1234567"
               value={earnkaroId}
               onChange={(e) => setEarnkaroId(e.target.value)}
               style={{
