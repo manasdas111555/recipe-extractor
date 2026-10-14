@@ -1,4 +1,7 @@
 .env
+.env.operator.local
+.env*.local
+
 __pycache__/
 *.py[cod]
 downloads/
@@ -15,3 +18,11 @@ frontend/.next/
 frontend/tsconfig.tsbuildinfo
 *.tsbuildinfo
 
+# Playwright Test Artifacts
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/e2e-evidence/
+test-results/
+playwright-report/
+e2e-evidence/

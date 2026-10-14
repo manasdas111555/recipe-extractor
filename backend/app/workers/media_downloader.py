@@ -156,6 +156,7 @@ def download_worker_media(
                     except Exception as meta_err:
                         logger.warning("Pre-flight metadata extraction skipped: %s", meta_err)
 
+                    info = ydl.extract_info(video_url, download=True)
                     if not info:
                         continue
 
