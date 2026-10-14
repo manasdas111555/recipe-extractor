@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ staging, main ]
 
+permissions:
+  contents: read
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
@@ -34,6 +37,158 @@ jobs:
           cd frontend
           npm ci || npm install
 
+      # Step 1: Core quality gate (unit tests, production build, backend pytest regression suite)
+      # Must execute before E2E tests so an E2E failure does not prevent core suite validation
       - name: Run CI Validation Suite
         run: |
           python scripts/ci_check.py
+
+      # Step 2: Browser E2E release gate (Chromium browser installation and mocked user-mimic suite)
+      - name: Install Playwright Chromium Browser
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+
+      - name: Run Mocked Browser E2E Test Suite
+        id: run-mocked-e2e
+        run: |
+          cd frontend
+          npm run test:e2e:mocked
+
+      # Step 3: Mandatory evidence validation (fails closed if manifest or required evidence is missing/invalid)
+      - name: Validate Mandatory E2E Evidence Artifacts
+        if: always() && steps.run-mocked-e2e.outcome != 'skipped'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const manifestPath = path.resolve('frontend/test-results/evidence-manifest.json');
+            if (!fs.existsSync(manifestPath)) {
+              console.error('🚨 [CI Evidence Validation] Mandatory manifest missing: ' + manifestPath);
+              process.exit(1);
+            }
+            let manifest;
+            try {
+              manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+            } catch (e) {
+              console.error('🚨 [CI Evidence Validation] Malformed JSON in evidence manifest: ' + e.message);
+              process.exit(1);
+            }
+            const errors = [];
+            if (!manifest || typeof manifest !== 'object') {
+              console.error('🚨 [CI Evidence Validation] Manifest is not a valid JSON object');
+              process.exit(1);
+            }
+            if (manifest.schemaVersion !== 1) errors.push('Missing or invalid schemaVersion (expected 1, got ' + manifest.schemaVersion + ')');
+            if (!manifest.runId || typeof manifest.runId !== 'string' || !manifest.runId.trim()) errors.push('Missing or invalid runId');
+            if (!manifest.commitSha || typeof manifest.commitSha !== 'string' || !manifest.commitSha.trim()) errors.push('Missing or invalid commitSha');
+            if (!['dev', 'staging', 'ci'].includes(manifest.environment)) errors.push('Invalid environment: ' + manifest.environment);
+            if (manifest.executionClassification !== 'mocked') {
+              errors.push('Invalid executionClassification for mocked E2E step: expected mocked, got ' + manifest.executionClassification);
+            }
+            if (!Array.isArray(manifest.tests) || manifest.tests.length === 0) {
+              errors.push('Mandatory tests array is missing or empty (tests count: ' + (Array.isArray(manifest.tests) ? 0 : 'non-array') + ')');
+            }
+            const s = manifest.summary;
+            if (!s || typeof s !== 'object') {
+              errors.push('Missing summary object');
+            } else if (Array.isArray(manifest.tests)) {
+              const tests = manifest.tests;
+              const actualPassed = tests.filter(t => t && t.outcome === 'PASS').length;
+              const actualFailed = tests.filter(t => t && t.outcome === 'FAIL').length;
+              const actualBlocked = tests.filter(t => t && t.outcome === 'BLOCKED').length;
+              const actualNotRun = tests.filter(t => t && t.outcome === 'NOT RUN').length;
+              if (s.total !== tests.length) errors.push('Inconsistent summary: total (' + s.total + ') !== tests.length (' + tests.length + ')');
+              if (s.passed !== actualPassed) errors.push('Inconsistent summary: passed (' + s.passed + ') !== actual (' + actualPassed + ')');
+              if (s.failed !== actualFailed) errors.push('Inconsistent summary: failed (' + s.failed + ') !== actual (' + actualFailed + ')');
+              if (s.blocked !== actualBlocked) errors.push('Inconsistent summary: blocked (' + s.blocked + ') !== actual (' + actualBlocked + ')');
+              if (s.notRun !== actualNotRun) errors.push('Inconsistent summary: notRun (' + s.notRun + ') !== actual (' + actualNotRun + ')');
+              if (s.total !== (s.passed + s.failed + s.blocked + s.notRun)) {
+                errors.push('Inconsistent summary: sum of outcomes (' + (s.passed + s.failed + s.blocked + s.notRun) + ') !== total (' + s.total + ')');
+              }
+              let expectedStatus = 'PASS';
+              if (s.failed > 0) expectedStatus = 'FAIL';
+              else if (s.blocked > 0) expectedStatus = 'BLOCKED';
+              else if (tests.length === 0 || s.notRun > 0 || s.passed === 0) expectedStatus = 'NOT RUN';
+              if (manifest.overallStatus !== expectedStatus) {
+                errors.push('Inconsistent overallStatus: expected ' + expectedStatus + ', got ' + manifest.overallStatus);
+              }
+              if (manifest.overallStatus === 'PASS') {
+                if (s.passed === 0) errors.push('Anti-false-green gate violation: overallStatus is PASS with 0 passed tests');
+                if (s.failed > 0 || s.blocked > 0) errors.push('overallStatus is PASS but contains failed or blocked tests');
+                if (s.notRun > 0) errors.push('overallStatus is PASS but contains unrun tests (partial NOT RUN coverage: ' + s.notRun + ')');
+              }
+            }
+            const isValidEvidencePath = (p) => {
+              if (!p || typeof p !== 'string' || path.isAbsolute(p) || p.includes('..')) return false;
+              return p.startsWith('test-results/') || p.startsWith('e2e-evidence/') || p.startsWith('playwright-report/');
+            };
+            if (Array.isArray(manifest.tests)) {
+              for (const t of manifest.tests) {
+                if (!t || typeof t !== 'object') { errors.push('Test record is not an object'); continue; }
+                if (!t.testId) errors.push('Test missing testId');
+                if (!t.title) errors.push('Test missing title');
+                if (!['PASS', 'FAIL', 'BLOCKED', 'NOT RUN'].includes(t.outcome)) errors.push('Test ' + t.title + ' has invalid outcome: ' + t.outcome);
+                if (t.outcome === 'PASS') {
+                  if (!Array.isArray(t.assertionOutcomes) || t.assertionOutcomes.length === 0) {
+                    errors.push('Missing assertion evidence for test: ' + t.title);
+                  } else {
+                    for (const a of t.assertionOutcomes) {
+                      if (!a || typeof a !== 'object') {
+                        errors.push('Passing test contains null or non-object assertion record: ' + t.title);
+                      } else if (!a.name || typeof a.name !== 'string' || !a.name.trim()) {
+                        errors.push('Passing test contains assertion record missing name: ' + t.title);
+                      } else if (!a.status || typeof a.status !== 'string') {
+                        errors.push('Passing test contains assertion record missing status: ' + t.title);
+                      } else if (a.status !== 'PASS') {
+                        errors.push('Passing test contains non-PASS assertion (' + a.name + ' [' + a.status + ']): ' + t.title);
+                      }
+                    }
+                  }
+                  const ep = t.evidencePaths;
+                  if (!ep || !Array.isArray(ep.screenshots) || ep.screenshots.length === 0) {
+                    errors.push('Missing screenshots for test: ' + t.title);
+                  } else {
+                    for (const sc of ep.screenshots) {
+                      if (!isValidEvidencePath(sc)) errors.push('Invalid screenshot path: ' + sc);
+                      else if (!fs.existsSync(path.resolve('frontend', sc))) errors.push('Missing screenshot: ' + sc);
+                    }
+                  }
+                  if (!ep || !ep.video || !isValidEvidencePath(ep.video)) {
+                    errors.push('Missing or invalid video path: ' + (ep ? ep.video : 'undefined'));
+                  } else if (!fs.existsSync(path.resolve('frontend', ep.video))) {
+                    errors.push('Missing video: ' + ep.video);
+                  }
+                  if (!ep || !ep.trace || !isValidEvidencePath(ep.trace)) {
+                    errors.push('Missing or invalid trace path: ' + (ep ? ep.trace : 'undefined'));
+                  } else if (!fs.existsSync(path.resolve('frontend', ep.trace))) {
+                    errors.push('Missing trace: ' + ep.trace);
+                  }
+                }
+              }
+            }
+            if (errors.length > 0) {
+              console.error('🚨 [CI Evidence Validation] Gate failed with ' + errors.length + ' error(s):');
+              errors.forEach(e => console.error('  - ' + e));
+              process.exit(1);
+            }
+            console.log('✅ [CI Evidence Validation] All mandatory evidence artifacts verified successfully (' + manifest.tests.length + ' tests checked).');
+          "
+
+      # PRIVACY & DATA GOVERNANCE WARNING:
+      # Uploaded Playwright artifacts (screenshots, videos, traces, HTML reports) physically
+      # contain raw DevTools network events (HTTP headers, cookies, request/response bodies)
+      # and visual viewport recordings. These binary artifacts CANNOT be guaranteed safe by regex text
+      # sanitization alone. Access must remain strictly restricted to private authorized maintainers,
+      # with zero public artifact publication and synthetic test inputs only.
+      - name: Upload Browser E2E Evidence Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-e2e-evidence
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+            frontend/e2e-evidence/
+          retention-days: 7
+          if-no-files-found: warn

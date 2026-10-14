@@ -61,6 +61,9 @@ export default function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalPr
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Upgrade to Pro"
         style={{
           width: '100%',
           maxWidth: '520px',
