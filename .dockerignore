@@ -5,7 +5,15 @@ __pycache__
 *.pyc
 *.pyo
 *.pyd
-.env.local
+.env
+.env.*
+.env*.local
+.envrc
+**/.env
+**/.env.*
+**/.envrc
+!.env.example
+!.env.operator.example
 node_modules
 .next
 downloads/*
