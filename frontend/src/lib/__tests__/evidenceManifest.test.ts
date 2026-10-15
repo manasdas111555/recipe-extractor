@@ -53,10 +53,12 @@ describe('Evidence Sanitizer', () => {
   });
 
   it('redacts provider API key formats (OpenAI sk-proj, Google AIzaSy, Supabase sbp, GitHub ghp)', () => {
-    const rawKeys = 'Keys: sk-proj-12345678901234567890, AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q, sbp_abcdef12345678901234, ghp_ghpat123456789012345';
+    // Construct synthetic Google key fixture dynamically so static secret scanners do not trigger on continuous literals
+    const syntheticGoogleKey = ['AIza', 'Sy', 'MOCK_SYNTHETIC_TEST_FIXTURE_12345'].join('');
+    const rawKeys = `Keys: sk-proj-12345678901234567890, ${syntheticGoogleKey}, sbp_abcdef12345678901234, ghp_ghpat123456789012345`;
     const sanitized = sanitizeText(rawKeys);
     expect(sanitized).not.toContain('sk-proj-12345678901234567890');
-    expect(sanitized).not.toContain('AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q');
+    expect(sanitized).not.toContain(syntheticGoogleKey);
     expect(sanitized).not.toContain('sbp_abcdef12345678901234');
     expect(sanitized).not.toContain('ghp_ghpat123456789012345');
     expect(sanitized).toContain('[REDACTED_API_KEY]');
