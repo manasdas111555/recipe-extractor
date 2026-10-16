@@ -54,14 +54,16 @@
 - **Explicit Thinking Level & Cost Governance**: Set the thinking level explicitly (start with low; confirm on the golden set before locking) and record latency and token cost per request. Note that introductory API pricing may end at year-end; continuously review cost assumptions.
 - **Catalog Alignment**: Continuously monitor Google Gemini's official model catalog (https://ai.google.dev/gemini-api/docs/models). As soon as any model endpoint is marked shutdown or deprecated by Google, agents must promptly prune it from `Settings` to prevent 404/410 latency spikes.
 
-## 9. Mandatory 4-Core Document Governance Contract & Measured Metrics
-- **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following 4 core living documents without exception:
+## 9. Mandatory Document Governance Contract & Living Architecture Files
+- **Living Documentation Requirement**: Whenever any feature, bug fix, architectural change, or roadmap step is built or modified, agents MUST update and maintain the following mandatory living documents without exception:
   1. **`docs/TROUBLESHOOTING.md`**: Log every encountered error/bug, root cause, exact code resolution diffs, and verification steps.
   2. **`docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`**: Maintain product strategy, user impact, architecture diagrams, UI visual showcases, and PO review sign-off checklists.
   3. **`docs/architecture/DISASTER_RECOVERY.md`**: Maintain system architecture inventory, active endpoints, cloud failure modes, emergency failovers, and step-by-step DR runbooks.
   4. **`docs/USER_MANUAL.md`**: Maintain end-to-end user manual and feature guide explaining how to use all features.
+  5. **`docs/architecture/DECISIONS.md`**: Maintain repository architectural decision records (ADRs), rationale, library evaluations, and accepted trade-offs.
+  6. **`docs/architecture/FLOW.md`**: Maintain execution sequences, entry point mappings, and cross-subsystem call hierarchies.
 - **Automated & Measured Metrics**: Metrics (test counts, latency, throughput) must be generated directly from CI outputs or telemetry data, never typed manually by agents. Every numerical figure in documentation must be explicitly labeled as **[MEASURED]** or **[ESTIMATED]**.
-- **Verification Rule**: No feature implementation or bug fix is considered complete until the 4 core living documents plus the sprint backlog (Rule 17) reflect the updated state of the codebase.
+- **Verification Rule**: No feature implementation or bug fix is considered complete until the mandatory living documents plus the sprint backlog (Rule 17) reflect the updated state of the codebase.
 
 ## 10. Multi-LLM Council Consensus Engine Invariants
 - **Council Mode Invariant**: The 3-Stage Multi-LLM Council Consensus Engine (Gemini + Groq Llama 3.3 + Mistral) must NEVER be configured as the default execution pipeline. It must strictly remain an explicit opt-in selection or an internal fallback retry mechanism.
@@ -254,5 +256,35 @@ Before deleting, moving, renaming, overwriting, resetting, cleaning, restoring, 
    - environment drift
    - infrastructure drift
    - documentation drift
+
+## 22. Architectural Decision Tracking & Baseline Log (`DECISIONS.md`)
+- **Baseline & Forward Decision Logging**: The repository maintains an active architectural log in `docs/architecture/DECISIONS.md`. In addition to establishing the retroactive baseline for existing core architectural decisions, agents MUST append a new record whenever a change introduces or replaces a dependency, establishes a design pattern, modifies database schemas, or alters cloud infrastructure.
+- **Minimum Decision Record Structure**:
+  1. **Context & Problem Statement**: What problem is being solved and what constraints exist.
+  2. **Options Evaluated**: Which libraries, patterns, or architectures were considered.
+  3. **Rationale**: Why the chosen approach was selected over alternatives.
+  4. **Accepted Trade-Offs**: Known liabilities, maintenance overhead, or performance trade-offs accepted.
+
+## 23. Execution Flow Mapping & System Call Hierarchy (`FLOW.md`)
+- **Living Subsystem Flow & Baseline**: The repository maintains an end-to-end execution flow map in `docs/architecture/FLOW.md`. Agents modifying or adding execution paths (API endpoints, worker pipelines, Gemini processors, URL validation chains, or event dispatchers) MUST keep the corresponding flow diagram/sequence synchronized.
+- **Mandatory Path Specifications**:
+  1. **Entry Points**: Explicit trigger points (FastAPI routes, Celery tasks, CLI commands, webhook listeners).
+  2. **Execution Sequence**: Step-by-step trace of function calls and state mutations across modules.
+  3. **Dependency & Fallback Graph**: Explicit downstream services, RPCs, cache layers, and fallback pathways (e.g., Redis down -> BackgroundTasks fallback).
+- **Subsystem Synchronization**: Whenever an active ticket touches a pipeline slice, the agent must ensure that slice reflects the verified, implemented state.
+
+## 24. Comprehension Gate & AI Quizzing Protocol (High-Impact & Sprint Gates)
+- **Zero Auto-Accept on Critical Changes**: Blind acceptance ("Allow All" or merging without comprehension) of AI-generated code is strictly forbidden for high-impact alterations.
+- **Applicability Threshold**:
+  This gate triggers exclusively during:
+  1. Changes to protected domains: Security/SSRF logic (Rule 14), Ingestion caps (Rule 4), Affiliate monetization invariants (Rule 3), or Multi-LLM Council consensus (Rule 10).
+  2. Database schema migrations or breaking state transitions (Rule 11).
+  3. Sprint closeout and staging promotion reviews (Rule 2, Rule 17).
+- **Interactive Comprehension Protocol**:
+  - Before requesting sign-off or staging promotion for high-impact work, the agent MUST present a 2-to-3 question comprehension quiz to the repository owner covering:
+    - Potential edge-case failure modes and error propagation.
+    - Call chain and side-effects across the 3-layer architecture.
+    - Security and state invariants touched by the PR.
+  - The repository owner must validate the mental model before promoting changes to Layer 2 (`staging`). Routine bug fixes, UI styling, and documentation adjustments bypass this gate.
 
 
