@@ -317,10 +317,9 @@ class TestMediaHardCeilingsAndCleanup:
             mock_ydl.extract_info.return_value = None
             mock_ydl_cls.return_value = mock_ydl
 
-            try:
-                download_worker_media("https://www.instagram.com/reel/C1234567890/")
-            except Exception:
-                pass
+            success, msg = download_worker_media("https://www.instagram.com/reel/C1234567890/")
+            assert not success
+            assert msg == "Failed to locate downloaded media stream file."
             assert mock_ydl_cls.called
             opts = mock_ydl_cls.call_args[0][0]
             fmt = opts.get("format", "")
