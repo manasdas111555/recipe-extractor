@@ -5,6 +5,7 @@ Tests AffiliateEngine merchant deep links, strict URL encoding (urllib.parse.quo
 category-conditional storefront display, and owner revenue shield invariants (AGENTS.md Rule 3).
 """
 
+import re
 import unittest
 import urllib.parse
 from pathlib import Path
@@ -67,8 +68,8 @@ class TestSprint14CommerceIntegration(unittest.TestCase):
         self.assertEqual(fashion_enriched["blinkit_url"], "")
         self.assertEqual(fashion_enriched["zepto_url"], "")
 
-    def test_four_core_document_governance_contract_and_user_manual(self):
-        """Verify 4-Core Document Governance Contract in AGENTS.md and User Manual files."""
+    def test_mandatory_document_governance_contract_and_user_manual(self):
+        """Verify Mandatory Document Governance Contract in AGENTS.md and User Manual files."""
         root_dir = self.engine.default_amazon_tag and (Path(__file__).resolve().parent.parent)
         agents_file = root_dir / "AGENTS.md"
         manual_file = root_dir / "docs" / "USER_MANUAL.md"
@@ -81,8 +82,35 @@ class TestSprint14CommerceIntegration(unittest.TestCase):
         self.assertIn("10-Minute Quick Commerce", manual_content)
 
         agents_content = agents_file.read_text(encoding="utf-8")
-        self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)
-        self.assertIn("docs/USER_MANUAL.md", agents_content)
+        sec9_match = re.search(r"(?m)^##\s+9\..*$", agents_content)
+        self.assertIsNotNone(
+            sec9_match,
+            "Could not find line-anchored Markdown level-two heading for Section 9 in AGENTS.md",
+        )
+        start_idx = sec9_match.start()
+
+        next_heading_match = re.search(r"(?m)^##\s+", agents_content[sec9_match.end() :])
+        self.assertIsNotNone(
+            next_heading_match,
+            "Could not find terminating level-two heading after Section 9 in AGENTS.md",
+        )
+        end_idx = sec9_match.end() + next_heading_match.start()
+        section_9_content = agents_content[start_idx:end_idx]
+
+        required_living_documents = [
+            "docs/TROUBLESHOOTING.md",
+            "docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md",
+            "docs/architecture/DISASTER_RECOVERY.md",
+            "docs/USER_MANUAL.md",
+            "docs/architecture/DECISIONS.md",
+            "docs/architecture/FLOW.md",
+        ]
+        for doc_path in required_living_documents:
+            self.assertIn(
+                doc_path,
+                section_9_content,
+                f"Missing required living document contract path in AGENTS.md Section 9: {doc_path}",
+            )
 
         faq_content = faq_file.read_text(encoding="utf-8")
         self.assertIn("user_manual", faq_content)
