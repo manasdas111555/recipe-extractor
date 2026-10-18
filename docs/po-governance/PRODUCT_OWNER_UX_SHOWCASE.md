@@ -700,7 +700,7 @@ Please review each module deliverable and provide your official sign-off status 
 3. **Layer 2 Staging Promotion Status**:
    - Promoted to Layer 2 Staging via approved isolated branch `promotion/upa-1311-staging` and merged via PR #6 (commit `48a426c`).
    - Staging GitHub Actions CI `test-and-build` passed cleanly (run 39154636869); Vercel Preview deployment clean.
-   - Current status: **Ready for PO Review on Staging [MEASURED]**.
+   - Current status: **PO Accepted on Staging in SIGN_OFF.md [MEASURED]**.
 
 ---
 

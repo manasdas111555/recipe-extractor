@@ -245,7 +245,7 @@ Direct pushes and ad-hoc hotfixes to production risk live downtime, database cor
 
 ## ADR-007: Resilient Document Governance Assertion & Section-Scoping Protocol
 
-* **Status**: Accepted / Active `[VERIFIED IN CURRENT REPOSITORY]`
+* **Status**: Accepted / Verified on Staging (PR #6 @ `48a426c`) `[VERIFIED IN CURRENT REPOSITORY]`
 * **Date / Sprint**: Sprint 13 (UPA-1311)
 * **Governing Rules**: AGENTS.md Rule 1 (*Test Suite Integrity*), Rule 9 (*Living Documentation Contract*), Rule 16 (*Evidence & Verification*)
 
