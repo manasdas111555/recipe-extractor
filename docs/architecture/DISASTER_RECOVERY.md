@@ -665,7 +665,7 @@ Ensure Section 9 of `AGENTS.md` lists all six mandatory living architecture docu
 6. `docs/architecture/FLOW.md`
 
 #### Step 2: Verify Dynamic Section Extraction in Test Suite
-Confirm `test_mandatory_document_governance_contract_and_user_manual` in `tests/test_sprint14_commerce.py` slices Section 9 using boundary delimiters (`## 9.` to `## 10.`) rather than expecting brittle exact heading titles.
+Confirm `test_mandatory_document_governance_contract_and_user_manual` in `tests/test_sprint14_commerce.py` locates Section 9 using a line-anchored level-two heading (`(?m)^##\s+9\..*$`) and terminates at the next level-two heading (`(?m)^##\s+`) without hardcoding Section 10.
 
 #### Step 3: Execute Focused Regression Verification
 - Run: `pytest tests/test_sprint14_commerce.py -v` (must report **5 passed**).

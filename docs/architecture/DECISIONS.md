@@ -259,11 +259,11 @@ When UPA-1308 added `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW
    - *Pros*: Makes the legacy assertion pass without touching test files.
    - *Cons*: Violates the living architecture reality where 6 documents are actively maintained; mislabels the section as "4-Core".
 2. **Option B (Selected): Section-Scoped Path Validation & Method Renaming**:
-   - *Pros*: Dynamically extracts Section 9 (`## 9.` to `## 10.`) and asserts that each of the six required document paths (`docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md`, `docs/architecture/DECISIONS.md`, `docs/architecture/FLOW.md`) is explicitly present in the section. Renames test method to `test_mandatory_document_governance_contract_and_user_manual`.
+   - *Pros*: Dynamically locates Section 9 via line-anchored heading (`(?m)^##\s+9\..*$`) and extracts until the next level-two heading (`(?m)^##\s+`) without hardcoding Section 10. Asserts that each of the six required document paths (`docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md`, `docs/architecture/DECISIONS.md`, `docs/architecture/FLOW.md`) is explicitly present in the section. Renames test method to `test_mandatory_document_governance_contract_and_user_manual`.
    - *Cons*: Requires an authorized test contract update under Rule 1 with explicit Product Owner sign-off.
 
 ### Decision & Rationale
-We adopted Option B under explicit Product Owner approval. Rather than asserting a volatile markdown heading string, the test validates the contractual substance of Section 9 by asserting the presence of all six canonical document paths inside the extracted section. If any document is removed or misspelled, the test fails with an informative error message naming the missing file.
+We adopted Option B under explicit Product Owner approval. Rather than asserting a volatile markdown heading string or assuming Section 10 is the only possible terminator, the test uses line-anchored regex to extract Section 9 up to the subsequent level-two heading and validates the contractual substance by asserting the presence of all six canonical document paths inside the extracted section. If any document is removed or misspelled, the test fails with an informative error message naming the missing file.
 
 ### Accepted Trade-Offs
-* Requires `AGENTS.md` section numbering conventions (`## 9.` and `## 10.`) to remain consistent.
+* Requires `AGENTS.md` section numbering for Section 9 (`## 9.`) to be maintained, but does not constrain subsequent section numbering.

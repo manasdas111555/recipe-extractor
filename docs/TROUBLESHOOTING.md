@@ -1525,8 +1525,9 @@ The test failure blocked clean promotional gates without requiring an owner-appr
 Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of `AGENTS.md` was expanded from 4 documents to 6 living architecture documents and retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when adding `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. The test in `test_sprint14_commerce.py` asserted the exact legacy substring `"Mandatory 4-Core Document Governance Contract"`, causing a brittle failure despite the underlying contract being fully satisfied.
 
 #### 3. Resolution (Code Changes):
-1. **Dynamic Section 9 Extraction & Resilient Assertion**:
-   - Replaced exact heading assertion with dynamic section extraction (`start = agents_content.find("## 9.")`, `end = agents_content.find("## 10.", start)`).
+1. **Line-Anchored Section 9 Extraction & Resilient Assertion**:
+   - Replaced exact heading assertion with line-anchored level-two heading extraction (`re.search(r"(?m)^##\s+9\..*$", ...)` up to the next level-two heading `re.search(r"(?m)^##\s+", ...)` without hardcoding Section 10).
+   - Asserted that Section 9 and its terminating level-two heading exist with clear failure diagnostics.
    - Iterated over all six required living document paths (`docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md`, `docs/architecture/DECISIONS.md`, and `docs/architecture/FLOW.md`) and asserted their presence within Section 9.
    - Added explicit diagnostic messages identifying the exact missing document path upon assertion failure.
 2. **Method Renaming**:
@@ -1535,13 +1536,13 @@ Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of
    - Preserved `manual_file.exists()`, manual content checks, and FAQ modal assertions.
 
 #### 4. Testing & Verification:
-- **Focused Unit Test**: `pytest tests/test_sprint14_commerce.py -v` -> **5 passed in 0.33s [MEASURED]**.
+- **Focused Unit Test**: `pytest tests/test_sprint14_commerce.py -v` -> **5 passed in 0.22s [MEASURED]**.
 - **Full Backend Pytest Suite**: `pytest tests/` -> **349 passed, 3 deselected, 12 warnings in 48.20s [MEASURED]**.
 - **Frontend Type Check**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
 - **Frontend Lint**: `npm run lint` -> **0 errors (7 warnings) [MEASURED]**.
 - **Frontend Unit Tests**: `npm test` -> **40 passed in 2.27s [MEASURED]**.
 - **Frontend Production Build**: `npm run build` -> **Compiled in 913ms, 8/8 routes generated [MEASURED]**.
-- **Status**: **Resolved on Dev (Commit `e74c77d`)**.
+- **Status**: **Resolved on Dev (Commits `e74c77d`, `e223af9`)**.
 
 ---
 
