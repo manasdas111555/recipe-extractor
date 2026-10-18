@@ -67,8 +67,8 @@ class TestSprint14CommerceIntegration(unittest.TestCase):
         self.assertEqual(fashion_enriched["blinkit_url"], "")
         self.assertEqual(fashion_enriched["zepto_url"], "")
 
-    def test_four_core_document_governance_contract_and_user_manual(self):
-        """Verify 4-Core Document Governance Contract in AGENTS.md and User Manual files."""
+    def test_mandatory_document_governance_contract_and_user_manual(self):
+        """Verify Mandatory Document Governance Contract in AGENTS.md and User Manual files."""
         root_dir = self.engine.default_amazon_tag and (Path(__file__).resolve().parent.parent)
         agents_file = root_dir / "AGENTS.md"
         manual_file = root_dir / "docs" / "USER_MANUAL.md"
@@ -81,8 +81,25 @@ class TestSprint14CommerceIntegration(unittest.TestCase):
         self.assertIn("10-Minute Quick Commerce", manual_content)
 
         agents_content = agents_file.read_text(encoding="utf-8")
-        self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)
-        self.assertIn("docs/USER_MANUAL.md", agents_content)
+        start = agents_content.find("## 9.")
+        self.assertNotEqual(start, -1, "Could not find Section 9 in AGENTS.md")
+        end = agents_content.find("## 10.", start)
+        section_9_content = agents_content[start:end] if end != -1 else agents_content[start:]
+
+        required_living_documents = [
+            "docs/TROUBLESHOOTING.md",
+            "docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md",
+            "docs/architecture/DISASTER_RECOVERY.md",
+            "docs/USER_MANUAL.md",
+            "docs/architecture/DECISIONS.md",
+            "docs/architecture/FLOW.md",
+        ]
+        for doc_path in required_living_documents:
+            self.assertIn(
+                doc_path,
+                section_9_content,
+                f"Missing required living document contract path in AGENTS.md Section 9: {doc_path}",
+            )
 
         faq_content = faq_file.read_text(encoding="utf-8")
         self.assertIn("user_manual", faq_content)
