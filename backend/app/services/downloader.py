@@ -74,7 +74,16 @@ def download_via_ytdlp(video_url: str, output_dir: Path) -> Tuple[bool, str]:
         for client_list in client_cascades:
             ydl_opts = {
                 'outtmpl': output_template,
-                'format': 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[height<=360][ext=mp4]/best[height<=360]',
+                'format': (
+                    'bestvideo[height<=360][width<=640][ext=mp4]+bestaudio[ext=m4a]/'
+                    'bestvideo[width<=360][height<=640][ext=mp4]+bestaudio[ext=m4a]/'
+                    'bestvideo[height<=360][width<=640]+bestaudio/'
+                    'bestvideo[width<=360][height<=640]+bestaudio/'
+                    'best[height<=360][width<=640][ext=mp4]/'
+                    'best[width<=360][height<=640][ext=mp4]/'
+                    'best[height<=360][width<=640]/'
+                    'best[width<=360][height<=640]'
+                ),
                 'merge_output_format': 'mp4',
                 'quiet': True,
                 'no_warnings': True,

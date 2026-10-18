@@ -94,13 +94,24 @@ def download_worker_media(
         timestamp = int(time.time() * 1000)
         output_template = str(target_dir / f"worker_{timestamp}_%(id)s.%(ext)s")
 
-        # 360p format selector: minimizes bandwidth, memory, and upload latency
+        # 360p format selector: minimizes bandwidth, memory, and upload latency (portrait and landscape aware with dual dimension bounds)
         res_limit = settings.MEDIA_DOWNLOAD_RESOLUTION or "360"
+        try:
+            short_limit = int(res_limit)
+            long_limit = int(round(short_limit * 16 / 9))
+        except (ValueError, TypeError):
+            short_limit = 360
+            long_limit = 640
+
         format_selector = (
-            f"bestvideo[height<={res_limit}][ext=mp4]+bestaudio[ext=m4a]/"
-            f"bestvideo[height<={res_limit}]+bestaudio/"
-            f"best[height<={res_limit}][ext=mp4]/"
-            f"best[height<={res_limit}]"
+            f"bestvideo[height<={short_limit}][width<={long_limit}][ext=mp4]+bestaudio[ext=m4a]/"
+            f"bestvideo[width<={short_limit}][height<={long_limit}][ext=mp4]+bestaudio[ext=m4a]/"
+            f"bestvideo[height<={short_limit}][width<={long_limit}]+bestaudio/"
+            f"bestvideo[width<={short_limit}][height<={long_limit}]+bestaudio/"
+            f"best[height<={short_limit}][width<={long_limit}][ext=mp4]/"
+            f"best[width<={short_limit}][height<={long_limit}][ext=mp4]/"
+            f"best[height<={short_limit}][width<={long_limit}]/"
+            f"best[width<={short_limit}][height<={long_limit}]"
         )
 
         max_bytes = settings.MAX_MEDIA_DOWNLOAD_MB * 1024 * 1024
