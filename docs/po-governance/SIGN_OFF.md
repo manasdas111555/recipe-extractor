@@ -110,3 +110,63 @@
 - **Verdict:** Approved (Conditional)
 - **Status:** 🟢 **GATE-9-CONDITIONAL (PO Approved)**
 - **Date:** 2026-09-30
+
+---
+
+## Rule 16 Test Suite Exception Sign-Off — UPA-1310 (Staging Promotion & Verification)
+
+### 1. Scope of Review & Failure Attribution
+- **Ticket**: UPA-1310 (Instagram Portrait/Landscape Format Selection & Dual-Dimension Bounds)
+- **Target Context**: Layer 2 Staging Promotion & Verification (`origin/staging` at `544387f3e2814bed068ebc2c895c47a55fd1be34` and candidate `promotion/upa-1310-staging`).
+- **Target Test Case**:
+  `tests/test_sprint14_commerce.py::TestSprint14CommerceIntegration::test_four_core_document_governance_contract_and_user_manual`
+- **Failing Assertion**:
+  `self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)`
+- **Attribution & Root Cause**:
+  Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`, cherry-picked to staging at `9a6d9117fc04d84e6ab37738fe7d8eb89215dec7`), Section 9 of `AGENTS.md` was expanded from 4 documents to 6 living architecture documents and retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when establishing `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. This pre-existing title update removed the literal substring `"Mandatory 4-Core Document Governance Contract"`.
+- **Honest Test Suite Status**:
+  Full pre-promotion regression verification (`python scripts/verify_promotion.py`) honestly records: **348 passed, 1 failed, 3 deselected, 12 warnings in 54.59s**. Zero false-green claims, test suppression, or test file modifications (Rule 1 preserved). All 52 focused media downloader regression, stream proxy security, and worker/affiliate tests pass cleanly. All 40 frontend Vitest tests, TypeScript typecheck, and Next.js production build pass cleanly.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision (Option A)**: The repository owner explicitly granted written authorization in this session accepting this single pre-existing heading-assertion failure solely for UPA-1310 Staging promotion, deployment, and live verification under Rule 16.
+- **Rule 16 Authorization**: This formal written exception satisfies Rule 16's requirement that known test failures block promotion unless explicitly accepted in writing by the repository owner.
+- **Scope & Isolation Constraints**:
+  1. This exception applies exclusively to the documented heading assertion in `tests/test_sprint14_commerce.py` for UPA-1310 Staging verification. It does **not** waive any other or unrelated test failure.
+  2. This exception does **not** authorize Production access, deployment, or database mutations. Production (`140.245.214.28`) remains 100% untouched.
+  3. The new format selector implementation remains pending live Staging verification against Instagram Reel `De8smJtvao0`.
+- **Verdict:** Approved (Rule 16 Staging Verification Exception — Option A)
+- **Status:** 🟢 **RULE-16-EXCEPTION-APPROVED (PO Approved)**
+- **Date:** 2026-10-18
+
+---
+
+## Rule 16 Production Release Exception Sign-Off — UPA-1310 (Production Release & Worker Deployment)
+
+### 1. Scope of Review & Failure Attribution
+- **Ticket**: UPA-1310 (Instagram Portrait/Landscape Format Selection & Dual-Dimension Bounds)
+- **Target Context**: Layer 3 Production Release (`origin/main` at `e91bdb89edc5d3238491bbb388db3a01e6edb46a` and candidate `release/upa-1310-main`).
+- **Target Test Case**:
+  `tests/test_sprint14_commerce.py::TestSprint14CommerceIntegration::test_four_core_document_governance_contract_and_user_manual`
+- **Failing Assertion**:
+  `self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)`
+- **Attribution & Root Cause**:
+  Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of `AGENTS.md` was expanded from 4 documents to 6 living architecture documents and retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when establishing `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. This pre-existing title update removed the literal substring `"Mandatory 4-Core Document Governance Contract"`.
+- **Honest Test Suite Status**:
+  Full pre-promotion regression verification (`python scripts/verify_promotion.py`) honestly records: **348 passed, 1 failed, 3 deselected, 12 warnings in 54.59s**. Zero false-green claims, test suppression, or test file modifications (Rule 1 preserved). All 52 focused media downloader regression, stream proxy security, and worker/affiliate tests pass cleanly. All 40 frontend Vitest tests, TypeScript typecheck, and Next.js production build pass cleanly.
+- **Staging Verification Precedent**:
+  Live Staging verification was successfully completed on Staging VM `129.225.86.241` on the failing Instagram Reel `https://www.instagram.com/reel/De8smJtvao0/` (Job ID: `fc2e5bd4-844e-4e36-9940-4bae35275299`, format `360x640` selected, zero format errors, `ALLOW_DB_WRITES=false` preserved, 0 rows inserted, temporary files cleaned up).
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: The repository owner explicitly granted written authorization in this session for:
+  1. Promotion of UPA-1310 from verified Staging to `main`.
+  2. Acceptance of exactly one pre-existing Rule 16 test failure (`test_four_core_document_governance_contract_and_user_manual`) for this release.
+  3. Production worker deployment after the governed merge and all remaining release checks pass.
+- **Rule 16 Authorization**: This formal written exception satisfies Rule 16's requirement that known test failures block promotion unless explicitly accepted in writing by the repository owner.
+- **Scope & Isolation Constraints**:
+  1. This exception applies exclusively to the documented heading assertion in `tests/test_sprint14_commerce.py` for UPA-1310 Production release. It does **not** waive any other or unrelated test failure.
+  2. Production deployment scope is strictly restricted to the Celery `worker` container on OCI VM `140.245.214.28`.
+  3. Production API container, Caddy reverse proxy, and Vercel application remain un-deployed unless separately authorized.
+  4. Database writes, object creation, migrations, and schema mutations are strictly prohibited (`ALLOW_DB_WRITES` remains unchanged; no real-media extraction in Production).
+- **Verdict:** Approved (Rule 16 Production Release Exception — PO Approved)
+- **Status:** 🟢 **RULE-16-PROD-RELEASE-EXCEPTION-APPROVED (PO Approved)**
+- **Date:** 2026-10-18
