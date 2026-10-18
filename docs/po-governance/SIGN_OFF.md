@@ -113,3 +113,30 @@
 - **Verdict:** Approved (Conditional)
 - **Status:** 🟢 **GATE-9-CONDITIONAL (PO Approved)**
 - **Date:** 2026-09-30
+
+---
+
+## Rule 16 Test Suite Exception Sign-Off — UPA-1305
+
+### 1. Scope of Review & Failure Attribution
+- **Ticket**: UPA-1305 (Media Downloader `yt-dlp` Assignment & Stream Proxy Security Regression Hardening)
+- **Target Context**: Layer 2 Staging Verification (`origin/staging` at `544387f3e2814bed068ebc2c895c47a55fd1be34` and candidate `promotion/UPA-1305-staging` at `c12f6d332011bd4f24945835bc2e6ec9f15b9566`).
+- **Target Test Case**:
+  `tests/test_sprint14_commerce.py::TestSprint14CommerceIntegration::test_four_core_document_governance_contract_and_user_manual`
+- **Failing Assertion**:
+  `self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)`
+- **Attribution & Root Cause**:
+  Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`, cherry-picked to staging at `9a6d9117fc04d84e6ab37738fe7d8eb89215dec7`), Section 9 of `AGENTS.md` was retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when adding `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. This pre-existing title update removed the literal substring `"Mandatory 4-Core Document Governance Contract"`.
+- **Honest Test Suite Status**:
+  Full backend test execution honestly records: **341 passed, 1 failed, 3 deselected**. Zero false-green claims, test suppression, or test file modifications (Rule 1 preserved). All 27 focused media downloader, proxy security, and commerce tests pass cleanly.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision (Option B)**: The repository owner explicitly accepts the pre-existing heading-assertion failure in `tests/test_sprint14_commerce.py` solely for UPA-1305 Staging verification under Rule 16.
+- **Rule 16 Authorization**: This formal written exception satisfies Rule 16's requirement that known test failures block promotion unless explicitly accepted in writing by the repository owner.
+- **Scope & Isolation Constraints**:
+  1. This exception applies exclusively to the documented heading assertion in `tests/test_sprint14_commerce.py` for UPA-1305 Staging verification. It does **not** waive any other or unrelated test failure.
+  2. This exception does **not** authorize Production deployment. Production release of UPA-1305 remains strictly gated on successful Staging runtime verification, PO sign-off, and separate operator runbook execution.
+  3. The Staging worker runtime update to revision `544387f3e2814bed068ebc2c895c47a55fd1be34` on `129.225.86.241` is authorized separately and must produce measured runtime evidence (revision SHA, container health, absence of downloader `NameError`, and deterministic disk cleanup).
+- **Verdict:** Approved (Rule 16 Staging Verification Exception — Option B)
+- **Status:** 🟢 **RULE-16-EXCEPTION-APPROVED (PO Approved)**
+- **Date:** 2026-10-18
