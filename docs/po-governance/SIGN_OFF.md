@@ -113,3 +113,30 @@
 - **Verdict:** Approved (Conditional)
 - **Status:** 🟢 **GATE-9-CONDITIONAL (PO Approved)**
 - **Date:** 2026-09-30
+
+---
+
+## Rule 16 Test Suite Exception Sign-Off — UPA-1310
+
+### 1. Scope of Review & Failure Attribution
+- **Ticket**: UPA-1310 (Instagram Portrait/Landscape Format Selection & Dual-Dimension Bounds)
+- **Target Context**: Layer 2 Staging Promotion & Verification (`origin/staging` at `544387f3e2814bed068ebc2c895c47a55fd1be34` and candidate `promotion/upa-1310-staging`).
+- **Target Test Case**:
+  `tests/test_sprint14_commerce.py::TestSprint14CommerceIntegration::test_four_core_document_governance_contract_and_user_manual`
+- **Failing Assertion**:
+  `self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)`
+- **Attribution & Root Cause**:
+  Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`, cherry-picked to staging at `9a6d9117fc04d84e6ab37738fe7d8eb89215dec7`), Section 9 of `AGENTS.md` was expanded from 4 documents to 6 living architecture documents and retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when establishing `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. This pre-existing title update removed the literal substring `"Mandatory 4-Core Document Governance Contract"`.
+- **Honest Test Suite Status**:
+  Full pre-promotion regression verification (`python scripts/verify_promotion.py`) honestly records: **348 passed, 1 failed, 3 deselected, 12 warnings in 54.59s**. Zero false-green claims, test suppression, or test file modifications (Rule 1 preserved). All 52 focused media downloader regression, stream proxy security, and worker/affiliate tests pass cleanly. All 40 frontend Vitest tests, TypeScript typecheck, and Next.js production build pass cleanly.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision (Option A)**: The repository owner explicitly granted written authorization in this session accepting this single pre-existing heading-assertion failure solely for UPA-1310 Staging promotion, deployment, and live verification under Rule 16.
+- **Rule 16 Authorization**: This formal written exception satisfies Rule 16's requirement that known test failures block promotion unless explicitly accepted in writing by the repository owner.
+- **Scope & Isolation Constraints**:
+  1. This exception applies exclusively to the documented heading assertion in `tests/test_sprint14_commerce.py` for UPA-1310 Staging verification. It does **not** waive any other or unrelated test failure.
+  2. This exception does **not** authorize Production access, deployment, or database mutations. Production (`140.245.214.28`) remains 100% untouched.
+  3. The new format selector implementation remains pending live Staging verification against Instagram Reel `De8smJtvao0`.
+- **Verdict:** Approved (Rule 16 Staging Verification Exception — Option A)
+- **Status:** 🟢 **RULE-16-EXCEPTION-APPROVED (PO Approved)**
+- **Date:** 2026-10-18
