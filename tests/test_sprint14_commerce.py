@@ -5,6 +5,7 @@ Tests AffiliateEngine merchant deep links, strict URL encoding (urllib.parse.quo
 category-conditional storefront display, and owner revenue shield invariants (AGENTS.md Rule 3).
 """
 
+import re
 import unittest
 import urllib.parse
 from pathlib import Path
@@ -81,10 +82,20 @@ class TestSprint14CommerceIntegration(unittest.TestCase):
         self.assertIn("10-Minute Quick Commerce", manual_content)
 
         agents_content = agents_file.read_text(encoding="utf-8")
-        start = agents_content.find("## 9.")
-        self.assertNotEqual(start, -1, "Could not find Section 9 in AGENTS.md")
-        end = agents_content.find("## 10.", start)
-        section_9_content = agents_content[start:end] if end != -1 else agents_content[start:]
+        sec9_match = re.search(r"(?m)^##\s+9\..*$", agents_content)
+        self.assertIsNotNone(
+            sec9_match,
+            "Could not find line-anchored Markdown level-two heading for Section 9 in AGENTS.md",
+        )
+        start_idx = sec9_match.start()
+
+        next_heading_match = re.search(r"(?m)^##\s+", agents_content[sec9_match.end() :])
+        self.assertIsNotNone(
+            next_heading_match,
+            "Could not find terminating level-two heading after Section 9 in AGENTS.md",
+        )
+        end_idx = sec9_match.end() + next_heading_match.start()
+        section_9_content = agents_content[start_idx:end_idx]
 
         required_living_documents = [
             "docs/TROUBLESHOOTING.md",
