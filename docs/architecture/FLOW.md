@@ -335,3 +335,4 @@ flowchart LR
 | Affiliate Link Enrichment | `services/affiliate_engine.py` | `urllib.parse.quote_plus` | Immutable constants | Dynamic store link suppression by category |
 | Telegram Bot Listener | `services/telegram_bot.py` | `url_validator.py`, `extract.py`, `requests` | Telegram Bot API | Error message dispatch to chat |
 | WhatsApp Cloud Webhook | `services/whatsapp_service.py` | `url_validator.py`, `hmac`, `requests` | Meta Graph API | Fail-closed signature verification |
+| Governance Contract Verification | `tests/test_sprint14_commerce.py` | `AGENTS.md` (Section 9 slice), `docs/USER_MANUAL.md`, `FaqSection.tsx` | `AGENTS.md` | Explicit missing-path diagnostics |

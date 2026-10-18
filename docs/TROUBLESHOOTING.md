@@ -44,6 +44,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-048** | 2026-09-26 | Security & DevOps | Container Egress Firewall Hardening & Rollback Automation (UPA-1206) | ✅ Resolved |
 | **ISSUE-049** | 2026-09-26 | Security & DevOps | Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206) | ✅ Resolved |
 | **ISSUE-050** | 2026-09-27 | Dependencies & Security | Python 3.11 Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207) | ✅ Resolved |
+| **ISSUE-051** | 2026-10-18 | Governance & Tests | Governance Heading Assertion Brittleness in Sprint 14 Commerce Suite (UPA-1311) | ✅ Resolved |
 
 ---
 
@@ -1508,6 +1509,39 @@ During repository dependency auditing and Docker containerization:
   - `curl http://localhost:8000/health` -> **HTTP 200 `{"status":"healthy",...}` [MEASURED]**.
 - **Full Pytest Suite**: `pytest tests/ -q` -> **249 passed, 3 deselected in 22.33s [MEASURED]**.
 - **Status**: **Resolved on Dev**.
+
+---
+
+### 🚨 ISSUE-051: Governance Heading Assertion Brittleness in Sprint 14 Commerce Suite (UPA-1311)
+- **Date**: 2026-10-18
+- **Affected Files**: `tests/test_sprint14_commerce.py`
+
+#### 1. What Happened (Symptom):
+During pre-promotion test suite execution and CI validation under Rule 16, `tests/test_sprint14_commerce.py::TestSprint14CommerceIntegration::test_four_core_document_governance_contract_and_user_manual` failed with:
+`AssertionError: 'Mandatory 4-Core Document Governance Contract' not found in AGENTS.md`
+The test failure blocked clean promotional gates without requiring an owner-approved Rule 16 exception.
+
+#### 2. Root Cause:
+Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of `AGENTS.md` was expanded from 4 documents to 6 living architecture documents and retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when adding `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. The test in `test_sprint14_commerce.py` asserted the exact legacy substring `"Mandatory 4-Core Document Governance Contract"`, causing a brittle failure despite the underlying contract being fully satisfied.
+
+#### 3. Resolution (Code Changes):
+1. **Dynamic Section 9 Extraction & Resilient Assertion**:
+   - Replaced exact heading assertion with dynamic section extraction (`start = agents_content.find("## 9.")`, `end = agents_content.find("## 10.", start)`).
+   - Iterated over all six required living document paths (`docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md`, `docs/architecture/DECISIONS.md`, and `docs/architecture/FLOW.md`) and asserted their presence within Section 9.
+   - Added explicit diagnostic messages identifying the exact missing document path upon assertion failure.
+2. **Method Renaming**:
+   - Renamed test method from `test_four_core_document_governance_contract_and_user_manual` to `test_mandatory_document_governance_contract_and_user_manual`.
+3. **Preservation of Surrounding Invariants**:
+   - Preserved `manual_file.exists()`, manual content checks, and FAQ modal assertions.
+
+#### 4. Testing & Verification:
+- **Focused Unit Test**: `pytest tests/test_sprint14_commerce.py -v` -> **5 passed in 0.33s [MEASURED]**.
+- **Full Backend Pytest Suite**: `pytest tests/` -> **349 passed, 3 deselected, 12 warnings in 48.20s [MEASURED]**.
+- **Frontend Type Check**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
+- **Frontend Lint**: `npm run lint` -> **0 errors (7 warnings) [MEASURED]**.
+- **Frontend Unit Tests**: `npm test` -> **40 passed in 2.27s [MEASURED]**.
+- **Frontend Production Build**: `npm run build` -> **Compiled in 913ms, 8/8 routes generated [MEASURED]**.
+- **Status**: **Resolved on Dev (Commit `e74c77d`)**.
 
 ---
 

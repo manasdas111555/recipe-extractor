@@ -685,6 +685,21 @@ Please review each module deliverable and provide your official sign-off status 
 
 ---
 
+## Module 22: Living Document Governance Contract Assertion Hardening (UPA-1311)
+
+### Key Architectural & Test Enhancements Delivered:
+1. **Dynamic Section 9 Extraction & Resilient Contract Validation (`tests/test_sprint14_commerce.py`)**:
+   - Replaced fragile substring match on legacy heading `"Mandatory 4-Core Document Governance Contract"` with dynamic scoping of Section 9 in `AGENTS.md`.
+   - Programmatically verifies that all six living architecture documents (`docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md`, `docs/architecture/DECISIONS.md`, and `docs/architecture/FLOW.md`) are explicitly mandated within Section 9.
+   - Renamed test method to `test_mandatory_document_governance_contract_and_user_manual` while preserving user-manual and FAQ modal assertions.
+2. **Measured Verification Pipeline Status**:
+   - Backend pytest suite: **349 / 349 PASSED (3 deselected, 0 failed) in 48.20s [MEASURED]**.
+   - Frontend Vitest suite: **40 / 40 PASSED in 2.27s [MEASURED]**.
+   - TypeScript: **0 errors [MEASURED]**.
+   - Next.js Production Build: **100% SUCCESSFUL (compiled in 913ms, 8/8 routes generated) [MEASURED]**.
+
+---
+
 ### 🚀 Production Promotion Final Status
 
 With **191 / 191 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ modal guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, Sprint 9 Friends & Family Beta Rollout, **Sprint 10 Beta Testing Feedback & Multilingual Engine**, **Ultra-Minimalist UI Overhaul & E2E Validation**, **Module 20 Universal Intelligence Vault**, and **Module 21 Streamlined FAQ Modal & Isolated User Manual View**:
