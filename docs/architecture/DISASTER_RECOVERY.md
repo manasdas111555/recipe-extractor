@@ -652,6 +652,27 @@ docker compose logs --tail=100 > ~/deployment_failure_$(date +%s).log
 
 ---
 
+### 📘 Runbook 24: Living Document Governance Contract & Section 9 Assertion Recovery (UPA-1311)
+**Symptom**: `tests/test_sprint14_commerce.py` fails during CI verification due to missing or mismatched living document paths in `AGENTS.md`.
+
+#### Step 1: Verify Section 9 Contract Paths in `AGENTS.md`
+Ensure Section 9 of `AGENTS.md` lists all six mandatory living architecture documents:
+1. `docs/TROUBLESHOOTING.md`
+2. `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`
+3. `docs/architecture/DISASTER_RECOVERY.md`
+4. `docs/USER_MANUAL.md`
+5. `docs/architecture/DECISIONS.md`
+6. `docs/architecture/FLOW.md`
+
+#### Step 2: Verify Dynamic Section Extraction in Test Suite
+Confirm `test_mandatory_document_governance_contract_and_user_manual` in `tests/test_sprint14_commerce.py` slices Section 9 using boundary delimiters (`## 9.` to `## 10.`) rather than expecting brittle exact heading titles.
+
+#### Step 3: Execute Focused Regression Verification
+- Run: `pytest tests/test_sprint14_commerce.py -v` (must report **5 passed**).
+- Run full suite: `pytest tests/` (must report **349 passed, 3 deselected, 0 failed**).
+
+---
+
 
 
 

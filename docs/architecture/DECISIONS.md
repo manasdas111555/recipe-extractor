@@ -23,6 +23,7 @@
 | **[ADR-004](#adr-004-centralized-gemini-configuration--multi-llm-council-fallback)** | Centralized Gemini Configuration & Multi-LLM Council Consensus | Rules 8, 10 | **Accepted / Active** | Sprint 8 / Reconciled Sprint 12 |
 | **[ADR-005](#adr-005-domain-affiliate-engine-isolation--immutable-partner-identifiers)** | Domain-Affiliate Engine Isolation & Immutable Partner Identifiers | Rule 3 | **Accepted / Active** | Sprint 3 |
 | **[ADR-006](#adr-006-3-layer-environment-architecture--production-sign-off-gates)** | 3-Layer Environment Architecture & Production Sign-Off Gates | Rule 2 | **Accepted / Active** | Sprint 11 / Reconciled Sprint 12 |
+| **[ADR-007](#adr-007-resilient-document-governance-assertion--section-scoping-protocol)** | Resilient Document Governance Assertion & Section-Scoping Protocol | Rules 1, 9, 16 | **Accepted / Active** | Sprint 13 (UPA-1311) |
 
 ---
 
@@ -239,3 +240,30 @@ Direct pushes and ad-hoc hotfixes to production risk live downtime, database cor
 ### Accepted Trade-Offs
 * Promotion requires a multi-step git merge and verification cycle (`scripts/promote.py`, `scripts/ci_check.py`).
 * Staging environment requires maintaining isolated configuration, secrets, and database hosts.
+
+---
+
+## ADR-007: Resilient Document Governance Assertion & Section-Scoping Protocol
+
+* **Status**: Accepted / Active `[VERIFIED IN CURRENT REPOSITORY]`
+* **Date / Sprint**: Sprint 13 (UPA-1311)
+* **Governing Rules**: AGENTS.md Rule 1 (*Test Suite Integrity*), Rule 9 (*Living Documentation Contract*), Rule 16 (*Evidence & Verification*)
+
+### Context & Problem Statement
+Section 9 of `AGENTS.md` mandates continuous maintenance of the project's living architecture documents. Historical tests in `tests/test_sprint14_commerce.py` asserted an exact substring match on the section's heading title: `"Mandatory 4-Core Document Governance Contract"`.
+
+When UPA-1308 added `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md` (expanding the contract from 4 to 6 documents) and retitled Section 9 to `## 9. Mandatory Document Governance Contract & Living Architecture Files`, the exact title assertion broke. This produced a brittle test failure on subsequent test runs even though all document governance requirements were strictly fulfilled.
+
+### Options Considered
+1. **Option A: Revert Section 9 heading in `AGENTS.md`**:
+   - *Pros*: Makes the legacy assertion pass without touching test files.
+   - *Cons*: Violates the living architecture reality where 6 documents are actively maintained; mislabels the section as "4-Core".
+2. **Option B (Selected): Section-Scoped Path Validation & Method Renaming**:
+   - *Pros*: Dynamically extracts Section 9 (`## 9.` to `## 10.`) and asserts that each of the six required document paths (`docs/TROUBLESHOOTING.md`, `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/USER_MANUAL.md`, `docs/architecture/DECISIONS.md`, `docs/architecture/FLOW.md`) is explicitly present in the section. Renames test method to `test_mandatory_document_governance_contract_and_user_manual`.
+   - *Cons*: Requires an authorized test contract update under Rule 1 with explicit Product Owner sign-off.
+
+### Decision & Rationale
+We adopted Option B under explicit Product Owner approval. Rather than asserting a volatile markdown heading string, the test validates the contractual substance of Section 9 by asserting the presence of all six canonical document paths inside the extracted section. If any document is removed or misspelled, the test fails with an informative error message naming the missing file.
+
+### Accepted Trade-Offs
+* Requires `AGENTS.md` section numbering conventions (`## 9.` and `## 10.`) to remain consistent.

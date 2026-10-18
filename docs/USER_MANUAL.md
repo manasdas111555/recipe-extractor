@@ -115,3 +115,15 @@ Save and organize your extractions across all video categories.
 ### How to Use:
 - **WhatsApp Notes**: Click **"WhatsApp Notes"** on any card or enter a mobile phone number to receive formatted notes and shopping links on WhatsApp.
 - **Telegram Bot (`@UniversalProAIBot`)**: Forward video links directly to our Telegram bot to receive structured markdown cards and tap **"Start Cooking Mode"** to launch the interactive viewer.
+
+---
+
+## 8. Governance & Documentation Reference
+
+Universal Pro AI maintains continuous synchronization across its six mandatory living architecture documents as enforced by AGENTS.md Section 9:
+- `docs/TROUBLESHOOTING.md` — Bug logs, root cause analysis, and resolution verification.
+- `docs/po-governance/PRODUCT_OWNER_UX_SHOWCASE.md` — Feature showcases, UX improvements, and sign-off criteria.
+- `docs/architecture/DISASTER_RECOVERY.md` — System architecture, capacity metrics, and disaster runbooks.
+- `docs/USER_MANUAL.md` — End-to-end user guide and feature workflows.
+- `docs/architecture/DECISIONS.md` — Architectural Decision Records (ADRs).
+- `docs/architecture/FLOW.md` — Execution flow diagrams and subsystem call hierarchy.
