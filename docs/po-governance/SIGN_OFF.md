@@ -166,3 +166,30 @@
 - **Verdict:** Approved for Staging Promotion
 - **Status:** 🟢 **PO-APPROVED-FOR-STAGING (PO Approved)**
 - **Date:** 2026-10-18
+
+---
+
+## Product Owner Staging Verification Acceptance — UPA-1311
+
+### 1. Scope of Review & Acceptance
+- **Ticket**: UPA-1311 (Living Document Governance Contract Assertion Hardening)
+- **Environment**: Layer 2 Staging (`staging` branch at commit `48a426cd71f5e89dadfc4ee32e8f85847b5ca88a`)
+- **Promotion Workflow & Merge**: Promoted via isolated branch `promotion/upa-1311-staging`, verified via clean CI, and merged via PR #6 ([#6](https://github.com/manasdas111555/recipe-extractor/pull/6)).
+- **Staging Verification Evidence**:
+  1. Staging Merge Commit: `48a426cd71f5e89dadfc4ee32e8f85847b5ca88a` on `origin/staging`.
+  2. GitHub Actions CI (`test-and-build`): Completed with **SUCCESS** on `staging` (run `39154636869`, 349 tests passing, 0 failures, 3 deselected).
+  3. Vercel Preview Deployment: Clean deployment status confirmed (`status=completed conclusion=success`, run `117755335930`).
+  4. Scope Isolation: Zero inclusion of unapproved tickets (UPA-1307 `.dockerignore` excluded).
+  5. Governance Integrity: Section 9 extraction correctly validates all six living architecture documents dynamically.
+- **Production Isolation**: Production VM (`140.245.214.28`), Production branch (`main`), Production database, and Production containers remained 100% untouched.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: The repository owner explicitly accepts UPA-1311's Staging verification.
+- **Scope & Isolation Constraints**:
+  1. This acceptance confirms successful completion of UPA-1311 on Layer 2 Staging.
+  2. It does **not** authorize Production release or merge to `main` (Rule 2).
+  3. Production VM, Production branch (`main`), Production database, and Production deployment remain 100% untouched.
+  4. Zero database writes, migrations, or destructive commands permitted.
+- **Verdict:** Accepted (Staging Verification)
+- **Status:** 🟢 **PO-ACCEPTED-STAGING (PO Accepted)**
+- **Date:** 2026-10-19
