@@ -681,7 +681,10 @@ Authoritative Staging endpoints are configured as follows:
 - **Frontend Staging Origin**: `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`
 - **Backend Staging Health Endpoint**: `http://129.225.86.241/health` (OCI Staging VM, port 80 via Caddy)
 - *Note on Custom FQDN*: Any proposed hostname such as `https://staging-api.universal-pro-ai.com/health` is currently **UNRESOLVED / UNCONFIGURED** in DNS and must not be targeted until official DNS A/CNAME and TLS provisioning are complete.
-- *Commit-Bound Manifest & Live Classification Requirement*: Promotion tooling (`scripts/promote.py` preflight invoking `scripts/verify_promotion.py`) strictly enforces that promotion requires a valid commit-bound evidence manifest with `executionClassification: live`. Mocked evidence is permitted only on Dev and cannot satisfy Staging or Production release gates.
+- *Commit-Bound Manifest & Source-Aware Preflight*: Promotion tooling ([`scripts/promote.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/promote.py) preflight invoking [`scripts/verify_promotion.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/verify_promotion.py)) verifies the source branch evidence:
+  - Dev → Staging preflight: verifies source `Dev` manifest using `--env dev` with expected Dev SHA, accepting Dev-appropriate classification (`mocked` or `live`).
+  - Staging release acceptance: requires live Staging evidence bound to the deployed Staging revision (`executionClassification: "live"`).
+  - Staging → Production preflight: verifies source `staging` manifest using `--env staging` with expected Staging SHA, strictly enforcing `executionClassification: "live"`. Mocked evidence cannot satisfy Staging or Production release gates.
 
 Execute read-only health checks:
 ```bash

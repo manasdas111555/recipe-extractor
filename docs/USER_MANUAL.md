@@ -148,9 +148,10 @@ Universal Pro AI implements a strict multi-tier testing framework separating off
   - `python scripts/ci_check.py` (executes the complete 5-step pipeline: `tsc`, `lint`, `vitest`, `build`, `pytest`).
 
 ### 2. Live Staging Release Gates (`staging` Branch)
-- **Commit-Bound Manifest & Promotion Preflight**:
-  - `python scripts/promote.py` executes preflight verification (`verify_evidence_manifest`) enforcing `manifest.commitSha === expectedCommitSha` and requiring `executionClassification: "live"`.
-  - Mocked evidence is permitted strictly on Dev and cannot satisfy Staging or Production release gates.
+- **Commit-Bound Manifest & Source-Aware Promotion Preflight**:
+  - **Dev → Staging Preflight**: `python scripts/promote.py --to staging` executes preflight verification (`verify_evidence_manifest`) on the source `Dev` evidence manifest using `--env dev`, checking `manifest.commitSha === expectedDevSha` and accepting Dev-appropriate classification (`mocked` or `live`).
+  - **Staging Release Acceptance**: Generating release acceptance evidence on Staging requires deploying to Staging and executing the live Staging smoke/E2E suite, producing an `evidence-manifest.json` bound to the deployed Staging revision with `executionClassification: "live"`.
+  - **Staging → Production Preflight**: `python scripts/promote.py --to main` executes preflight verification on the source `staging` evidence manifest using `--env staging`, checking `manifest.commitSha === expectedStagingSha` and strictly enforcing `executionClassification: "live"`. Mocked evidence is permitted strictly on Dev and cannot satisfy Staging or Production release gates.
 - **Tier 1 — Universal Live Staging Smoke Gate**:
   - `npm run test:e2e:staging:smoke` (mandatory after *every* Staging deployment before Product Owner acceptance).
   - Targets `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app` with `ALLOW_LIVE_STAGING_SMOKE=true` and edge bypass cookies.

@@ -350,9 +350,9 @@ flowchart TD
     end
 
     subgraph Phase4["Phase 4: Governed Staging Promotion"]
-        P3F -->|PO Authorized| P4Pre{"Preflight Manifest Check (verify_evidence_manifest)"}
-        P4Pre -->|FAIL / Mocked Evidence| P4Block["Fail-Closed Promotion Blocker (STOP)"]
-        P4Pre -->|PASS (commit-bound & live classification)| P4A["Prepare Promotion Branch (promotion/...)"]
+        P3F -->|PO Authorized| P4Pre{"Source Preflight Check (Dev Manifest @ commit SHA)"}
+        P4Pre -->|FAIL / Mismatch / Unverified| P4Block["Fail-Closed Promotion Blocker (STOP)"]
+        P4Pre -->|PASS (Dev evidence valid for SHA)| P4A["Prepare Promotion Branch (promotion/...)"]
         P4A --> P4B["Submit PR to staging & Validate Remote CI (ci.yml)"]
         P4B --> P4C["Owner PR Sign-Off & Merge into origin/staging"]
     end
@@ -369,7 +369,9 @@ flowchart TD
     end
 
     subgraph Phase6["Phase 6: Governed Production Release & Closeout"]
-        P5G -->|Explicit Written Authorization| P6A["Deploy to Production (universal-pro-ai.vercel.app & OCI 140.245.214.28)"]
+        P5G -->|Explicit Written Authorization| P6Pre{"Source Preflight Check (Staging Live Manifest @ commit SHA)"}
+        P6Pre -->|FAIL / Mocked Evidence / Mismatch| P6Block["Fail-Closed Promotion Blocker (STOP)"]
+        P6Pre -->|PASS (Live Staging evidence bound to SHA)| P6A["Deploy to Production (universal-pro-ai.vercel.app & OCI 140.245.214.28)"]
         P6A --> P6B["Post-Deployment Non-Destructive Live Smoke Check"]
         P6B --> P6C{"Production Smoke PASS?"}
         P6C -->|FAIL| P6D["Halt Progression, Alert Owner, Execute Bounded Rollback (Runbook 25)"]

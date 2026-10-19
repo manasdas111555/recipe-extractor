@@ -217,29 +217,30 @@ def test_missing_manifest_file_fails_closed(tmp_path: Path):
 # ======================================================================
 # GAP-01: scripts/promote.py Preflight & Argument Mapping Regressions
 # ======================================================================
+import sys
+import subprocess
 from scripts.promote import (
     get_manifest_verify_cmd,
     resolve_source_sha,
     verify_promotion_preflight,
 )
-import subprocess
 
 
-def test_get_manifest_verify_cmd_staging_maps_to_staging():
+def test_get_manifest_verify_cmd_staging_maps_to_dev():
     cmd = get_manifest_verify_cmd("staging", SAMPLE_COMMIT_SHA)
     assert "--verify-manifest" in cmd
     assert "--env" in cmd
-    assert cmd[cmd.index("--env") + 1] == "staging"
+    assert cmd[cmd.index("--env") + 1] == "dev"
     assert "--expected-sha" in cmd
     assert cmd[cmd.index("--expected-sha") + 1] == SAMPLE_COMMIT_SHA
 
 
-def test_get_manifest_verify_cmd_main_maps_to_prod():
+def test_get_manifest_verify_cmd_main_maps_to_staging():
     staging_sha = "d493122dd3c7f979affd3542218cd4bd815b362c"
     cmd = get_manifest_verify_cmd("main", staging_sha)
     assert "--verify-manifest" in cmd
     assert "--env" in cmd
-    assert cmd[cmd.index("--env") + 1] == "prod"
+    assert cmd[cmd.index("--env") + 1] == "staging"
     assert "--expected-sha" in cmd
     assert cmd[cmd.index("--expected-sha") + 1] == staging_sha
 
@@ -284,12 +285,12 @@ def test_verify_promotion_preflight_aborts_on_manifest_failure(monkeypatch):
     assert any("--verify-manifest" in c for c in calls)
     manifest_call = next(c for c in calls if "--verify-manifest" in c)
     assert "--env" in manifest_call
-    assert manifest_call[manifest_call.index("--env") + 1] == "staging"
+    assert manifest_call[manifest_call.index("--env") + 1] == "dev"
     assert "--expected-sha" in manifest_call
     assert manifest_call[manifest_call.index("--expected-sha") + 1] == SAMPLE_COMMIT_SHA
 
 
-def test_verify_promotion_preflight_main_aborts_on_prod_manifest_failure(monkeypatch):
+def test_verify_promotion_preflight_main_aborts_on_staging_manifest_failure(monkeypatch):
     calls = []
 
     def mock_subprocess_run(cmd, *args, **kwargs):
@@ -309,7 +310,7 @@ def test_verify_promotion_preflight_main_aborts_on_prod_manifest_failure(monkeyp
     assert any("--verify-manifest" in c for c in calls)
     manifest_call = next(c for c in calls if "--verify-manifest" in c)
     assert "--env" in manifest_call
-    assert manifest_call[manifest_call.index("--env") + 1] == "prod"
+    assert manifest_call[manifest_call.index("--env") + 1] == "staging"
     assert "--expected-sha" in manifest_call
     assert manifest_call[manifest_call.index("--expected-sha") + 1] == "d493122dd3c7f979affd3542218cd4bd815b362c"
 
@@ -345,6 +346,74 @@ def test_verify_promotion_preflight_passes_when_all_checks_succeed(monkeypatch):
     # Should complete without error
     verify_promotion_preflight("staging", "Dev")
     assert any("--verify-manifest" in c for c in calls)
+    manifest_call = next(c for c in calls if "--verify-manifest" in c)
+    assert manifest_call[manifest_call.index("--env") + 1] == "dev"
+    assert manifest_call[manifest_call.index("--expected-sha") + 1] == SAMPLE_COMMIT_SHA
+
+
+def test_verify_promotion_preflight_staging_accepts_valid_mocked_dev_manifest(tmp_path: Path, monkeypatch):
+    manifest = create_manifest(classification="mocked", environment="dev", commit_sha=SAMPLE_COMMIT_SHA)
+    manifest_path = tmp_path / "dev-evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    real_run = subprocess.run
+
+    def mock_run(cmd, *args, **kwargs):
+        if "--verify-manifest" not in cmd:
+            if cmd[0] == "git" and "rev-parse" in cmd:
+                return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=SAMPLE_COMMIT_SHA)
+            # Base quality checks pass
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
+        return real_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    # Valid mocked dev manifest must pass Dev preflight when promoting to staging
+    verify_promotion_preflight("staging", "Dev", manifest_path=manifest_path)
+
+
+def test_verify_promotion_preflight_main_rejects_mocked_staging_manifest(tmp_path: Path, monkeypatch):
+    manifest = create_manifest(classification="mocked", environment="staging", commit_sha=SAMPLE_COMMIT_SHA)
+    manifest_path = tmp_path / "mocked-staging-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    real_run = subprocess.run
+
+    def mock_run(cmd, *args, **kwargs):
+        if "--verify-manifest" not in cmd:
+            if cmd[0] == "git" and "rev-parse" in cmd:
+                return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=SAMPLE_COMMIT_SHA)
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
+        return real_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    # Mocked staging evidence must fail Staging preflight when promoting to main
+    with pytest.raises(SystemExit) as exc_info:
+        verify_promotion_preflight("main", "staging", manifest_path=manifest_path)
+    assert exc_info.value.code == 1
+
+
+def test_verify_promotion_preflight_aborts_on_sha_mismatch(tmp_path: Path, monkeypatch):
+    manifest = create_manifest(classification="mocked", environment="dev", commit_sha="mismatched_sha_12345678901234567890123456789012")
+    manifest_path = tmp_path / "dev-evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    real_run = subprocess.run
+
+    def mock_run(cmd, *args, **kwargs):
+        if "--verify-manifest" not in cmd:
+            if cmd[0] == "git" and "rev-parse" in cmd:
+                return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=SAMPLE_COMMIT_SHA)
+            return subprocess.CompletedProcess(args=cmd, returncode=0)
+        return real_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    # SHA mismatch must abort preflight
+    with pytest.raises(SystemExit) as exc_info:
+        verify_promotion_preflight("staging", "Dev", manifest_path=manifest_path)
+    assert exc_info.value.code == 1
 
 
 # ======================================================================

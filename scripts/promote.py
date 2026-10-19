@@ -48,8 +48,10 @@ def resolve_source_sha(source_env: str) -> str:
     return (res.stdout or "").strip()
 
 def get_manifest_verify_cmd(target_env: str, expected_sha: str, manifest_path: Path = None) -> list:
-    """Construct command to verify the release evidence manifest for the given target environment."""
-    verify_env = "staging" if target_env == "staging" else "prod"
+    """Construct command to verify the release evidence manifest for the source branch being promoted."""
+    # When promoting Dev -> staging, verify the Dev manifest (source)
+    # When promoting staging -> main, verify the Staging live manifest (source)
+    verify_env = "dev" if target_env == "staging" else "staging"
     cmd = [
         sys.executable,
         str(ROOT_DIR / "scripts" / "verify_promotion.py"),
@@ -74,7 +76,7 @@ def verify_promotion_preflight(target_env: str, source_env: str, manifest_path: 
 
     # 2. Mandatory Release Evidence Manifest Verification
     expected_sha = resolve_source_sha(source_env)
-    verify_env = "staging" if target_env == "staging" else "prod"
+    verify_env = "dev" if target_env == "staging" else "staging"
     print(f"\n👉 Verifying release evidence manifest for [{target_env}] (source: {source_env} @ {expected_sha[:10]})...")
 
     manifest_cmd = get_manifest_verify_cmd(target_env, expected_sha, manifest_path)

@@ -734,16 +734,16 @@ Please review each module deliverable and provide your official sign-off status 
    - `scripts/verify_promotion.py`: Provides `--deployed [staging|prod]` mode verifying deployed frontend and backend health endpoints against ground truth.
    - **Commit-Bound Manifest Verification & P0 Classification Enforcement**: Enforces `manifest.commitSha === expectedCommitSha` and requires `executionClassification: "live"` for Staging and Production release gates (`"mocked"` accepted strictly on Dev; mocked evidence rejected for staging/prod).
    - **GAP-02 Verifier Output Label & Verdict Hygiene**: Renamed `Manifest Overall Status` to `Payload Self-Reported Status` and emits explicit final gate verdicts (`REJECTED (FAILED CLOSED)` / `PASSED`), preventing false-green overall status when subsequent validation rejects the manifest.
-   - **GAP-01 Promotion Entry Point Preflight**: `scripts/promote.py` enforces preflight evidence manifest verification before creating or pushing any promotion branch (`promotion/staging-<sha>`).
+   - **GAP-01 Promotion Entry Point Preflight & Source-Aware Mapping**: `scripts/promote.py` enforces source-aware preflight evidence manifest verification before creating or pushing any promotion branch: validates source `Dev` manifest (`--env dev`) for Staging promotion, and validates source `staging` manifest (`--env staging`, requiring `executionClassification: "live"`) for Production promotion.
    - `frontend/playwright.config.ts` & `frontend/package.json`: Configures `staging-smoke` project and `"test:e2e:staging:smoke"` script.
-   - **Offline Unit Test Coverage**: 62 passing Vitest unit tests (including 29 evidence manifest tests and 14 staging smoke unit tests in `stagingSmoke.test.ts`), and 25 passing manifest verification Pytest tests in `tests/test_verify_promotion_manifest.py`.
+   - **Offline Unit Test Coverage**: 62 passing Vitest unit tests (including 29 evidence manifest tests and 14 staging smoke unit tests in `stagingSmoke.test.ts`), and 28 passing manifest verification Pytest tests in `tests/test_verify_promotion_manifest.py`.
 
 #### Product Owner Verification Checklist (Pending PO Review):
 - [ ] **Six-Phase Workflow**: Operational workflow clearly maps Phase 1 through Phase 6 with unskippable approval checkpoints.
 - [ ] **Tier 1 Live Staging Smoke**: Universal live Staging smoke spec created and integrated into `playwright.config.ts`, with cross-origin backend error tracking and fail-closed navigation assertions.
 - [ ] **Tier 2 Conditional Live Extraction**: Preserved with `ALLOW_DB_WRITES=false` zero-dirty-rows guarantee.
 - [ ] **Mocked vs Live Isolation**: Offline mocked Playwright runs remain completely isolated from live staging tests; mocked evidence rejected for staging/prod gates.
-- [ ] **Commit-Bound Promotion Preflight**: Promotion entry point validates manifest SHA and live classification before branch creation.
+- [ ] **Source-Aware Promotion Preflight**: Promotion entry point validates source manifest SHA and classification (source Dev for Staging, source Staging live for Production) before branch creation.
 - [ ] **Bounded Production Rollback**: Governed rollback protocol replaces blind git revert on `origin/main`.
 - [ ] **Final Synchronized Tree Verification**: Rule 16 5-step pipeline validated clean green.
 
