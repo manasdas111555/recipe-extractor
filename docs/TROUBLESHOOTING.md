@@ -1598,14 +1598,19 @@ Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of
    - *Operational Status Note*: The hardened smoke checks have not yet been executed against live Staging (they remain offline in Dev, guarded by `ALLOW_LIVE_STAGING_SMOKE=true`).
 6. **Governed, Bounded Production Rollback**:
    - Replaced blind git revert with bounded rollback protocol in `docs/architecture/DISASTER_RECOVERY.md`: capture failed SHA and smoke evidence, alert owner, halt progression, identify previous known-good releases on Vercel and OCI VM, and stop for operator intervention if automated rollback is not explicitly approved.
-7. **Documentation Plan Reconciliation**:
+7. **Ticket-Scoped Promotion Branch Support & Fail-Closed Remote Lookup (`scripts/promote.py`)**:
+   - Mandated validated `--ticket <ticket>` CLI argument when promoting to Staging (`--to staging`), normalizing tickets (`validate_ticket_format`) to `promotion/<ticket>-staging` (e.g. `promotion/upa-1401-staging`). Rejects malformed or empty tickets with `ValueError`.
+   - Added collision detection (`check_branch_exists`) checking both local refs (`git show-ref`) and remote refs (`git ls-remote`). Replaced destructive `git checkout -B` with safe `git checkout -b`, halting safely before branch creation or push if a branch already exists.
+   - **Remote-Lookup Fail-Closed Handling**: Distinguishes clean nonexistent branches (`returncode == 0` and empty stdout) from remote failures (`returncode != 0`). Any non-zero exit code (network error, auth failure, git error) raises `RuntimeError` and halts promotion with exit code 1 before preflight and branch creation, never misclassifying remote failure as branch absence.
+   - Expanded manifest verification pytest suite in `tests/test_verify_promotion_manifest.py` from 28 to 50 passing unit tests.
+8. **Documentation Plan Reconciliation**:
    - Recorded ADR-008 in `docs/architecture/DECISIONS.md` and updated ADR Index table (reconciled sequential ADR-008 vs preliminary reference ADR-014).
    - Added Section 8 (Governance Reference) and Section 9 (Developer & QA Guide) to `docs/USER_MANUAL.md` and updated Table of Contents (reconciled Section 9 vs preliminary reference Section 19).
    - Updated `docs/po-governance/JIRA_BACKLOG.md` with explicit Rule 21.6 Documentation Impact Assessment across all six living architecture documents.
 
 #### 4. Testing & Verification:
 - **Focused Unit Test Suite**: `pytest tests/test_sprint14_commerce.py tests/test_port_shielding_and_docs.py -v` -> **12 passed in 0.40s [MEASURED]**.
-- **Evidence Manifest Pytest Suite**: `pytest tests/test_verify_promotion_manifest.py -v` -> **28 passed in 0.69s [MEASURED]**.
+- **Evidence Manifest Pytest Suite**: `pytest tests/test_verify_promotion_manifest.py -v` -> **50 passed in 0.64s [MEASURED]**.
 - **TypeScript Compilation**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
 - **Frontend Vitest Suite**: `npm test` -> **62 passed in 1.93s [MEASURED]** (including 29 evidence manifest tests and 14 staging smoke unit tests).
 - **Frontend Lint**: `npm run lint` -> **0 errors (7 pre-existing warnings) [MEASURED]**.

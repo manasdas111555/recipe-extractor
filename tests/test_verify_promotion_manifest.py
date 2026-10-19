@@ -531,3 +531,168 @@ def test_verifier_output_missing_manifest_rejected(tmp_path: Path, capsys):
     captured = capsys.readouterr()
     assert "Missing evidence manifest artifact" in captured.out
     assert "❌ Evaluated Release Gate Verdict for STAGING: REJECTED (FAILED CLOSED)." in captured.out
+
+
+# ==============================================================================
+# Ticket-Scoped Promotion Branch Support Tests (UPA-1401)
+# ==============================================================================
+from scripts.promote import (
+    validate_ticket_format,
+    derive_staging_promotion_branch,
+    check_branch_exists,
+)
+
+
+def test_derive_staging_promotion_branch_valid_tickets():
+    assert derive_staging_promotion_branch("upa-1401") == "promotion/upa-1401-staging"
+    assert derive_staging_promotion_branch("UPA-1401") == "promotion/upa-1401-staging"
+    assert derive_staging_promotion_branch("  upa-1305  ") == "promotion/upa-1305-staging"
+    assert derive_staging_promotion_branch("SPRINT-12") == "promotion/sprint-12-staging"
+    assert derive_staging_promotion_branch("jira-9999") == "promotion/jira-9999-staging"
+
+
+@pytest.mark.parametrize(
+    "invalid_ticket",
+    [
+        "",
+        "   ",
+        None,
+        "1401",
+        "-1401",
+        "upa",
+        "upa-",
+        "upa_1401",
+        "upa-abc",
+        "promotion/upa-1401-staging",
+        "upa-1401;rm -rf /",
+        "upa-1401 && ls",
+        "upa.1401",
+    ],
+)
+def test_validate_ticket_format_rejects_malformed_inputs(invalid_ticket):
+    with pytest.raises(ValueError):
+        validate_ticket_format(invalid_ticket)
+
+
+def test_check_branch_exists_locally(monkeypatch):
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        if cmd[0] == "git" and "show-ref" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+    exists, location = check_branch_exists("promotion/upa-1401-staging")
+    assert exists is True
+    assert location == "locally"
+
+
+def test_check_branch_exists_remotely(monkeypatch):
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        if cmd[0] == "git" and "show-ref" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+        if cmd[0] == "git" and "ls-remote" in cmd:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="b16fd8db5804cddaedab0cb2cbf81e85e0bbb338\trefs/heads/promotion/upa-1401-staging\n",
+                stderr="",
+            )
+        return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+    exists, location = check_branch_exists("promotion/upa-1401-staging")
+    assert exists is True
+    assert location == "remotely on origin"
+
+
+def test_check_branch_exists_neither(monkeypatch):
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        if cmd[0] == "git" and "show-ref" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+        if cmd[0] == "git" and "ls-remote" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+        return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+    exists, location = check_branch_exists("promotion/upa-1401-staging")
+    assert exists is False
+    assert location == ""
+
+
+def test_check_branch_exists_remote_error_raises_runtime_error(monkeypatch):
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        if cmd[0] == "git" and "show-ref" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+        if cmd[0] == "git" and "ls-remote" in cmd:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=128,
+                stdout="",
+                stderr="fatal: Could not read from remote repository.",
+            )
+        return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+    with pytest.raises(RuntimeError) as exc_info:
+        check_branch_exists("promotion/upa-1401-staging")
+    assert "Failed to query remote branch status on origin" in str(exc_info.value)
+    assert "fatal: Could not read from remote repository." in str(exc_info.value)
+
+
+def test_promote_cli_missing_ticket_for_staging_fails_closed(monkeypatch, capsys):
+    import scripts.promote as promote_mod
+
+    monkeypatch.setattr(sys, "argv", ["promote.py", "--to", "staging"])
+    with pytest.raises(SystemExit) as exc_info:
+        promote_mod.main()
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "--ticket is required when promoting to staging" in captured.out
+
+
+def test_promote_cli_invalid_ticket_fails_closed(monkeypatch, capsys):
+    import scripts.promote as promote_mod
+
+    monkeypatch.setattr(sys, "argv", ["promote.py", "--to", "staging", "--ticket", "invalid_ticket"])
+    with pytest.raises(SystemExit) as exc_info:
+        promote_mod.main()
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "Invalid ticket format 'invalid_ticket'" in captured.out
+
+
+def test_promote_cli_existing_branch_fails_closed(monkeypatch, capsys):
+    import scripts.promote as promote_mod
+
+    monkeypatch.setattr(promote_mod, "check_branch_exists", lambda branch: (True, "locally"))
+    monkeypatch.setattr(sys, "argv", ["promote.py", "--to", "staging", "--ticket", "upa-1401"])
+    with pytest.raises(SystemExit) as exc_info:
+        promote_mod.main()
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "already exists locally" in captured.out
+    assert "Halting promotion safely to prevent destructive overwrite or reset." in captured.out
+
+
+def test_promote_cli_remote_lookup_failure_fails_closed(monkeypatch, capsys):
+    import scripts.promote as promote_mod
+
+    def mock_check_branch_exists(branch):
+        raise RuntimeError("fatal: Could not read from remote repository.")
+
+    preflight_called = []
+    def mock_preflight(*args, **kwargs):
+        preflight_called.append(True)
+
+    monkeypatch.setattr(promote_mod, "check_branch_exists", mock_check_branch_exists)
+    monkeypatch.setattr(promote_mod, "verify_promotion_preflight", mock_preflight)
+    monkeypatch.setattr(sys, "argv", ["promote.py", "--to", "staging", "--ticket", "upa-1401"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        promote_mod.main()
+
+    assert exc_info.value.code == 1
+    assert len(preflight_called) == 0, "Preflight must not run if remote branch lookup fails"
+    captured = capsys.readouterr()
+    assert "🚨 RULE 2 FAIL-CLOSED: Remote branch verification failed" in captured.out
+    assert "fatal: Could not read from remote repository." in captured.out

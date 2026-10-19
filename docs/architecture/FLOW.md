@@ -352,7 +352,9 @@ flowchart TD
     subgraph Phase4["Phase 4: Governed Staging Promotion"]
         P3F -->|PO Authorized| P4Pre{"Source Preflight Check (Dev Manifest @ commit SHA)"}
         P4Pre -->|FAIL / Mismatch / Unverified| P4Block["Fail-Closed Promotion Blocker (STOP)"]
-        P4Pre -->|PASS (Dev evidence valid for SHA)| P4A["Prepare Promotion Branch (promotion/...)"]
+        P4Pre -->|PASS (Dev evidence valid for SHA)| P4BranchCheck{"Validate Ticket & Probe Local/Remote Branch"}
+        P4BranchCheck -->|Remote Fail / Collision / Invalid Ticket| P4BranchBlock["Fail-Closed Branch Blocker (STOP)"]
+        P4BranchCheck -->|Clean (Absent Locally & Remotely)| P4A["Prepare Ticket Branch (promotion/<ticket>-staging)"]
         P4A --> P4B["Submit PR to staging & Validate Remote CI (ci.yml)"]
         P4B --> P4C["Owner PR Sign-Off & Merge into origin/staging"]
     end
@@ -360,7 +362,8 @@ flowchart TD
     subgraph Phase5["Phase 5: Live Staging Deployment Verification & Release Gates"]
         P4C --> P5A["Deploy Frontend (Vercel) & Backend (OCI VM 129.225.86.241)"]
         P5A --> P5B["Verify Deployed Versions & Endpoints (verify_promotion.py --deployed)"]
-        P5B --> P5C["Tier 1 Mandatory Live Staging Smoke Gate (smoke.staging.e2e.ts)"]
+        P5C["Tier 1 Mandatory Live Staging Smoke Gate (smoke.staging.e2e.ts)"]
+        P5B --> P5C
         P5C --> P5D{"Extraction / Worker Changed?"}
         P5D -->|Yes| P5E["Tier 2 Conditional Live Extraction Gate (ALLOW_DB_WRITES=false)"]
         P5D -->|No| P5F["Record Commit-Bound Evidence Manifest"]
@@ -399,5 +402,5 @@ flowchart TD
 | Mocked E2E Release Verification | `frontend/e2e/specs/app.spec.ts` | Playwright mock route fixtures, `http://localhost:3000` | In-memory Next.js test server | Fail build on regression |
 | Tier 1 Live Staging Smoke Gate | `frontend/e2e/specs/smoke.staging.e2e.ts` | Vercel Staging preview origin, Vercel edge bypass cookie, backend origin (`STAGING_API_URL` / `http://129.225.86.241`), `validateNavigationResponse` | Vercel Edge Staging | Block Staging acceptance on failure (offline unit-tested; not yet run against live Staging) |
 | Tier 2 Conditional Extraction E2E | `frontend/e2e/specs/staging.live.e2e.ts` | Media downloader, OCI Staging VM (`129.225.86.241`), `ALLOW_DB_WRITES=false` | Ephemeral Redis/memory JobManager | Block Staging sign-off on failure |
-| Promotion Manifest Verification | `scripts/promote.py` & `scripts/verify_promotion.py` | `verify_evidence_manifest`, `validateEvidenceManifest`, commit SHA check | Commit-bound `evidence-manifest.json` | Rejects mocked evidence for staging/prod; blocks promotion on missing/mismatched SHA |
+| Promotion Manifest & Branch Verification | `scripts/promote.py` & `scripts/verify_promotion.py` | `verify_evidence_manifest`, `validateEvidenceManifest`, `validate_ticket_format`, `check_branch_exists`, commit SHA check | Commit-bound `evidence-manifest.json` & Git remote heads | Rejects mocked evidence for staging/prod; blocks promotion on missing/mismatched SHA or collision/remote query failure |
 | Definitive Rule 16 CI Pipeline | `scripts/ci_check.py` | `npx tsc`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/` | Immutable Rule 16 Contract | Zero-defect promotion blocker |

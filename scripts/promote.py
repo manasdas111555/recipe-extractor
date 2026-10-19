@@ -12,6 +12,7 @@ Enforces:
 3. Automatic push to origin upon successful verification.
 """
 
+import re
 import sys
 import argparse
 import subprocess
@@ -88,9 +89,68 @@ def verify_promotion_preflight(target_env: str, source_env: str, manifest_path: 
         )
         sys.exit(1)
 
+def validate_ticket_format(ticket: str) -> str:
+    """Validate and normalize a Jira / Backlog ticket identifier.
+
+    Must follow the standard pattern: '<prefix>-<number>' (e.g., 'upa-1401' or 'UPA-1401').
+    Returns the normalized lower-cased ticket string.
+    """
+    if not ticket or not isinstance(ticket, str):
+        raise ValueError("Ticket identifier cannot be empty.")
+    normalized = ticket.strip().lower()
+    if not re.match(r"^[a-z]+-\d+$", normalized):
+        raise ValueError(
+            f"Invalid ticket format '{ticket}'. Must match pattern '<prefix>-<number>' (e.g. 'upa-1401' or 'UPA-1401')."
+        )
+    return normalized
+
+def derive_staging_promotion_branch(ticket: str) -> str:
+    """Derive the mandated ticket-scoped promotion branch name for staging promotion.
+
+    Example: 'upa-1401' -> 'promotion/upa-1401-staging'
+    """
+    normalized_ticket = validate_ticket_format(ticket)
+    return f"promotion/{normalized_ticket}-staging"
+
+def check_branch_exists(branch_name: str) -> tuple:
+    """Check whether a target branch already exists locally or on remote 'origin'.
+
+    Returns (exists: bool, location: str).
+    Raises RuntimeError if remote branch state cannot be verified (e.g. network/auth failure).
+    """
+    # 1. Local ref check
+    local_res = subprocess.run(
+        ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}"],
+        cwd=str(ROOT_DIR),
+        text=True,
+        capture_output=True,
+    )
+    if local_res.returncode == 0:
+        return True, "locally"
+
+    # 2. Remote ref check on origin
+    remote_res = subprocess.run(
+        ["git", "ls-remote", "--heads", "origin", branch_name],
+        cwd=str(ROOT_DIR),
+        text=True,
+        capture_output=True,
+    )
+    if remote_res.returncode != 0:
+        error_msg = remote_res.stderr.strip() if remote_res.stderr else f"git exit code {remote_res.returncode}"
+        raise RuntimeError(
+            f"Failed to query remote branch status on origin: {error_msg}. "
+            "Unable to verify whether branch already exists remotely."
+        )
+
+    if remote_res.stdout.strip():
+        return True, "remotely on origin"
+
+    return False, ""
+
 def main():
     parser = argparse.ArgumentParser(description="Promote code safely across environments.")
     parser.add_argument("--to", choices=["staging", "main"], required=True, help="Target environment to promote into")
+    parser.add_argument("--ticket", type=str, help="Ticket identifier for ticket-scoped promotion branch (e.g., 'upa-1401')")
     parser.add_argument("--owner-approved", action="store_true", help="Confirm explicit written owner authorization exists in docs/po-governance/SIGN_OFF.md")
     parser.add_argument("--manifest", type=Path, help="Optional path to evidence manifest JSON file")
     args = parser.parse_args()
@@ -116,6 +176,32 @@ def main():
             print("\n🚨 RULE 2 FAIL-CLOSED: No explicit owner sign-off entry found in docs/po-governance/SIGN_OFF.md.")
             sys.exit(1)
 
+    # Enforce Rule 2 ticket-scoped branch requirement for staging promotion
+    promo_branch = None
+    if target_env == "staging":
+        if not args.ticket:
+            print("\n🚨 RULE 2 FAIL-CLOSED: --ticket is required when promoting to staging (e.g. --ticket upa-1401).")
+            sys.exit(1)
+        try:
+            promo_branch = derive_staging_promotion_branch(args.ticket)
+        except ValueError as err:
+            print(f"\n🚨 RULE 2 FAIL-CLOSED: {err}")
+            sys.exit(1)
+
+        # Early check: ensure target promotion branch does not already exist
+        try:
+            exists, location = check_branch_exists(promo_branch)
+        except RuntimeError as err:
+            print(f"\n🚨 RULE 2 FAIL-CLOSED: Remote branch verification failed: {err}")
+            sys.exit(1)
+
+        if exists:
+            print(
+                f"\n🚨 RULE 2 FAIL-CLOSED: Target promotion branch '{promo_branch}' already exists {location}. "
+                "Halting promotion safely to prevent destructive overwrite or reset."
+            )
+            sys.exit(1)
+
     print(f"\n🚀 Initiating Safe Promotion: [{source_env}] ──> [{target_env}]")
     print(f"{'=' * 60}")
 
@@ -137,12 +223,22 @@ def main():
     # 4. Governed Promotion Workflow: Staging vs Production
     if target_env == "staging":
         # Rule 2 Phase 4: Prepare isolated promotion branch and submit PR
-        sha_res = run_cmd(["git", "rev-parse", "--short", "HEAD"])
-        head_sha = sha_res.stdout.strip()
-        promo_branch = f"promotion/staging-{head_sha}"
+        # Re-check existence post-pull to ensure remote sync didn't fetch it
+        try:
+            exists, location = check_branch_exists(promo_branch)
+        except RuntimeError as err:
+            print(f"\n🚨 RULE 2 FAIL-CLOSED: Remote branch verification failed: {err}")
+            sys.exit(1)
+
+        if exists:
+            print(
+                f"\n🚨 RULE 2 FAIL-CLOSED: Target promotion branch '{promo_branch}' already exists {location}. "
+                "Halting promotion safely to prevent destructive overwrite or reset."
+            )
+            sys.exit(1)
 
         print(f"\n👉 Creating isolated promotion branch: {promo_branch}...")
-        run_cmd(["git", "checkout", "-B", promo_branch])
+        run_cmd(["git", "checkout", "-b", promo_branch])
         print(f"👉 Pushing promotion branch to origin: {promo_branch}...")
         run_cmd(["git", "push", "-u", "origin", promo_branch])
 

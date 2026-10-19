@@ -132,7 +132,7 @@ This document details:
 ### 5. Multi-Environment & CI/CD Pipeline (`scripts/`, `.github/`)
 - **`scripts/verify_promotion.py`**: Executes syntax validation, isolated clean-process module imports, and the 45-test unit suite.
 - **`scripts/promote.py`**: Enforces automated promotion gates:
-  - `python scripts/promote.py --to staging` (Dev $\rightarrow$ Staging)
+  - `python scripts/promote.py --to staging --ticket <ticket>` (Dev $\rightarrow$ Staging via ticket-scoped branch `promotion/<ticket>-staging`)
   - `python scripts/promote.py --to main` (Staging $\rightarrow$ Production)
 - **`.github/workflows/ci.yml`**: GitHub Actions runs on every push and PR to `Dev`, `staging`, and `main`.
 
@@ -685,6 +685,7 @@ Authoritative Staging endpoints are configured as follows:
   - Dev → Staging preflight: verifies source `Dev` manifest using `--env dev` with expected Dev SHA, accepting Dev-appropriate classification (`mocked` or `live`).
   - Staging release acceptance: requires live Staging evidence bound to the deployed Staging revision (`executionClassification: "live"`).
   - Staging → Production preflight: verifies source `staging` manifest using `--env staging` with expected Staging SHA, strictly enforcing `executionClassification: "live"`. Mocked evidence cannot satisfy Staging or Production release gates.
+- *Ticket-Scoped Promotion Branch & Remote Fail-Closed Guard*: Staging promotion strictly mandates a validated ticket parameter (`--ticket <ticket>`, e.g. `promotion/upa-1401-staging`). `scripts/promote.py` probes both local (`git show-ref --verify`) and remote (`git ls-remote --heads origin <branch>`) targets before creating the branch. A nonzero exit code from `git ls-remote` (network, auth, or remote failure) fails closed immediately with an explicit Rule 2 error to prevent branch collisions or corrupt promotions.
 
 Execute read-only health checks:
 ```bash
