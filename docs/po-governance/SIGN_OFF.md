@@ -116,6 +116,33 @@
 
 ---
 
+## Rule 16 Test Suite Exception Sign-Off — UPA-1305
+
+### 1. Scope of Review & Failure Attribution
+- **Ticket**: UPA-1305 (Media Downloader `yt-dlp` Assignment & Stream Proxy Security Regression Hardening)
+- **Target Context**: Layer 2 Staging Verification (`origin/staging` at `544387f3e2814bed068ebc2c895c47a55fd1be34` and candidate `promotion/UPA-1305-staging` at `c12f6d332011bd4f24945835bc2e6ec9f15b9566`).
+- **Target Test Case**:
+  `tests/test_sprint14_commerce.py::TestSprint14CommerceIntegration::test_four_core_document_governance_contract_and_user_manual`
+- **Failing Assertion**:
+  `self.assertIn("Mandatory 4-Core Document Governance Contract", agents_content)`
+- **Attribution & Root Cause**:
+  Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`, cherry-picked to staging at `9a6d9117fc04d84e6ab37738fe7d8eb89215dec7`), Section 9 of `AGENTS.md` was retitled to `## 9. Mandatory Document Governance Contract & Living Architecture Files` when adding `docs/architecture/DECISIONS.md` and `docs/architecture/FLOW.md`. This pre-existing title update removed the literal substring `"Mandatory 4-Core Document Governance Contract"`.
+- **Honest Test Suite Status**:
+  Full backend test execution honestly records: **341 passed, 1 failed, 3 deselected**. Zero false-green claims, test suppression, or test file modifications (Rule 1 preserved). All 27 focused media downloader, proxy security, and commerce tests pass cleanly.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision (Option B)**: The repository owner explicitly accepts the pre-existing heading-assertion failure in `tests/test_sprint14_commerce.py` solely for UPA-1305 Staging verification under Rule 16.
+- **Rule 16 Authorization**: This formal written exception satisfies Rule 16's requirement that known test failures block promotion unless explicitly accepted in writing by the repository owner.
+- **Scope & Isolation Constraints**:
+  1. This exception applies exclusively to the documented heading assertion in `tests/test_sprint14_commerce.py` for UPA-1305 Staging verification. It does **not** waive any other or unrelated test failure.
+  2. This exception does **not** authorize Production deployment. Production release of UPA-1305 remains strictly gated on successful Staging runtime verification, PO sign-off, and separate operator runbook execution.
+  3. The Staging worker runtime update to revision `544387f3e2814bed068ebc2c895c47a55fd1be34` on `129.225.86.241` is authorized separately and must produce measured runtime evidence (revision SHA, container health, absence of downloader `NameError`, and deterministic disk cleanup).
+- **Verdict:** Approved (Rule 16 Staging Verification Exception — Option B)
+- **Status:** 🟢 **RULE-16-EXCEPTION-APPROVED (PO Approved)**
+- **Date:** 2026-10-18
+
+---
+
 ## Rule 16 Test Suite Exception Sign-Off — UPA-1310
 
 ### 1. Scope of Review & Failure Attribution
@@ -166,3 +193,30 @@
 - **Verdict:** Approved for Staging Promotion
 - **Status:** 🟢 **PO-APPROVED-FOR-STAGING (PO Approved)**
 - **Date:** 2026-10-18
+
+---
+
+## Product Owner Staging Verification Acceptance — UPA-1311
+
+### 1. Scope of Review & Acceptance
+- **Ticket**: UPA-1311 (Living Document Governance Contract Assertion Hardening)
+- **Environment**: Layer 2 Staging (`staging` branch at commit `48a426cd71f5e89dadfc4ee32e8f85847b5ca88a`)
+- **Promotion Workflow & Merge**: Promoted via isolated branch `promotion/upa-1311-staging`, verified via clean CI, and merged via PR #6 ([#6](https://github.com/manasdas111555/recipe-extractor/pull/6)).
+- **Staging Verification Evidence**:
+  1. Staging Merge Commit: `48a426cd71f5e89dadfc4ee32e8f85847b5ca88a` on `origin/staging`.
+  2. GitHub Actions CI (`test-and-build`): Completed with **SUCCESS** on `staging` (run `39154636869`, 349 tests passing, 0 failures, 3 deselected).
+  3. Vercel Preview Deployment: Clean deployment status confirmed (`status=completed conclusion=success`, run `117755335930`).
+  4. Scope Isolation: Zero inclusion of unapproved tickets (UPA-1307 `.dockerignore` excluded).
+  5. Governance Integrity: Section 9 extraction correctly validates all six living architecture documents dynamically.
+- **Production Isolation**: Production VM (`140.245.214.28`), Production branch (`main`), Production database, and Production containers remained 100% untouched.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: The repository owner explicitly accepts UPA-1311's Staging verification.
+- **Scope & Isolation Constraints**:
+  1. This acceptance confirms successful completion of UPA-1311 on Layer 2 Staging.
+  2. It does **not** authorize Production release or merge to `main` (Rule 2).
+  3. Production VM, Production branch (`main`), Production database, and Production deployment remain 100% untouched.
+  4. Zero database writes, migrations, or destructive commands permitted.
+- **Verdict:** Accepted (Staging Verification)
+- **Status:** 🟢 **PO-ACCEPTED-STAGING (PO Approved)**
+- **Date:** 2026-10-19

@@ -132,7 +132,7 @@ This document details:
 ### 5. Multi-Environment & CI/CD Pipeline (`scripts/`, `.github/`)
 - **`scripts/verify_promotion.py`**: Executes syntax validation, isolated clean-process module imports, and the 45-test unit suite.
 - **`scripts/promote.py`**: Enforces automated promotion gates:
-  - `python scripts/promote.py --to staging` (Dev $\rightarrow$ Staging)
+  - `python scripts/promote.py --to staging --ticket <ticket>` (Dev $\rightarrow$ Staging via ticket-scoped branch `promotion/<ticket>-staging`)
   - `python scripts/promote.py --to main` (Staging $\rightarrow$ Production)
 - **`.github/workflows/ci.yml`**: GitHub Actions runs on every push and PR to `Dev`, `staging`, and `main`.
 
@@ -673,8 +673,78 @@ Confirm `test_mandatory_document_governance_contract_and_user_manual` in `tests/
 
 ---
 
+### 📘 Runbook 25: Staging & Production Playwright Release Gate Triage, Health Probe & Bounded Rollback Protocol (UPA-1401)
+**Symptom**: Tier 1 Staging smoke test fails, Tier 2 live extraction E2E fails, backend health probe is unreachable, or a live post-deployment Production check fails.
 
+#### Step 1: Staging Authoritative Endpoints & Health Probe Audit
+Authoritative Staging endpoints are configured as follows:
+- **Frontend Staging Origin**: `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`
+- **Backend Staging Health Endpoint**: `http://129.225.86.241/health` (OCI Staging VM, port 80 via Caddy)
+- *Note on Custom FQDN*: Any proposed hostname such as `https://staging-api.universal-pro-ai.com/health` is currently **UNRESOLVED / UNCONFIGURED** in DNS and must not be targeted until official DNS A/CNAME and TLS provisioning are complete.
+- *Commit-Bound Manifest & Source-Aware Preflight*: Promotion tooling ([`scripts/promote.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/promote.py) preflight invoking [`scripts/verify_promotion.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/verify_promotion.py)) verifies the source branch evidence:
+  - Dev → Staging preflight: verifies source `Dev` manifest using `--env dev` with expected Dev SHA, accepting Dev-appropriate classification (`mocked` or `live`).
+  - Staging release acceptance: requires live Staging evidence bound to the deployed Staging revision (`executionClassification: "live"`).
+  - Staging → Production preflight: verifies source `staging` manifest using `--env staging` with expected Staging SHA, strictly enforcing `executionClassification: "live"`. Mocked evidence cannot satisfy Staging or Production release gates.
+- *Ticket-Scoped Promotion Branch & Remote Fail-Closed Guard*: Staging promotion strictly mandates a validated ticket parameter (`--ticket <ticket>`, e.g. `promotion/upa-1401-staging`). `scripts/promote.py` probes both local (`git show-ref --verify`) and remote (`git ls-remote --heads origin <branch>`) targets before creating the branch. A nonzero exit code from `git ls-remote` (network, auth, or remote failure) fails closed immediately with an explicit Rule 2 error to prevent branch collisions or corrupt promotions.
 
+Execute read-only health checks:
+```bash
+# 1. Probe OCI Staging VM backend directly
+curl -fsS -m 5 http://129.225.86.241/health
+
+# 2. Probe Vercel Staging preview with bypass header
+curl -fsS -m 5 -H "x-vercel-protection-bypass: ${VERCEL_PROTECTION_BYPASS_SECRET}" \
+  https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app/
+```
+
+#### Step 2: Tier 1 Universal Live Staging Smoke Triage (`smoke.staging.e2e.ts`)
+If `npm run test:e2e:staging:smoke` fails:
+1. Verify `ALLOW_LIVE_STAGING_SMOKE=true` is exported in the test environment (note: hardened smoke checks have not yet been executed against live Staging; they remain offline in Dev).
+2. Verify Vercel Protection Bypass: if running in a browser, ensure Option A URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`) are passed on initial navigation to mint the `_vercel_jwt` edge cookie.
+3. Check HTTP error monitoring: `smoke.staging.e2e.ts` tracks failed responses (>= 400) targeting both Vercel frontend origin and configured backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`). If backend returns 5xx/4xx, inspect OCI VM API logs.
+4. Check navigation guard: `validateNavigationResponse` asserts non-null navigation response and `response.ok()`.
+5. Check DOM assertions: single docked video player contract (`video` count $\le 1$), hero input visibility, theme tokens (`globals.css`), and responsive layout.
+6. If UI failed to boot or returns HTTP 401/403/500, check Vercel deployment build logs and stop promotion immediately.
+
+#### Step 3: Tier 2 Conditional Live Extraction E2E Triage (`staging.live.e2e.ts`)
+If conditional un-mocked live extraction fails:
+1. **Database Safety**: Confirm `ALLOW_DB_WRITES=false` is enforced. Jobs complete ephemerally in Redis/in-memory `JobManager` with zero dirty rows written to Supabase PostgreSQL.
+2. Check Celery worker & Redis status on OCI Staging VM (`129.225.86.241`):
+   ```bash
+   ssh -i "path/to/staging-key.key" ubuntu@129.225.86.241
+   docker compose ps
+   docker compose logs --tail=100 worker api
+   ```
+3. Check quota and rate limits: Ensure test account has quota available in Upstash Redis.
+4. If upstream media download (`yt-dlp`) or Gemini inference fails, capture the job error JSON via `GET /api/v1/extract/status/{job_id}`.
+
+#### Step 4: Governed, Bounded Production Rollback Protocol
+If mandatory post-deployment live smoke verification on `https://universal-pro-ai.vercel.app` or OCI VM `140.245.214.28` fails:
+1. **Capture Evidence Immediately**:
+   - Capture failed deployment SHA: `export FAILED_SHA=$(git rev-parse HEAD)`
+   - Save smoke test error logs and screenshots to `artifacts/` or incident log.
+2. **Stop Release Progression**:
+   - Halt further promotion steps immediately.
+   - Send high-priority alert to the repository owner with failed SHA and error diagnostics.
+3. **Identify Previous Known-Good Versions**:
+   - Query Vercel deployment history to identify the last known-good production deployment ID.
+   - Query OCI Production VM (`140.245.214.28`) deployment log to identify the previous known-good git commit SHA (`PREV_PROD_SHA`).
+4. **Execute Bounded, Non-Destructive Rollback**:
+   - **Vercel Frontend**: Roll back instantly to previous known-good deployment via Vercel dashboard or CLI (`vercel rollback <deployment-id>`).
+   - **OCI Backend**: On `140.245.214.28`:
+     ```bash
+     git checkout ${PREV_PROD_SHA}
+     docker compose -f docker-compose.yml -f docker-compose.hardening.yml up -d --build --no-deps worker api caddy
+     curl -fsS http://localhost:8000/health
+     ```
+   - **Strict Negative Constraints**:
+     - **NEVER** execute `git push --force` to `origin/main`.
+     - **NEVER** execute an unconditional blind `git revert HEAD` on `origin/main` without concurrency checks, as concurrent commits could be corrupted.
+     - **NEVER** bypass required PR review or Product Owner authorization gates.
+5. **Operator Intervention Gate**:
+   - If automated rollback cannot execute safely within verified parameters, **STOP** and await explicit human operator/owner intervention.
+
+---
 
 ## 🔐 Secrets & Credentials Disaster Reference
 

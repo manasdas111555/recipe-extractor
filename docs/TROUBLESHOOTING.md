@@ -45,6 +45,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-049** | 2026-09-26 | Security & DevOps | Docker Egress Firewall Broad RFC1918 172.16/12 RETURN Rule Bypass (UPA-1206) | ✅ Resolved |
 | **ISSUE-050** | 2026-09-27 | Dependencies & Security | Python 3.11 Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207) | ✅ Resolved |
 | **ISSUE-051** | 2026-10-18 | Governance & Tests | Governance Heading Assertion Brittleness in Sprint 14 Commerce Suite (UPA-1311) | ✅ Resolved |
+| **ISSUE-052** | 2026-10-19 | Governance & CI/CD | Operational Workflow Streamlining & Mandatory Two-Tier Playwright Release Gates (UPA-1401) | ✅ Resolved on Dev |
 
 ---
 
@@ -1542,7 +1543,81 @@ Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of
 - **Frontend Lint**: `npm run lint` -> **0 errors (7 warnings) [MEASURED]**.
 - **Frontend Unit Tests**: `npm test` -> **40 passed in 2.27s [MEASURED]**.
 - **Frontend Production Build**: `npm run build` -> **Compiled in 913ms, 8/8 routes generated [MEASURED]**.
-- **Status**: **Resolved on Dev (Commits `e74c77d`, `e223af9`)**.
+- **Status**: **Resolved on Dev (Commits `e74c77d`, `e223af9`); Promoted to Staging via PR #6 (`48a426c`); Staging verification accepted by Product Owner in SIGN_OFF.md [MEASURED]**.
+
+---
+
+### 🚨 ISSUE-052: Operational Workflow Streamlining & Mandatory Two-Tier Playwright Release Gates (UPA-1401)
+- **Date**: 2026-10-19
+- **Affected Files**: `AGENTS.md`, `frontend/e2e/specs/smoke.staging.e2e.ts`, `frontend/playwright.config.ts`, `frontend/package.json`, `scripts/ci_check.py`, `scripts/promote.py`, `scripts/verify_promotion.py`, `docs/architecture/DISASTER_RECOVERY.md`, `docs/architecture/DECISIONS.md`, `docs/architecture/FLOW.md`
+
+#### 1. What Happened (Symptom):
+1. The release lifecycle had expanded into approximately 13 loosely structured operational phases, causing boundary ambiguity between development, staging promotion, live environment verification, and production release.
+2. In the test suite, mocked Playwright E2E tests (`npm run test:e2e:mocked` targeting `http://localhost:3000`) were not strictly separated in policy from live deployed-environment release gates, risking false confidence where passing mocked CI checks might be mistaken for live Staging verification.
+3. Staging deployments lacked a mandatory, lightweight live browser smoke test that executes after every Staging deployment before Product Owner acceptance, while un-mocked live extraction E2E suites needed clear conditional triggering without creating dirty database rows.
+4. Proposed Staging API endpoints (such as `staging-api.universal-pro-ai.com/health`) were cited in documentation without authoritative DNS/TLS verification, and production rollback procedures relied on unconditional git reverts.
+
+#### 2. Root Cause:
+1. Operational phases lacked strict consolidation into well-defined, sequential release lifecycle phases with explicit failure-stop boundaries.
+2. Playwright configuration did not isolate staging smoke specifications from mocked UI test runs, causing potential test pollution or unintended live environment requests during offline developer runs.
+3. The Staging API domain is currently reachable via Oracle Cloud Infrastructure Staging VM IP `129.225.86.241` over Caddy reverse proxy; custom FQDN DNS/TLS was deferred, so documentation required reconciliation with configured ground truth.
+4. An automatic `git revert` on `origin/main` without concurrency checks or target validation could overwrite concurrent commits or bypass required Product Owner authorization gates.
+
+#### 3. Resolution (Code Changes):
+1. **Six-Phase Release Lifecycle Workflow (`AGENTS.md` Rule 2)**:
+   - Consolidated release operations into six sequential phases:
+     - Phase 1: Intake & Governed Planning (backlog registration, risk assessment, surgical rollback plan, owner checkpoint gate).
+     - Phase 2: Dev Implementation & Local Verification (sandbox implementation, focused regressions, mocked Playwright `test:e2e:mocked`).
+     - Phase 3: Living Document Sync & Definitive Verification (sync all six living architecture documents, Rule 21.6 assessment, definitive full Rule 16 pipeline on final synchronized tree, Dev/PO boundary stop).
+     - Phase 4: Governed Staging Promotion (promotion branch, PR to `staging`, remote GitHub Actions CI, owner approval, merge).
+     - Phase 5: Live Staging Deployment Verification & Release Gates (deploy frontend & backend, verify deployed versions, execute Tier 1 live Staging smoke gate, conditionally execute Tier 2 un-mocked live extraction gate under `ALLOW_DB_WRITES=false`, record commit-bound evidence, stop for PO sign-off).
+     - Phase 6: Governed Production Release & Closeout (separate prior owner authorization, deploy to Production Vercel and OCI VM `140.245.214.28`, post-deployment live smoke verification, bounded rollback handling on failure, owner closeout in `SIGN_OFF.md` and `JIRA_BACKLOG.md`).
+2. **Two-Tier Live Staging Release Gate Policy (`AGENTS.md` Rule 2 & Rule 16)**:
+   - **Tier 1 (Universal Live Staging Smoke Gate)**: Mandatory after every Staging deployment before Staging acceptance (`smoke.staging.e2e.ts`). Verifies UI boot, hero CTA interactivity, single docked video player contract, and design system tokens.
+   - **Tier 2 (Conditional Live Extraction E2E Gate)**: Mandatory whenever changes affect media extraction, request routing, background-worker behavior, or AI inference (`staging.live.e2e.ts`). Operates safely under `ALLOW_DB_WRITES=false` via ephemeral Redis/memory `JobManager` results with zero dirty PostgreSQL rows.
+   - Formulated four-state gate semantics: `PASS`, `FAIL`, `BLOCKED`, `NOT RUN`.
+3. **Frontend Playwright Configuration & Smoke Spec**:
+   - Created [`frontend/e2e/specs/smoke.staging.e2e.ts`](file:///d:/Personal%20Projects/recipe-extractor/frontend/e2e/specs/smoke.staging.e2e.ts) with origin validation, Vercel bypass protocol, core route `/` 200 OK assertion, design system tokens inspection (`--bg-base`, `--accent-emerald`, `--text-primary`), mobile (375x812) and desktop (1280x800) responsive layouts without horizontal overflow, input font-size >= 16px (Rule 15), interactive controls (sample chips, theme toggle, submit CTA), single docked player assertion, HTTP 4xx/5xx tracking, and safety environment guard (`ALLOW_LIVE_STAGING_SMOKE`).
+   - Updated [`frontend/playwright.config.ts`](file:///d:/Personal%20Projects/recipe-extractor/frontend/playwright.config.ts) to define `staging-smoke` project targeting authoritative Vercel Staging preview origin (`https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`) and ignore live/staging specs in `mocked-ui`.
+   - Updated [`frontend/package.json`](file:///d:/Personal%20Projects/recipe-extractor/frontend/package.json) with `"test:e2e:staging:smoke": "playwright test --project=staging-smoke"`.
+4. **CI & Promotion Tooling Enhancement**:
+   - Updated [`scripts/ci_check.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/ci_check.py) to run the full Rule 16 5-step pipeline (`npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/`) sequentially with UTF-8 Windows console output.
+   - Enhanced [`scripts/verify_promotion.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/verify_promotion.py) with `--deployed [staging|prod]` mode verifying actual frontend and backend health endpoints, and added `verify_evidence_manifest` enforcing `manifest.commitSha === expectedCommitSha` and anti-false-green gate validation.
+   - **P0 Evidence Classification Enforcement**: Enforced that `executionClassification` must be `"live"` for Staging and Production release gates; `"mocked"` evidence is accepted strictly on Dev. Missing, invalid, or mismatched classification fails closed with exit code 1. Mocked evidence cannot satisfy Staging or Production release gates.
+   - **GAP-01 Promotion Entry Point Preflight & Source-Aware Mapping**: Enhanced [`scripts/promote.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/promote.py) to execute source-aware preflight evidence verification (`verify_evidence_manifest`):
+     - Dev → Staging preflight: verifies source `Dev` manifest using `--env dev` with expected Dev SHA, accepting Dev-appropriate classification (`mocked` or `live`).
+     - Staging release acceptance: requires live Staging evidence bound to the deployed Staging revision (`executionClassification: "live"`).
+     - Staging → Production preflight: verifies source `staging` manifest using `--env staging` with expected Staging SHA, strictly enforcing `executionClassification: "live"` (`mocked` evidence strictly rejected for Staging/Production gates).
+   - **GAP-02 Verifier Output Label & Verdict Hygiene**: Renamed `Manifest Overall Status` to `Payload Self-Reported Status` in [`scripts/verify_promotion.py`](file:///d:/Personal%20Projects/recipe-extractor/scripts/verify_promotion.py) so raw payload text is not presented as verified gate truth. Emits explicit evaluated final verdicts (`REJECTED (FAILED CLOSED)` / `PASSED`), ensuring an overall gate pass is never implied when manifest validation fails closed.
+   - Enhanced [`frontend/src/lib/evidenceManifest.ts`](file:///d:/Personal%20Projects/recipe-extractor/frontend/src/lib/evidenceManifest.ts) with `options.expectedCommitSha` validation and anti-false-green `notRun > 0` validation. Added 4 unit tests in [`frontend/src/lib/__tests__/evidenceManifest.test.ts`](file:///d:/Personal%20Projects/recipe-extractor/frontend/src/lib/__tests__/evidenceManifest.test.ts).
+   - Created dedicated manifest verification pytest suite in [`tests/test_verify_promotion_manifest.py`](file:///d:/Personal%20Projects/recipe-extractor/tests/test_verify_promotion_manifest.py) containing 28 tests covering SHA checks, classification rules, source-aware promote preflight, and output label/verdict assertions.
+5. **Hardened Staging Smoke Error Detection (GAP-03)**:
+   - In [`frontend/e2e/specs/smoke.staging.e2e.ts`](file:///d:/Personal%20Projects/recipe-extractor/frontend/e2e/specs/smoke.staging.e2e.ts), expanded HTTP 4xx/5xx error monitoring to include both Vercel frontend origin and configured backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`). Cross-origin backend failures are tracked and asserted against.
+   - Added fail-closed navigation validation helper `validateNavigationResponse` asserting non-null navigation response and `response.ok()`, preventing silent false greens if page loading fails.
+   - Added 14 unit tests in [`frontend/src/lib/__tests__/stagingSmoke.test.ts`](file:///d:/Personal%20Projects/recipe-extractor/frontend/src/lib/__tests__/stagingSmoke.test.ts) covering API origin resolution, monitored URL pattern matching, and navigation response validation.
+   - *Operational Status Note*: The hardened smoke checks have not yet been executed against live Staging (they remain offline in Dev, guarded by `ALLOW_LIVE_STAGING_SMOKE=true`).
+6. **Governed, Bounded Production Rollback**:
+   - Replaced blind git revert with bounded rollback protocol in `docs/architecture/DISASTER_RECOVERY.md`: capture failed SHA and smoke evidence, alert owner, halt progression, identify previous known-good releases on Vercel and OCI VM, and stop for operator intervention if automated rollback is not explicitly approved.
+7. **Ticket-Scoped Promotion Branch Support & Fail-Closed Remote Lookup (`scripts/promote.py`)**:
+   - Mandated validated `--ticket <ticket>` CLI argument when promoting to Staging (`--to staging`), normalizing tickets (`validate_ticket_format`) to `promotion/<ticket>-staging` (e.g. `promotion/upa-1401-staging`). Rejects malformed or empty tickets with `ValueError`.
+   - Added collision detection (`check_branch_exists`) checking both local refs (`git show-ref`) and remote refs (`git ls-remote`). Replaced destructive `git checkout -B` with safe `git checkout -b`, halting safely before branch creation or push if a branch already exists.
+   - **Remote-Lookup Fail-Closed Handling**: Distinguishes clean nonexistent branches (`returncode == 0` and empty stdout) from remote failures (`returncode != 0`). Any non-zero exit code (network error, auth failure, git error) raises `RuntimeError` and halts promotion with exit code 1 before preflight and branch creation, never misclassifying remote failure as branch absence.
+   - Expanded manifest verification pytest suite in `tests/test_verify_promotion_manifest.py` from 28 to 50 passing unit tests.
+8. **Documentation Plan Reconciliation**:
+   - Recorded ADR-008 in `docs/architecture/DECISIONS.md` and updated ADR Index table (reconciled sequential ADR-008 vs preliminary reference ADR-014).
+   - Added Section 8 (Governance Reference) and Section 9 (Developer & QA Guide) to `docs/USER_MANUAL.md` and updated Table of Contents (reconciled Section 9 vs preliminary reference Section 19).
+   - Updated `docs/po-governance/JIRA_BACKLOG.md` with explicit Rule 21.6 Documentation Impact Assessment across all six living architecture documents.
+
+#### 4. Testing & Verification:
+- **Focused Unit Test Suite**: `pytest tests/test_sprint14_commerce.py tests/test_port_shielding_and_docs.py -v` -> **12 passed in 0.40s [MEASURED]**.
+- **Evidence Manifest Pytest Suite**: `pytest tests/test_verify_promotion_manifest.py -v` -> **50 passed in 0.64s [MEASURED]**.
+- **TypeScript Compilation**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
+- **Frontend Vitest Suite**: `npm test` -> **62 passed in 1.93s [MEASURED]** (including 29 evidence manifest tests and 14 staging smoke unit tests).
+- **Frontend Lint**: `npm run lint` -> **0 errors (7 pre-existing warnings) [MEASURED]**.
+- **Mocked Playwright E2E Suite**: `npm run test:e2e:mocked` -> **7 passed in 22.3s, Overall Gate Status: PASS [MEASURED]**.
+- **Staging Smoke Execution Status**: `smoke.staging.e2e.ts` skipped locally (1 skipped, 0 live network calls; not yet executed against live Staging) [MEASURED].
+- **Preservation Verification**: `frontend/e2e/specs/staging.live.e2e.ts`, `.agents/skills/gravitas/`, and `skills-lock.json` strictly preserved without modification.
+- **Status**: **Resolved on Dev; Ready for Product Owner Phase 3 review**.
 
 ---
 

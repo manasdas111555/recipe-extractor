@@ -13,6 +13,8 @@ Welcome to the **Universal Pro AI** User Manual. This guide explains what featur
 5. [10-Minute Quick Commerce & 1-Click Buying](#5-10-minute-quick-commerce--1-click-buying)
 6. [Intelligence Vault & Local Library](#6-intelligence-vault--local-library)
 7. [WhatsApp & Telegram Integration](#7-whatsapp--telegram-integration)
+8. [Governance & Documentation Reference](#8-governance--documentation-reference)
+9. [Developer & QA Guide: Release Verification & Testing Framework](#9-developer--qa-guide-release-verification--testing-framework)
 
 ---
 
@@ -127,3 +129,44 @@ Universal Pro AI maintains continuous synchronization across its six mandatory l
 - `docs/USER_MANUAL.md` — End-to-end user guide and feature workflows.
 - `docs/architecture/DECISIONS.md` — Architectural Decision Records (ADRs).
 - `docs/architecture/FLOW.md` — Execution flow diagrams and subsystem call hierarchy.
+
+---
+
+## 9. Developer & QA Guide: Release Verification & Testing Framework
+
+*(Sequential Numbering Reconciliation: Formally designated as Section 9 to align with the actual 9-section structure of USER_MANUAL.md; resolves preliminary planning references to Section 19).*
+
+Universal Pro AI implements a strict multi-tier testing framework separating offline sandbox verification from live deployment release gates:
+
+### 1. Local Developer Sandbox (`Dev` Branch)
+- **Unit & Component Tests**:
+  - Frontend Vitest: `npm test` (executes component and utility unit tests).
+  - Backend Pytest: `pytest tests/` (executes all unit, security, and integration test suites).
+- **Deterministic Mocked Playwright Suite**:
+  - `npm run test:e2e:mocked` (runs Playwright against `http://localhost:3000` with network mocks; never contacts external servers or triggers AI inference).
+- **Definitive Rule 16 Verification Pipeline**:
+  - `python scripts/ci_check.py` (executes the complete 5-step pipeline: `tsc`, `lint`, `vitest`, `build`, `pytest`).
+
+### 2. Live Staging Release Gates (`staging` Branch)
+- **Commit-Bound Manifest & Source-Aware Promotion Preflight**:
+  - **Dev → Staging Preflight**: `python scripts/promote.py --to staging --ticket <ticket>` executes preflight verification (`verify_evidence_manifest`) on the source `Dev` evidence manifest using `--env dev`, checking `manifest.commitSha === expectedDevSha` and accepting Dev-appropriate classification (`mocked` or `live`).
+  - **Ticket-Scoped Promotion Branches**: Staging promotion strictly mandates a validated ticket identifier via `--ticket <ticket>` (e.g. `python scripts/promote.py --to staging --ticket upa-1401`). Prepares and pushes isolated ticket-scoped branch `promotion/<ticket>-staging` (e.g. `promotion/upa-1401-staging`). Malformed ticket formats are rejected with `ValueError`.
+  - **Collision Detection & Fail-Closed Remote Lookup**: Probes both local refs (`git show-ref`) and remote refs (`git ls-remote`). Replaces destructive branch resets with safe `git checkout -b`, halting safely before branch creation or push if a branch already exists. Non-zero `git ls-remote` exit codes (network, authentication, or remote-access errors) raise `RuntimeError` and immediately fail closed, never misclassifying remote lookup failures as proof of branch absence.
+  - **Staging Release Acceptance**: Generating release acceptance evidence on Staging requires deploying to Staging and executing the live Staging smoke/E2E suite, producing an `evidence-manifest.json` bound to the deployed Staging revision with `executionClassification: "live"`.
+  - **Staging → Production Preflight**: `python scripts/promote.py --to main` executes preflight verification on the source `staging` evidence manifest using `--env staging`, checking `manifest.commitSha === expectedStagingSha` and strictly enforcing `executionClassification: "live"`. Mocked evidence is permitted strictly on Dev and cannot satisfy Staging or Production release gates.
+- **Tier 1 — Universal Live Staging Smoke Gate**:
+  - `npm run test:e2e:staging:smoke` (mandatory after *every* Staging deployment before Product Owner acceptance).
+  - Targets `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app` with `ALLOW_LIVE_STAGING_SMOKE=true` and edge bypass cookies.
+  - Monitors HTTP 4xx/5xx errors targeting both frontend origin and backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`).
+  - Asserts fail-closed navigation response using `validateNavigationResponse`.
+  - *Operational Status Note*: Hardened smoke checks have not yet been executed against live Staging (they remain offline in Dev, guarded by `ALLOW_LIVE_STAGING_SMOKE=true`).
+- **Tier 2 — Conditional Live Extraction E2E Gate**:
+  - `npx playwright test --project=staging-live` (mandatory when changes touch media extraction, request routing, or background workers).
+  - Runs with `ALLOW_DB_WRITES=false` ensuring zero dirty rows in PostgreSQL.
+- **Deployed Health Audit**:
+  - `python scripts/verify_promotion.py --deployed staging` (verifies deployed Vercel frontend and OCI backend `http://129.225.86.241/health`).
+
+### 3. Production Release & Smoke Gate (`main` Branch)
+- Strictly requires prior separate written Product Owner authorization in `docs/po-governance/SIGN_OFF.md`.
+- Requires mandatory post-deployment non-destructive live smoke verification against `https://universal-pro-ai.vercel.app`.
+- If smoke testing fails, follow bounded rollback procedures in `docs/architecture/DISASTER_RECOVERY.md` (Runbook 25).

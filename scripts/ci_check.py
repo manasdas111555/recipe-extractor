@@ -12,6 +12,14 @@ import sys
 import subprocess
 from pathlib import Path
 
+# Force UTF-8 encoding on Windows consoles
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 def run_step(cmd: str, cwd: Path, name: str) -> bool:
@@ -31,19 +39,32 @@ def run_step(cmd: str, cwd: Path, name: str) -> bool:
 def main():
     frontend_dir = ROOT_DIR / "frontend"
 
-    # Step 1: Frontend Vitest
+    # Step 1: TypeScript type checking (tsc --noEmit)
+    if not run_step("npx tsc --noEmit", frontend_dir, "Frontend TypeScript Typecheck"):
+        sys.exit(1)
+
+    # Step 2: ESLint (npm run lint)
+    if not run_step("npm run lint", frontend_dir, "Frontend ESLint Suite"):
+        sys.exit(1)
+
+    # Step 3: Frontend Vitest (npm test)
     if not run_step("npm test", frontend_dir, "Frontend Vitest Suite"):
         sys.exit(1)
 
-    # Step 2: Frontend Production Build
+    # Step 4: Frontend Production Build (npm run build)
     if not run_step("npm run build", frontend_dir, "Frontend Production Build"):
         sys.exit(1)
 
-    # Step 3: Backend Pytest Suite
+    # Step 5: Backend Pytest Suite (pytest tests/)
     if not run_step("pytest tests/", ROOT_DIR, "Backend Pytest Suite"):
         sys.exit(1)
 
-    print("\n🎉 ALL CI QUALITY GATES PASSED CLEANLY! Ready for staging promotion.\n")
+    # Optional: Mocked Playwright UI suite if --with-e2e flag provided
+    if "--with-e2e" in sys.argv or "--with-mocked-e2e" in sys.argv:
+        if not run_step("npm run test:e2e:mocked", frontend_dir, "Mocked Playwright E2E Suite"):
+            sys.exit(1)
+
+    print("\n🎉 ALL RULE 16 CI QUALITY GATES PASSED CLEANLY! Ready for staging promotion.\n")
     sys.exit(0)
 
 if __name__ == "__main__":

@@ -447,6 +447,207 @@ describe('Evidence Manifest Engine', () => {
     expect(validation.isValid).toBe(false);
     expect(validation.errors.some((err) => err.includes('contains failed or blocked tests'))).toBe(true);
   });
+
+  it('validates manifest commitSha matches expectedCommitSha successfully', () => {
+    const validManifest = createRunManifest({
+      runId: 'e2e_run_commit_match',
+      commitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      environment: 'staging',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      executionClassification: 'live',
+      tests: [
+        {
+          ...sampleTestRecord,
+          testId: 'test_live_extraction_match',
+          executionType: 'live',
+        },
+      ],
+    });
+
+    const validation = validateManifest(validManifest, {
+      expectedCommitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+    });
+    expect(validation.isValid).toBe(true);
+    expect(validation.errors).toEqual([]);
+  });
+
+  it('fails gate validation when manifest commitSha mismatches expectedCommitSha (deployed commit validation)', () => {
+    const mismatchedManifest = createRunManifest({
+      runId: 'e2e_run_commit_mismatch',
+      commitSha: '6ce1b1b144f38024d81f8a6db4ce931c11e34556',
+      environment: 'staging',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      executionClassification: 'live',
+      tests: [
+        {
+          ...sampleTestRecord,
+          testId: 'test_live_extraction_mismatch',
+          executionType: 'live',
+        },
+      ],
+    });
+
+    const validation = validateManifest(mismatchedManifest, {
+      expectedCommitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+    });
+    expect(validation.isValid).toBe(false);
+    expect(validation.errors.some((err) => err.includes('Commit SHA mismatch: expected 48a426cd71f5e89dadfc4ee32e8f85847b5ca88a, got 6ce1b1b144f38024d81f8a6db4ce931c11e34556'))).toBe(true);
+  });
+
+  it('fails gate validation when manifest commitSha is empty or missing when expectedCommitSha is required', () => {
+    const missingShaManifest: any = {
+      schemaVersion: 1,
+      runId: 'e2e_run_missing_sha',
+      commitSha: '',
+      environment: 'staging',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      overallStatus: 'PASS',
+      executionClassification: 'live',
+      summary: { total: 1, passed: 1, failed: 0, blocked: 0, notRun: 0 },
+      tests: [sampleTestRecord],
+    };
+
+    const validation = validateManifest(missingShaManifest, {
+      expectedCommitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+    });
+    expect(validation.isValid).toBe(false);
+    expect(validation.errors.some((err) => err.includes('Missing commitSha'))).toBe(true);
+  });
+
+  it('fails gate validation if overallStatus is PASS but contains NOT RUN tests', () => {
+    const notRunPassManifest: any = {
+      schemaVersion: 1,
+      runId: 'e2e_run_not_run_pass',
+      commitSha: '6ce1b1b144f38024d81f8a6db4ce931c11e34556',
+      environment: 'dev',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      overallStatus: 'PASS', // Illegitimately PASS while containing NOT RUN
+      executionClassification: 'mocked',
+      summary: { total: 2, passed: 1, failed: 0, blocked: 0, notRun: 1 },
+      tests: [
+        sampleTestRecord,
+        {
+          ...sampleTestRecord,
+          testId: 'test_skipped_item',
+          outcome: 'NOT RUN',
+        },
+      ],
+    };
+
+    const validation = validateManifest(notRunPassManifest);
+    expect(validation.isValid).toBe(false);
+    expect(validation.errors.some((err) => err.includes('contains NOT RUN tests (anti-false-green gate violation)'))).toBe(true);
+  });
+
+  it('accepts a valid mocked manifest for mocked/dev validation when expectedClassification is mocked or omitted', () => {
+    const validMockedManifest = createRunManifest({
+      runId: 'e2e_run_mocked_dev',
+      commitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      environment: 'dev',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      executionClassification: 'mocked',
+      tests: [sampleTestRecord],
+    });
+
+    // Omitted expectedClassification
+    const validationDefault = validateManifest(validMockedManifest);
+    expect(validationDefault.isValid).toBe(true);
+    expect(validationDefault.errors).toEqual([]);
+
+    // Explicit mocked expectedClassification
+    const validationMocked = validateManifest(validMockedManifest, {
+      expectedClassification: 'mocked',
+    });
+    expect(validationMocked.isValid).toBe(true);
+    expect(validationMocked.errors).toEqual([]);
+  });
+
+  it('rejects a mocked manifest when expectedClassification is live even with matching SHA and passing counters', () => {
+    const mockedManifest = createRunManifest({
+      runId: 'e2e_run_mocked_staging_leak',
+      commitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      environment: 'staging',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      executionClassification: 'mocked',
+      tests: [sampleTestRecord],
+    });
+
+    const validation = validateManifest(mockedManifest, {
+      expectedCommitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      expectedClassification: 'live',
+    });
+    expect(validation.isValid).toBe(false);
+    expect(
+      validation.errors.some((err) =>
+        err.includes('Execution classification mismatch: expected live, got mocked')
+      )
+    ).toBe(true);
+  });
+
+  it('fails closed when manifest executionClassification is missing or invalid when expectedClassification is required', () => {
+    const invalidClassManifest: any = {
+      schemaVersion: 1,
+      runId: 'e2e_run_invalid_classification',
+      commitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      environment: 'staging',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      overallStatus: 'PASS',
+      executionClassification: 'synthetic',
+      summary: { total: 1, passed: 1, failed: 0, blocked: 0, notRun: 0 },
+      tests: [sampleTestRecord],
+    };
+
+    const validation = validateManifest(invalidClassManifest, {
+      expectedClassification: 'live',
+    });
+    expect(validation.isValid).toBe(false);
+    expect(
+      validation.errors.some((err) =>
+        err.includes('Invalid executionClassification: synthetic') ||
+        err.includes('Execution classification mismatch: expected live, got synthetic')
+      )
+    ).toBe(true);
+  });
+
+  it('accepts a valid live-classified manifest with matching SHA and passing counters when expectedClassification is live', () => {
+    const validLiveManifest = createRunManifest({
+      runId: 'e2e_run_live_accepted',
+      commitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      environment: 'staging',
+      startTime: '2026-10-13T17:00:00.000Z',
+      endTime: '2026-10-13T17:00:05.000Z',
+      totalDurationMs: 5000,
+      executionClassification: 'live',
+      tests: [
+        {
+          ...sampleTestRecord,
+          testId: 'test_live_extraction_accepted',
+          executionType: 'live',
+        },
+      ],
+    });
+
+    const validation = validateManifest(validLiveManifest, {
+      expectedCommitSha: '48a426cd71f5e89dadfc4ee32e8f85847b5ca88a',
+      expectedClassification: 'live',
+    });
+    expect(validation.isValid).toBe(true);
+    expect(validation.errors).toEqual([]);
+  });
 });
 
 describe('Staging Origin Enforcer & Privacy Policy', () => {

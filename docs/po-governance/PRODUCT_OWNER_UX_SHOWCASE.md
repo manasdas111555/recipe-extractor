@@ -697,12 +697,65 @@ Please review each module deliverable and provide your official sign-off status 
    - Frontend Vitest suite: **40 / 40 PASSED in 2.27s [MEASURED]**.
    - TypeScript: **0 errors [MEASURED]**.
    - Next.js Production Build: **100% SUCCESSFUL (compiled in 913ms, 8/8 routes generated) [MEASURED]**.
+3. **Layer 2 Staging Promotion Status**:
+   - Promoted to Layer 2 Staging via approved isolated branch `promotion/upa-1311-staging` and merged via PR #6 (commit `48a426c`).
+   - Staging GitHub Actions CI `test-and-build` passed cleanly (run 39154636869); Vercel Preview deployment clean.
+   - Current status: **PO Accepted on Staging in SIGN_OFF.md [MEASURED]**.
+
+---
+
+## Module 23: Six-Phase Release Lifecycle & Mandatory Two-Tier Playwright Release Gates (UPA-1401)
+
+### Key Architectural & Quality Assurance Enhancements Delivered:
+1. **Consolidated Six-Phase Release Lifecycle (`AGENTS.md` Rule 2)**:
+   - Streamlined disparate release procedures into six sequential phases with strict transition criteria:
+     - **Phase 1 (Intake & Governed Planning)**: Backlog ticket intake in `JIRA_BACKLOG.md`, risk assessment, rollback strategy, owner checkpoint gate.
+     - **Phase 2 (Dev Implementation & Local Verification)**: Sandbox implementation on `Dev`, focused regression test runs, mocked Playwright suite (`test:e2e:mocked` on `http://localhost:3000`).
+     - **Phase 3 (Living Document Sync & Definitive Verification)**: Synchronize all six living architecture documents, Rule 21.6 Documentation Impact Assessment, update ADRs/FLOW, final tree diff, execute full Rule 16 verification pipeline on final synchronized tree, stop at Dev/PO review boundary.
+     - **Phase 4 (Governed Staging Promotion)**: Isolated promotion branch, PR to `staging`, validate remote GitHub Actions CI checks, obtain explicit owner PR approval, merge to `origin/staging`.
+     - **Phase 5 (Live Staging Deployment Verification & Release Gates)**: Deploy affected components (Vercel Frontend & OCI Backend where applicable), verify deployed versions and endpoints, execute Tier 1 mandatory live Staging smoke gate (`smoke.staging.e2e.ts`), conditionally execute Tier 2 un-mocked live extraction E2E (`staging.live.e2e.ts`) under `ALLOW_DB_WRITES=false`, record commit-bound evidence manifest, stop for owner Staging sign-off in `SIGN_OFF.md`.
+     - **Phase 6 (Governed Production Release & Closeout)**: Separate written owner authorization in `SIGN_OFF.md`, deploy to Layer 3 Production (`https://universal-pro-ai.vercel.app` & OCI VM `140.245.214.28`), post-deployment non-destructive live smoke verification, bounded rollback handling on failure, final owner release status recording in `SIGN_OFF.md` and `JIRA_BACKLOG.md`.
+
+2. **Two-Tier Live Staging Playwright Release Gate Architecture**:
+   - **Tier 1 — Universal Live Staging Smoke Gate (`frontend/e2e/specs/smoke.staging.e2e.ts`)**:
+     - Executes after *every* Staging deployment before Staging acceptance.
+     - Validates Vercel Staging preview origin (`https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`), Vercel edge protection bypass cookie protocol, UI initial paint, single docked video player contract, theme tokens, and hero CTA interactivity.
+     - **Hardened HTTP Error Monitoring (GAP-03)**: Tracks failed responses (status >= 400) targeting both Vercel frontend origin and configured backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`).
+     - **Fail-Closed Navigation Guard**: Uses `validateNavigationResponse` asserting non-null navigation response and `response.ok()`.
+     - Guarded by `ALLOW_LIVE_STAGING_SMOKE=true`.
+     - *Operational Status Note*: Hardened smoke checks have not yet been executed against live Staging (they remain offline in Dev, guarded by `ALLOW_LIVE_STAGING_SMOKE=true`).
+   - **Tier 2 — Conditional Live Extraction E2E Gate (`frontend/e2e/specs/staging.live.e2e.ts`)**:
+     - Conditionally triggered whenever changes touch media downloaders, request routing, worker tasks, or AI inference.
+     - Operates with `ALLOW_DB_WRITES=false` via ephemeral Redis/in-memory `JobManager` results with zero dirty rows written to PostgreSQL.
+   - **Mocked CI Invariant**: Deterministic mocked Playwright tests (`npm run test:e2e:mocked`) remain isolated in `mocked-ui` project and never substitute for required live Staging or Production release gates. Mocked evidence cannot satisfy Staging or Production release gates.
+
+3. **CI & Promotion Tooling Synchronization**:
+   - `scripts/ci_check.py`: Enforces the 5-step Rule 16 pipeline (`npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/`) on the final synchronized tree.
+   - `scripts/verify_promotion.py`: Provides `--deployed [staging|prod]` mode verifying deployed frontend and backend health endpoints against ground truth.
+   - **Commit-Bound Manifest Verification & P0 Classification Enforcement**: Enforces `manifest.commitSha === expectedCommitSha` and requires `executionClassification: "live"` for Staging and Production release gates (`"mocked"` accepted strictly on Dev; mocked evidence rejected for staging/prod).
+   - **GAP-02 Verifier Output Label & Verdict Hygiene**: Renamed `Manifest Overall Status` to `Payload Self-Reported Status` and emits explicit final gate verdicts (`REJECTED (FAILED CLOSED)` / `PASSED`), preventing false-green overall status when subsequent validation rejects the manifest.
+   - **GAP-01 Promotion Entry Point Preflight & Source-Aware Mapping**: `scripts/promote.py` enforces source-aware preflight evidence manifest verification before creating or pushing any promotion branch: validates source `Dev` manifest (`--env dev`) for Staging promotion, and validates source `staging` manifest (`--env staging`, requiring `executionClassification: "live"`) for Production promotion.
+   - **Ticket-Scoped Promotion Branching & Fail-Closed Remote Lookup**: `scripts/promote.py` requires a validated `--ticket` identifier (`^[a-z]+-\d+$`, e.g. `upa-1401`) for Staging promotions, deriving standard branches formatted as `promotion/<ticket>-staging`. Safe branch checkout (`git checkout -b`) verifies local and remote branch absence. Remote queries (`git ls-remote`) fail closed: empty output with code 0 indicates absence, whereas any nonzero exit code (network, auth, or remote error) immediately halts promotion before branch creation.
+   - `frontend/playwright.config.ts` & `frontend/package.json`: Configures `staging-smoke` project and `"test:e2e:staging:smoke"` script.
+   - **Offline Unit Test Coverage**: 62 passing Vitest unit tests (including 29 evidence manifest tests and 14 staging smoke unit tests in `stagingSmoke.test.ts`), and 50 passing manifest verification Pytest tests in `tests/test_verify_promotion_manifest.py` (covering source-aware mapping, SHA checks, ticket format validation, branch collision prevention, and remote lookup fail-closed behavior) `[MEASURED]`.
+
+#### Product Owner Verification Checklist (Pending PO Review):
+- [ ] **Six-Phase Workflow**: Operational workflow clearly maps Phase 1 through Phase 6 with unskippable approval checkpoints.
+- [ ] **Tier 1 Live Staging Smoke**: Universal live Staging smoke spec created and integrated into `playwright.config.ts`, with cross-origin backend error tracking and fail-closed navigation assertions.
+- [ ] **Tier 2 Conditional Live Extraction**: Preserved with `ALLOW_DB_WRITES=false` zero-dirty-rows guarantee.
+- [ ] **Mocked vs Live Isolation**: Offline mocked Playwright runs remain completely isolated from live staging tests; mocked evidence rejected for staging/prod gates.
+- [ ] **Source-Aware Promotion Preflight**: Promotion entry point validates source manifest SHA and classification (source Dev for Staging, source Staging live for Production) before branch creation.
+- [ ] **Ticket-Scoped Promotion Branching & Fail-Closed Remote Lookup**: Mandatory `--ticket` parameter prevents branch collisions; nonzero `git ls-remote` return codes fail closed.
+- [ ] **Bounded Production Rollback**: Governed rollback protocol replaces blind git revert on `origin/main`.
+- [ ] **Final Synchronized Tree Verification**: Rule 16 5-step pipeline validated clean green.
+
+*Status: Pending Product Owner Review & Sign-Off (Dev Boundary)*
 
 ---
 
 ### 🚀 Production Promotion Final Status
 
-With **191 / 191 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ modal guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, Sprint 9 Friends & Family Beta Rollout, **Sprint 10 Beta Testing Feedback & Multilingual Engine**, **Ultra-Minimalist UI Overhaul & E2E Validation**, **Module 20 Universal Intelligence Vault**, and **Module 21 Streamlined FAQ Modal & Isolated User Manual View**:
+With **191 / 191 automated tests passing** and complete coverage across mobile ingestion, SaaS monetization, PWA share targets, dynamic portion scaling, organic SEO indexing, cloud media fallback resilience, interactive FAQ modal guides, luxury dual-theme typography, Multi-LLM Council Consensus, Light Mode WCAG AA Visual Polish, Sprint 8 Impeccable UI/UX Polish, Sprint 9 Friends & Family Beta Rollout, **Sprint 10 Beta Testing Feedback & Multilingual Engine**, **Ultra-Minimalist UI Overhaul & E2E Validation**, **Module 20 Universal Intelligence Vault**, **Module 21 Streamlined FAQ Modal & Isolated User Manual View**, and **Module 22 Living Document Governance Contract Assertion Hardening**:
 
 **PO Status**: **FULL UNCONDITIONAL APPROVAL FOR STAGING PROMOTION & PRODUCTION RELEASE (`main` branch)**.
 
