@@ -46,6 +46,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-050** | 2026-09-27 | Dependencies & Security | Python 3.11 Dependency Cleanup, Dev Partitioning & Pinned Lockfile (UPA-1207) | ✅ Resolved |
 | **ISSUE-051** | 2026-10-18 | Governance & Tests | Governance Heading Assertion Brittleness in Sprint 14 Commerce Suite (UPA-1311) | ✅ Resolved |
 | **ISSUE-052** | 2026-10-19 | Governance & CI/CD | Operational Workflow Streamlining & Mandatory Two-Tier Playwright Release Gates (UPA-1401) | ✅ Resolved on Dev |
+| **ISSUE-053** | 2026-10-19 | Quality Assurance & E2E | Tier 1 Staging Smoke Submit CTA Assertion Failure & Environment Classification Audit (UPA-1401) | 🟡 Resolved on Dev / Staging Retest Pending |
 
 ---
 
@@ -1618,6 +1619,52 @@ Under UPA-1308 (commit `010a56cff15b5c9398a90b499aff59c11f74d8fd`), Section 9 of
 - **Staging Smoke Execution Status**: `smoke.staging.e2e.ts` skipped locally (1 skipped, 0 live network calls; not yet executed against live Staging) [MEASURED].
 - **Preservation Verification**: `frontend/e2e/specs/staging.live.e2e.ts`, `.agents/skills/gravitas/`, and `skills-lock.json` strictly preserved without modification.
 - **Status**: **Resolved on Dev; Ready for Product Owner Phase 3 review**.
+
+---
+
+### 🚨 ISSUE-053: Tier 1 Staging Smoke Submit CTA Assertion Failure & Environment Classification Audit (UPA-1401)
+- **Date**: 2026-10-19
+- **Affected Files**: `frontend/e2e/specs/smoke.staging.e2e.ts`, `frontend/e2e/reporters/evidence-manifest-reporter.ts`, `scripts/verify_promotion.py`
+
+#### 1. What Happened (Symptom):
+Following the governed promotion of UPA-1401 via PR #7 to `staging` (merge commit `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`), remote GitHub Actions CI passed (run `39300030918`) and Vercel deployed Staging successfully (deployment `#7181210296`). However, when executing the mandatory Tier 1 live Staging browser smoke test (`npm run test:e2e:staging:smoke`), the test failed with exit code 1:
+```text
+Error: expect(locator).toBeEnabled() failed
+Locator: getByLabel('Get video intelligence')
+Expected: enabled
+Received: disabled
+Timeout: 10000ms
+```
+Additionally, the generated evidence manifest recorded `executionClassification: "live"` and `commitSha: "85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7"`, but defaulted to `environment: "dev"`. The verification command also incorrectly used `--env dev`.
+
+#### 2. Root Cause:
+1. **Assertion Contract Mismatch**: In `frontend/src/app/page.tsx:1038`, the application intentionally disables the submit button whenever the URL input is empty: `disabled={isLoading || !url}`. The initial smoke test asserted `await expect(submitBtn).toBeEnabled();` on initial page load before any input was supplied, which failed against valid application behavior.
+2. **Environment Defaulting**: In `frontend/e2e/reporters/evidence-manifest-reporter.ts`, `environment` resolves from `process.env.TEST_ENV || process.env.APP_ENV || 'dev'`. Because neither `TEST_ENV` nor `APP_ENV` was set during invocation, the reporter defaulted to `'dev'` despite targeting the live Staging preview URL.
+
+#### 3. Resolution (Code Changes):
+1. **Test-Only Assertion Correction on Dev (`frontend/e2e/specs/smoke.staging.e2e.ts`)**:
+   Committed locally on Dev (commit `0c107ca681b1e5dda8d61f5b58f8e33ffb224e67`):
+   ```typescript
+   const submitBtn = page.getByLabel('Get video intelligence');
+   await expect(submitBtn).toBeVisible();
+   // Application enforces disabled={isLoading || !url}; verify initial disabled state on empty input
+   await expect(submitBtn).toBeDisabled();
+
+   // Verify input interaction enables the submit CTA without initiating extraction
+   await urlInput.fill('https://www.instagram.com/reel/C1234567890/');
+   await expect(submitBtn).toBeEnabled();
+   await urlInput.clear();
+   ```
+2. **Environment Classification Requirement**:
+   Documented operational requirement: live Staging smoke executions must supply `$env:TEST_ENV = "staging"` and bind to the active deployed commit SHA (`$env:GIT_COMMIT_SHA = "<deployed-staging-sha>"`), and manifest verification must use `--env staging`.
+
+#### 4. Testing & Verification:
+- **TypeScript Static Check**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
+- **Frontend Vitest Suite**: `npm test` -> **62 passed in 2.17s [MEASURED]**.
+- **Mocked Playwright Suite**: `npm run test:e2e:mocked` -> **7 passed in 20.1s, Overall Gate Status: PASS [MEASURED]** (includes empty URL submission guard test).
+- **Backend Manifest Pytest**: `pytest tests/test_verify_promotion_manifest.py` -> **50 passed in 0.77s [MEASURED]**.
+- **Working Tree Preservation**: Zero changes to application validation logic (`page.tsx`), and main working tree files strictly preserved.
+- **Status**: **Resolved on Dev (commit `0c107ca`); live Staging release gate remains FAIL pending subsequent fix promotion and live retest**.
 
 ---
 

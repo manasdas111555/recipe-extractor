@@ -159,7 +159,7 @@ Universal Pro AI implements a strict multi-tier testing framework separating off
   - Targets `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app` with `ALLOW_LIVE_STAGING_SMOKE=true` and edge bypass cookies.
   - Monitors HTTP 4xx/5xx errors targeting both frontend origin and backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`).
   - Asserts fail-closed navigation response using `validateNavigationResponse`.
-  - *Operational Status Note*: Hardened smoke checks have not yet been executed against live Staging (they remain offline in Dev, guarded by `ALLOW_LIVE_STAGING_SMOKE=true`).
+  - *Operational Status Note*: Executed on live Staging commit `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`; evaluated to `FAIL` because the initial test expected `submitBtn` enabled with an empty input (`disabled={isLoading || !url}` is intentional). Corrected on Dev (`0c107ca`) to test disabled on empty input and enabled when fixture input is supplied without submitting. Live Staging runs require `$env:TEST_ENV = "staging"` so evidence is not mislabeled as `dev`. Staging release gate remains `FAIL` pending fix promotion and live retest.
 - **Tier 2 — Conditional Live Extraction E2E Gate**:
   - `npx playwright test --project=staging-live` (mandatory when changes touch media extraction, request routing, or background workers).
   - Runs with `ALLOW_DB_WRITES=false` ensuring zero dirty rows in PostgreSQL.

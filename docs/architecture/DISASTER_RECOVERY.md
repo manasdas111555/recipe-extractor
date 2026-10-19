@@ -699,12 +699,14 @@ curl -fsS -m 5 -H "x-vercel-protection-bypass: ${VERCEL_PROTECTION_BYPASS_SECRET
 
 #### Step 2: Tier 1 Universal Live Staging Smoke Triage (`smoke.staging.e2e.ts`)
 If `npm run test:e2e:staging:smoke` fails:
-1. Verify `ALLOW_LIVE_STAGING_SMOKE=true` is exported in the test environment (note: hardened smoke checks have not yet been executed against live Staging; they remain offline in Dev).
-2. Verify Vercel Protection Bypass: if running in a browser, ensure Option A URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`) are passed on initial navigation to mint the `_vercel_jwt` edge cookie.
-3. Check HTTP error monitoring: `smoke.staging.e2e.ts` tracks failed responses (>= 400) targeting both Vercel frontend origin and configured backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`). If backend returns 5xx/4xx, inspect OCI VM API logs.
-4. Check navigation guard: `validateNavigationResponse` asserts non-null navigation response and `response.ok()`.
-5. Check DOM assertions: single docked video player contract (`video` count $\le 1$), hero input visibility, theme tokens (`globals.css`), and responsive layout.
-6. If UI failed to boot or returns HTTP 401/403/500, check Vercel deployment build logs and stop promotion immediately.
+1. Verify `ALLOW_LIVE_STAGING_SMOKE=true` and `TEST_ENV=staging` are exported in the execution environment. Note: if `TEST_ENV` is unset, `evidence-manifest-reporter.ts` defaults to `dev`, causing environment mismatch during manifest verification.
+2. Verify deployed commit SHA binding: pass `GIT_COMMIT_SHA=<deployed-staging-sha>` (reverified at deployment time, e.g. `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`) so that `evidence-manifest.json` correctly binds to the deployed Staging revision.
+3. Check Submit CTA assertion contract: the application intentionally enforces `disabled={isLoading || !url}`. The initial live smoke test on `85fa6e7` failed because it expected `submitBtn` to be enabled with an empty input. The corrected contract (`0c107ca`) verifies `disabled` when empty, fills fixture URL (`https://www.instagram.com/reel/C1234567890/`), verifies `enabled`, and clears the input without submitting an extraction request.
+4. Verify Vercel Protection Bypass: if running in a browser, ensure Option A URL query parameters (`?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=samesitenone`) are passed on initial navigation to mint the `_vercel_jwt` edge cookie.
+5. Check HTTP error monitoring: `smoke.staging.e2e.ts` tracks failed responses (>= 400) targeting both Vercel frontend origin and configured backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`). If backend returns 5xx/4xx, inspect OCI VM API logs.
+6. Check navigation guard: `validateNavigationResponse` asserts non-null navigation response and `response.ok()`.
+7. Check DOM assertions: single docked video player contract (`video` count $\le 1$), hero input visibility, theme tokens (`globals.css`), and responsive layout.
+8. If UI failed to boot or returns HTTP 401/403/500, check Vercel deployment build logs and stop promotion immediately.
 
 #### Step 3: Tier 2 Conditional Live Extraction E2E Triage (`staging.live.e2e.ts`)
 If conditional un-mocked live extraction fails:
