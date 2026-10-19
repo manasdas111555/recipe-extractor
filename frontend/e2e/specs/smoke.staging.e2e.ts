@@ -168,7 +168,13 @@ test.describe('Universal Pro AI - Live Staging Browser Smoke Suite [LIVE]', () =
 
     const submitBtn = page.getByLabel('Get video intelligence');
     await expect(submitBtn).toBeVisible();
+    // Application enforces disabled={isLoading || !url}; verify initial disabled state on empty input
+    await expect(submitBtn).toBeDisabled();
+
+    // Verify input interaction enables the submit CTA without initiating extraction
+    await urlInput.fill('https://www.instagram.com/reel/C1234567890/');
     await expect(submitBtn).toBeEnabled();
+    await urlInput.clear();
 
     const sampleChips = page.locator('.chip-tactile');
     const sampleCount = await sampleChips.count();
