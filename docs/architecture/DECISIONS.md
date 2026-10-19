@@ -24,6 +24,7 @@
 | **[ADR-005](#adr-005-domain-affiliate-engine-isolation--immutable-partner-identifiers)** | Domain-Affiliate Engine Isolation & Immutable Partner Identifiers | Rule 3 | **Accepted / Active** | Sprint 3 |
 | **[ADR-006](#adr-006-3-layer-environment-architecture--production-sign-off-gates)** | 3-Layer Environment Architecture & Production Sign-Off Gates | Rule 2 | **Accepted / Active** | Sprint 11 / Reconciled Sprint 12 |
 | **[ADR-007](#adr-007-resilient-document-governance-assertion--section-scoping-protocol)** | Resilient Document Governance Assertion & Section-Scoping Protocol | Rules 1, 9, 16 | **Accepted / Active** | Sprint 13 (UPA-1311) |
+| **[ADR-008](#adr-008-six-phase-release-lifecycle--mandatory-two-tier-playwright-release-gates)** | Six-Phase Release Lifecycle & Mandatory Two-Tier Playwright Release Gates | Rules 2, 16, 21 | **Proposed / Implemented on Dev** | Sprint 14 (UPA-1401) |
 
 ---
 
@@ -267,3 +268,45 @@ We adopted Option B under explicit Product Owner approval. Rather than asserting
 
 ### Accepted Trade-Offs
 * Requires `AGENTS.md` section numbering for Section 9 (`## 9.`) to be maintained, but does not constrain subsequent section numbering.
+
+---
+
+## ADR-008: Six-Phase Release Lifecycle & Mandatory Two-Tier Playwright Release Gates
+
+* **Status**: Proposed / Implemented on Dev `[VERIFIED IN CURRENT REPOSITORY]`
+* **Date / Sprint**: Sprint 14 (UPA-1401)
+* **Governing Rules**: AGENTS.md Rule 2 (*Sprint Governance & Release Lifecycle*), Rule 16 (*Verification & Definition of Done*), Rule 21 (*Living Documentation Contract*)
+* **Sequential Numbering Reconciliation**: Formally designated as ADR-008 (sequentially following ADR-007) to maintain contiguous baseline numbering; resolves preliminary planning references to ADR-014.
+
+### Context & Problem Statement
+Operational release activities had expanded into approximately 13 loosely structured operational phases across development, promotion, and deployment. This created ambiguity in three critical areas:
+1. **Mocked vs Live Verification**: Local Playwright tests (`npm run test:e2e:mocked` against `http://localhost:3000`) were not formally segregated in policy from live deployed environment verification, risking false confidence where passing offline mock tests could be mistaken for live Staging acceptance.
+2. **Staging Release Gate Absence**: Staging deployments lacked a mandatory, lightweight live browser smoke gate executing after *every* deployment before Product Owner acceptance, while un-mocked extraction tests risked mutating the database or failing due to external rate limits.
+3. **Rollback & Health Discrepancies**: Staging documentation cited speculative custom domain FQDNs (`staging-api.universal-pro-ai.com`) rather than authoritative OCI VM IPs, and production rollback procedures relied on unconditional `git revert` commands that could create concurrency hazards.
+
+### Options Considered
+1. **Option A: Retain 13-Phase Ad-Hoc Process & Offline CI Only**:
+   - *Pros*: Minimal tooling changes.
+   - *Cons*: High operational friction, unclear stage boundaries, risk of deploying broken staging UIs to production without live validation.
+2. **Option B (Selected): Consolidated Six-Phase Release Lifecycle with Two-Tier Live Playwright Release Gates**:
+   - *Pros*:
+     - Consolidates operations into six sequential, well-defined phases: Phase 1 (Intake & Governed Planning), Phase 2 (Dev Implementation & Local Verification), Phase 3 (Living Document Sync & Definitive Verification), Phase 4 (Governed Staging Promotion), Phase 5 (Live Staging Deployment Verification & Release Gates), Phase 6 (Governed Production Release & Closeout).
+     - Establishes a Two-Tier Staging Release Gate: Tier 1 (Universal Live Staging Smoke Gate: `smoke.staging.e2e.ts`) running after every deployment, and Tier 2 (Conditional Live Extraction E2E: `staging.live.e2e.ts`) triggered only on extraction/routing/worker changes and protected by `ALLOW_DB_WRITES=false`.
+     - Reconciles authoritative endpoints (`https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app` and `http://129.225.86.241/health`).
+     - Replaces blind git reverts with a governed, bounded Production rollback protocol requiring failed SHA capture, owner alert, known-good version target identification, and operator intervention safeguards.
+   - *Cons*: Requires developers and automated agents to strictly follow Phase 3 documentation synchronization before running the definitive Rule 16 pipeline.
+
+### Decision & Rationale
+We adopted Option B. By codifying the Six-Phase Release Lifecycle in `AGENTS.md` Rule 2 and separating mocked sandbox testing (`test:e2e:mocked`) from deployed environment gates (`test:e2e:staging:smoke`), the project ensures:
+1. No release is accepted on Staging without empirical browser evidence of UI bootstrap, single docked player invariants, and CTA interactivity.
+2. Un-mocked live extractions never write dirty rows to production or staging databases.
+3. Documentation synchronization is completed and verified against the definitive 5-step Rule 16 pipeline *before* PR submission or promotion.
+4. Production rollback is bounded and safe against concurrency issues.
+5. **Commit-Bound Evidence & Classification Gate**: `scripts/promote.py` enforces preflight manifest verification (`verify_evidence_manifest`) requiring `manifest.commitSha === expectedCommitSha` and `executionClassification: "live"` for Staging and Production release gates. Mocked evidence is permitted strictly on Dev and cannot satisfy Staging or Production gates.
+6. **Verifier Output Label & Verdict Hygiene**: `scripts/verify_promotion.py` displays raw manifest status as `Payload Self-Reported Status` and emits explicit evaluated final gate verdicts (`REJECTED (FAILED CLOSED)` / `PASSED`), ensuring false greens are impossible when validation fails closed.
+7. **Hardened Staging Smoke Error Tracking**: `smoke.staging.e2e.ts` tracks failed HTTP responses across both frontend preview and backend API origins (`STAGING_API_URL` or fallback `http://129.225.86.241`), and validates navigation response (`validateNavigationResponse`) fail-closed. Hardened smoke checks have not yet been executed against live Staging.
+
+### Accepted Trade-Offs
+* Running Tier 1 live Staging smoke tests requires Vercel edge protection bypass tokens and network access to Vercel preview URLs.
+* Local development remains strictly offline/mocked; live gates are evaluated exclusively against deployed Staging and Production layers.
+* Mocked test evidence cannot satisfy Staging or Production promotion gates; promotion automation fails closed if only mocked evidence or mismatched SHAs are provided.

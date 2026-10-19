@@ -66,7 +66,12 @@ export interface RunEvidenceManifest {
  */
 export function validateManifest(
   manifest: RunEvidenceManifest,
-  options?: { checkPhysicalFiles?: boolean; basePath?: string }
+  options?: {
+    checkPhysicalFiles?: boolean;
+    basePath?: string;
+    expectedCommitSha?: string;
+    expectedClassification?: ExecutionClassification;
+  }
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -82,11 +87,27 @@ export function validateManifest(
   if (!manifest.commitSha) {
     errors.push('Missing commitSha');
   }
+  if (options?.expectedCommitSha) {
+    if (!manifest.commitSha) {
+      errors.push(`Missing commitSha in manifest (expected ${options.expectedCommitSha})`);
+    } else if (manifest.commitSha !== options.expectedCommitSha) {
+      errors.push(`Commit SHA mismatch: expected ${options.expectedCommitSha}, got ${manifest.commitSha}`);
+    }
+  }
   if (!['dev', 'staging', 'ci'].includes(manifest.environment)) {
     errors.push(`Invalid environment: ${manifest.environment}`);
   }
   if (!['mocked', 'live'].includes(manifest.executionClassification)) {
     errors.push(`Invalid executionClassification: ${manifest.executionClassification}`);
+  }
+  if (options?.expectedClassification) {
+    if (!manifest.executionClassification) {
+      errors.push(`Missing executionClassification in manifest (expected ${options.expectedClassification})`);
+    } else if (manifest.executionClassification !== options.expectedClassification) {
+      errors.push(
+        `Execution classification mismatch: expected ${options.expectedClassification}, got ${manifest.executionClassification}`
+      );
+    }
   }
   if (!manifest.summary) {
     errors.push('Missing summary object');
@@ -96,6 +117,9 @@ export function validateManifest(
     }
     if (manifest.overallStatus === 'PASS' && (manifest.summary.failed > 0 || manifest.summary.blocked > 0)) {
       errors.push('Manifest overallStatus is PASS but contains failed or blocked tests');
+    }
+    if (manifest.overallStatus === 'PASS' && manifest.summary.notRun > 0) {
+      errors.push('Manifest overallStatus is PASS but contains NOT RUN tests (anti-false-green gate violation)');
     }
     if (manifest.executionClassification === 'live' && manifest.summary.passed === 0 && manifest.overallStatus === 'PASS') {
       errors.push('Live Staging release gate requires at least 1 passing live extraction test; cannot be marked PASS');

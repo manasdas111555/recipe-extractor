@@ -21,15 +21,24 @@ export default defineConfig({
   projects: [
     {
       name: 'mocked-ui',
-      testIgnore: [/.*\.live\.e2e\.ts$/],
+      testIgnore: [/.*\.live\.e2e\.ts$/, /.*\.staging\.e2e\.ts$/],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
       },
     },
     {
+      name: 'staging-smoke',
+      testMatch: /.*smoke\.staging\.e2e\.ts$/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        baseURL: process.env.STAGING_BASE_URL || 'https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app',
+      },
+    },
+    {
       name: 'staging-live',
-      testMatch: /.*\.live\.e2e\.ts$/,
+      testMatch: /.*staging\.live\.e2e\.ts$/,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },

@@ -1,0 +1,464 @@
+"""
+Test Suite: Release Gate Evidence Manifest Verification (UPA-1401 P0)
+======================================================================
+Tests verify_evidence_manifest in scripts/verify_promotion.py to guarantee:
+1. Valid mocked manifests are accepted for dev environment.
+2. Mocked manifests are strictly rejected for staging and prod release gates.
+3. Missing or invalid classifications fail closed.
+4. Valid live-classified manifests with matching SHA and passing counters are accepted.
+5. Existing SHA-mismatch, missing-file, and anti-false-green protections remain intact.
+"""
+
+import json
+from pathlib import Path
+import pytest
+from scripts.verify_promotion import verify_evidence_manifest
+
+SAMPLE_COMMIT_SHA = "92ad7b0212e551eb64345c2ceea4b6ab66498d4d"
+
+
+def create_manifest(
+    classification: str = "live",
+    overall_status: str = "PASS",
+    commit_sha: str = SAMPLE_COMMIT_SHA,
+    passed: int = 1,
+    failed: int = 0,
+    blocked: int = 0,
+    not_run: int = 0,
+    environment: str = "staging",
+) -> dict:
+    return {
+        "schemaVersion": 1,
+        "runId": "test_run_123",
+        "commitSha": commit_sha,
+        "environment": environment,
+        "startTime": "2026-10-19T00:00:00.000Z",
+        "endTime": "2026-10-19T00:00:05.000Z",
+        "totalDurationMs": 5000,
+        "overallStatus": overall_status,
+        "executionClassification": classification,
+        "summary": {
+            "total": passed + failed + blocked + not_run,
+            "passed": passed,
+            "failed": failed,
+            "blocked": blocked,
+            "notRun": not_run,
+        },
+        "tests": [
+            {
+                "testId": "test_case_1",
+                "title": "sample test case",
+                "outcome": overall_status,
+                "executionType": classification if classification in ["mocked", "live"] else "mocked",
+                "evidencePaths": {
+                    "screenshots": ["screenshot.png"],
+                    "video": "video.webm",
+                    "trace": "trace.zip",
+                },
+                "assertionOutcomes": [{"name": "assertion_1", "status": "PASS"}],
+                "capturedConsoleErrors": [],
+                "capturedHttpFailures": [],
+                "sanitized": True,
+            }
+        ],
+    }
+
+
+def test_mocked_manifest_valid_for_dev(tmp_path: Path):
+    manifest = create_manifest(classification="mocked", environment="dev")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="dev",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is True
+
+
+def test_mocked_manifest_rejected_for_staging_gate(tmp_path: Path):
+    manifest = create_manifest(classification="mocked", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+def test_mocked_manifest_rejected_for_prod_gate(tmp_path: Path):
+    manifest = create_manifest(classification="mocked", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="prod",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+def test_missing_classification_fails_closed(tmp_path: Path):
+    manifest = create_manifest(classification="")
+    del manifest["executionClassification"]
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+def test_invalid_classification_fails_closed(tmp_path: Path):
+    manifest = create_manifest(classification="synthetic")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+def test_valid_live_manifest_accepted_for_staging(tmp_path: Path):
+    manifest = create_manifest(classification="live", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is True
+
+
+def test_valid_live_manifest_accepted_for_prod(tmp_path: Path):
+    manifest = create_manifest(classification="live", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="prod",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is True
+
+
+def test_commit_sha_mismatch_fails_closed(tmp_path: Path):
+    manifest = create_manifest(classification="live", commit_sha=SAMPLE_COMMIT_SHA)
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha="different_sha_1234567890",
+    )
+    assert result is False
+
+
+def test_anti_false_green_not_run_fails_closed(tmp_path: Path):
+    manifest = create_manifest(
+        classification="live",
+        overall_status="PASS",
+        passed=1,
+        not_run=1,
+    )
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+def test_anti_false_green_zero_passed_fails_closed(tmp_path: Path):
+    manifest = create_manifest(
+        classification="live",
+        overall_status="PASS",
+        passed=0,
+    )
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+def test_missing_manifest_file_fails_closed(tmp_path: Path):
+    non_existent = tmp_path / "missing-manifest.json"
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=non_existent,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+
+# ======================================================================
+# GAP-01: scripts/promote.py Preflight & Argument Mapping Regressions
+# ======================================================================
+from scripts.promote import (
+    get_manifest_verify_cmd,
+    resolve_source_sha,
+    verify_promotion_preflight,
+)
+import subprocess
+
+
+def test_get_manifest_verify_cmd_staging_maps_to_staging():
+    cmd = get_manifest_verify_cmd("staging", SAMPLE_COMMIT_SHA)
+    assert "--verify-manifest" in cmd
+    assert "--env" in cmd
+    assert cmd[cmd.index("--env") + 1] == "staging"
+    assert "--expected-sha" in cmd
+    assert cmd[cmd.index("--expected-sha") + 1] == SAMPLE_COMMIT_SHA
+
+
+def test_get_manifest_verify_cmd_main_maps_to_prod():
+    staging_sha = "d493122dd3c7f979affd3542218cd4bd815b362c"
+    cmd = get_manifest_verify_cmd("main", staging_sha)
+    assert "--verify-manifest" in cmd
+    assert "--env" in cmd
+    assert cmd[cmd.index("--env") + 1] == "prod"
+    assert "--expected-sha" in cmd
+    assert cmd[cmd.index("--expected-sha") + 1] == staging_sha
+
+
+def test_get_manifest_verify_cmd_with_manifest_path(tmp_path: Path):
+    manifest_file = tmp_path / "custom-manifest.json"
+    cmd = get_manifest_verify_cmd("staging", SAMPLE_COMMIT_SHA, manifest_file)
+    assert "--manifest" in cmd
+    assert cmd[cmd.index("--manifest") + 1] == str(manifest_file)
+
+
+def test_resolve_source_sha_resolves_branches():
+    dev_sha = resolve_source_sha("Dev")
+    assert len(dev_sha) == 40
+    assert all(c in "0123456789abcdefABCDEF" for c in dev_sha)
+
+    staging_sha = resolve_source_sha("staging")
+    assert len(staging_sha) == 40
+    assert all(c in "0123456789abcdefABCDEF" for c in staging_sha)
+
+
+def test_verify_promotion_preflight_aborts_on_manifest_failure(monkeypatch):
+    calls = []
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "git" and "rev-parse" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=SAMPLE_COMMIT_SHA)
+        if "--verify-manifest" in cmd:
+            # Simulate failed manifest check (e.g. mocked or missing live evidence)
+            return subprocess.CompletedProcess(args=cmd, returncode=1)
+        # Base checks pass
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        verify_promotion_preflight("staging", "Dev")
+    assert exc_info.value.code == 1
+
+    # Verify base check, git rev-parse, and manifest check were invoked
+    assert any("--verify-manifest" in c for c in calls)
+    manifest_call = next(c for c in calls if "--verify-manifest" in c)
+    assert "--env" in manifest_call
+    assert manifest_call[manifest_call.index("--env") + 1] == "staging"
+    assert "--expected-sha" in manifest_call
+    assert manifest_call[manifest_call.index("--expected-sha") + 1] == SAMPLE_COMMIT_SHA
+
+
+def test_verify_promotion_preflight_main_aborts_on_prod_manifest_failure(monkeypatch):
+    calls = []
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "git" and "rev-parse" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="d493122dd3c7f979affd3542218cd4bd815b362c")
+        if "--verify-manifest" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=1)
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        verify_promotion_preflight("main", "staging")
+    assert exc_info.value.code == 1
+
+    assert any("--verify-manifest" in c for c in calls)
+    manifest_call = next(c for c in calls if "--verify-manifest" in c)
+    assert "--env" in manifest_call
+    assert manifest_call[manifest_call.index("--env") + 1] == "prod"
+    assert "--expected-sha" in manifest_call
+    assert manifest_call[manifest_call.index("--expected-sha") + 1] == "d493122dd3c7f979affd3542218cd4bd815b362c"
+
+
+def test_verify_promotion_preflight_aborts_on_base_check_failure(monkeypatch):
+    calls = []
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        calls.append(cmd)
+        # Base checks fail
+        return subprocess.CompletedProcess(args=cmd, returncode=1)
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        verify_promotion_preflight("staging", "Dev")
+    assert exc_info.value.code == 1
+    # Aborts before manifest check is reached
+    assert len(calls) == 1
+
+
+def test_verify_promotion_preflight_passes_when_all_checks_succeed(monkeypatch):
+    calls = []
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        calls.append(cmd)
+        if cmd[0] == "git" and "rev-parse" in cmd:
+            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=SAMPLE_COMMIT_SHA)
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+
+    # Should complete without error
+    verify_promotion_preflight("staging", "Dev")
+    assert any("--verify-manifest" in c for c in calls)
+
+
+# ======================================================================
+# GAP-02: Verifier Output Labels and Final Gate Verdict Regressions
+# ======================================================================
+
+
+def test_verifier_output_labels_mocked_staging_rejected(tmp_path: Path, capsys):
+    manifest = create_manifest(classification="mocked", overall_status="PASS", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+    captured = capsys.readouterr()
+    assert "Payload Self-Reported Status : PASS" in captured.out
+    assert "Manifest Overall Status" not in captured.out
+    assert "Classification violation: STAGING release gate requires 'live' execution evidence" in captured.out
+    assert "❌ Evaluated Release Gate Verdict for STAGING: REJECTED (FAILED CLOSED)." in captured.out
+    assert "Evaluated Release Gate Verdict for STAGING: PASSED." not in captured.out
+
+
+def test_verifier_output_labels_mocked_prod_rejected(tmp_path: Path, capsys):
+    manifest = create_manifest(classification="mocked", overall_status="PASS", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="prod",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+    captured = capsys.readouterr()
+    assert "Payload Self-Reported Status : PASS" in captured.out
+    assert "Manifest Overall Status" not in captured.out
+    assert "Classification violation: PROD release gate requires 'live' execution evidence" in captured.out
+    assert "❌ Evaluated Release Gate Verdict for PROD: REJECTED (FAILED CLOSED)." in captured.out
+    assert "Evaluated Release Gate Verdict for PROD: PASSED." not in captured.out
+
+
+def test_verifier_output_labels_live_staging_accepted(tmp_path: Path, capsys):
+    manifest = create_manifest(classification="live", overall_status="PASS", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is True
+
+    captured = capsys.readouterr()
+    assert "Payload Self-Reported Status : PASS" in captured.out
+    assert "Manifest Overall Status" not in captured.out
+    assert "✅ Evaluated Release Gate Verdict for STAGING: PASSED." in captured.out
+    assert "REJECTED" not in captured.out
+
+
+def test_verifier_output_labels_live_prod_accepted(tmp_path: Path, capsys):
+    manifest = create_manifest(classification="live", overall_status="PASS", environment="staging")
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="prod",
+        manifest_path=manifest_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is True
+
+    captured = capsys.readouterr()
+    assert "Payload Self-Reported Status : PASS" in captured.out
+    assert "Manifest Overall Status" not in captured.out
+    assert "✅ Evaluated Release Gate Verdict for PROD: PASSED." in captured.out
+    assert "REJECTED" not in captured.out
+
+
+def test_verifier_output_sha_mismatch_rejected(tmp_path: Path, capsys):
+    manifest = create_manifest(classification="live", overall_status="PASS", commit_sha=SAMPLE_COMMIT_SHA)
+    manifest_path = tmp_path / "evidence-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=manifest_path,
+        expected_sha="mismatched_commit_sha_12345",
+    )
+    assert result is False
+
+    captured = capsys.readouterr()
+    assert "Payload Self-Reported Status : PASS" in captured.out
+    assert "Commit SHA mismatch" in captured.out
+    assert "❌ Evaluated Release Gate Verdict for STAGING: REJECTED (FAILED CLOSED)." in captured.out
+    assert "Evaluated Release Gate Verdict for STAGING: PASSED." not in captured.out
+
+
+def test_verifier_output_missing_manifest_rejected(tmp_path: Path, capsys):
+    missing_path = tmp_path / "missing-manifest.json"
+
+    result = verify_evidence_manifest(
+        target_env="staging",
+        manifest_path=missing_path,
+        expected_sha=SAMPLE_COMMIT_SHA,
+    )
+    assert result is False
+
+    captured = capsys.readouterr()
+    assert "Missing evidence manifest artifact" in captured.out
+    assert "❌ Evaluated Release Gate Verdict for STAGING: REJECTED (FAILED CLOSED)." in captured.out

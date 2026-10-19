@@ -321,6 +321,64 @@ flowchart LR
 
 ---
 
+### 3.6 Six-Phase Release Lifecycle & Mandatory Two-Tier Playwright Gate Sequence
+
+All repository changes follow six distinct operational phases with mandatory automated release gates and Product Owner checkpoints:
+
+```mermaid
+flowchart TD
+    subgraph Phase1["Phase 1: Intake & Governed Planning"]
+        P1A["Backlog Intake (JIRA_BACKLOG.md)"] --> P1B["Risk Assessment & Rollback Map"]
+        P1B --> P1C{"Touches Protected Areas?"}
+        P1C -->|Yes| P1D["Owner Checkpoint Gate (STOP)"]
+        P1C -->|No| P2A
+        P1D -->|Approved| P2A
+    end
+
+    subgraph Phase2["Phase 2: Dev Implementation & Local Verification"]
+        P2A["Sandbox Implementation on Dev"] --> P2B["Focused Regressions (pytest / vitest)"]
+        P2B --> P2C["Deterministic Mocked Playwright (test:e2e:mocked)"]
+    end
+
+    subgraph Phase3["Phase 3: Living Document Sync & Definitive Verification"]
+        P2C --> P3A["Synchronize All 6 Living Documents (Rule 9/21)"]
+        P3A --> P3B["Documentation Impact Assessment & ADR/FLOW Updates"]
+        P3B --> P3C["Inspect Final Tree Diff"]
+        P3C --> P3D["Definitive Rule 16 Pipeline (ci_check.py: tsc, lint, vitest, build, pytest)"]
+        P3D --> P3E["Governed Commit ([UPA-####] ...)"]
+        P3E --> P3F["Dev / PO Review Boundary Gate (STOP)"]
+    end
+
+    subgraph Phase4["Phase 4: Governed Staging Promotion"]
+        P3F -->|PO Authorized| P4Pre{"Preflight Manifest Check (verify_evidence_manifest)"}
+        P4Pre -->|FAIL / Mocked Evidence| P4Block["Fail-Closed Promotion Blocker (STOP)"]
+        P4Pre -->|PASS (commit-bound & live classification)| P4A["Prepare Promotion Branch (promotion/...)"]
+        P4A --> P4B["Submit PR to staging & Validate Remote CI (ci.yml)"]
+        P4B --> P4C["Owner PR Sign-Off & Merge into origin/staging"]
+    end
+
+    subgraph Phase5["Phase 5: Live Staging Deployment Verification & Release Gates"]
+        P4C --> P5A["Deploy Frontend (Vercel) & Backend (OCI VM 129.225.86.241)"]
+        P5A --> P5B["Verify Deployed Versions & Endpoints (verify_promotion.py --deployed)"]
+        P5B --> P5C["Tier 1 Mandatory Live Staging Smoke Gate (smoke.staging.e2e.ts)"]
+        P5C --> P5D{"Extraction / Worker Changed?"}
+        P5D -->|Yes| P5E["Tier 2 Conditional Live Extraction Gate (ALLOW_DB_WRITES=false)"]
+        P5D -->|No| P5F["Record Commit-Bound Evidence Manifest"]
+        P5E --> P5F
+        P5F --> P5G["Owner Staging Sign-Off in SIGN_OFF.md (STOP)"]
+    end
+
+    subgraph Phase6["Phase 6: Governed Production Release & Closeout"]
+        P5G -->|Explicit Written Authorization| P6A["Deploy to Production (universal-pro-ai.vercel.app & OCI 140.245.214.28)"]
+        P6A --> P6B["Post-Deployment Non-Destructive Live Smoke Check"]
+        P6B --> P6C{"Production Smoke PASS?"}
+        P6C -->|FAIL| P6D["Halt Progression, Alert Owner, Execute Bounded Rollback (Runbook 25)"]
+        P6C -->|PASS| P6E["Owner Final Closeout (SIGN_OFF.md & JIRA_BACKLOG.md Released)"]
+    end
+```
+
+---
+
 ## 4. SUBSYSTEM CALL HIERARCHY & DEPENDENCY MAP
 
 | Entry Point / Route | Primary Module | Downstream Calls & Libraries | System of Record | Fallback Path |
@@ -336,3 +394,8 @@ flowchart LR
 | Telegram Bot Listener | `services/telegram_bot.py` | `url_validator.py`, `extract.py`, `requests` | Telegram Bot API | Error message dispatch to chat |
 | WhatsApp Cloud Webhook | `services/whatsapp_service.py` | `url_validator.py`, `hmac`, `requests` | Meta Graph API | Fail-closed signature verification |
 | Governance Contract Verification | `tests/test_sprint14_commerce.py` | `AGENTS.md` (line-anchored Section 9 slice), `docs/USER_MANUAL.md`, `FaqSection.tsx` | `AGENTS.md` | Explicit missing-path diagnostics |
+| Mocked E2E Release Verification | `frontend/e2e/specs/app.spec.ts` | Playwright mock route fixtures, `http://localhost:3000` | In-memory Next.js test server | Fail build on regression |
+| Tier 1 Live Staging Smoke Gate | `frontend/e2e/specs/smoke.staging.e2e.ts` | Vercel Staging preview origin, Vercel edge bypass cookie, backend origin (`STAGING_API_URL` / `http://129.225.86.241`), `validateNavigationResponse` | Vercel Edge Staging | Block Staging acceptance on failure (offline unit-tested; not yet run against live Staging) |
+| Tier 2 Conditional Extraction E2E | `frontend/e2e/specs/staging.live.e2e.ts` | Media downloader, OCI Staging VM (`129.225.86.241`), `ALLOW_DB_WRITES=false` | Ephemeral Redis/memory JobManager | Block Staging sign-off on failure |
+| Promotion Manifest Verification | `scripts/promote.py` & `scripts/verify_promotion.py` | `verify_evidence_manifest`, `validateEvidenceManifest`, commit SHA check | Commit-bound `evidence-manifest.json` | Rejects mocked evidence for staging/prod; blocks promotion on missing/mismatched SHA |
+| Definitive Rule 16 CI Pipeline | `scripts/ci_check.py` | `npx tsc`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/` | Immutable Rule 16 Contract | Zero-defect promotion blocker |
