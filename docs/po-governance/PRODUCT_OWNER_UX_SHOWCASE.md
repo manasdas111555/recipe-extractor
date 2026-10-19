@@ -723,7 +723,7 @@ Please review each module deliverable and provide your official sign-off status 
      - **Hardened HTTP Error Monitoring (GAP-03)**: Tracks failed responses (status >= 400) targeting both Vercel frontend origin and configured backend API origin (`STAGING_API_URL` or fallback `http://129.225.86.241`).
      - **Fail-Closed Navigation Guard**: Uses `validateNavigationResponse` asserting non-null navigation response and `response.ok()`.
      - Guarded by `ALLOW_LIVE_STAGING_SMOKE=true`.
-     - *Operational Status Note*: Hardened smoke checks have not yet been executed against live Staging (they remain offline in Dev, guarded by `ALLOW_LIVE_STAGING_SMOKE=true`).
+     - *Operational Status Note (Phase 5 Live Staging Findings)*: PR #7 was merged into `staging` (`85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`) with passing remote CI (run 39300030918) and Vercel preview deployment. Live execution against Staging revealed an assertion flaw in `smoke.staging.e2e.ts`: the test expected the Submit CTA to be enabled while URL input was empty, whereas application validation intentionally enforces `disabled={isLoading || !url}`. The assertion was corrected on Dev (`0c107ca681b1e5dda8d61f5b58f8e33ffb224e67`) to verify the disabled state on empty input and enabled state when a fixture URL is entered, clearing the input without submitting an extraction request. Additionally, the initial live execution recorded `environment: "dev"` in `evidence-manifest.json` because `TEST_ENV` was unset; the next authorized live Staging run must explicitly set `TEST_ENV=staging`, bind to the actual deployed Staging SHA, and verify the manifest using `--env staging`. Tier 1 live Staging release gate remains **FAIL** pending rollout of the assertion correction and live retest.
    - **Tier 2 — Conditional Live Extraction E2E Gate (`frontend/e2e/specs/staging.live.e2e.ts`)**:
      - Conditionally triggered whenever changes touch media downloaders, request routing, worker tasks, or AI inference.
      - Operates with `ALLOW_DB_WRITES=false` via ephemeral Redis/in-memory `JobManager` results with zero dirty rows written to PostgreSQL.
@@ -749,7 +749,7 @@ Please review each module deliverable and provide your official sign-off status 
 - [ ] **Bounded Production Rollback**: Governed rollback protocol replaces blind git revert on `origin/main`.
 - [ ] **Final Synchronized Tree Verification**: Rule 16 5-step pipeline validated clean green.
 
-*Status: Pending Product Owner Review & Sign-Off (Dev Boundary)*
+*Status: Pending Product Owner Review & Sign-Off (Staging Retest Pending — Live Gate: FAIL)*
 
 ---
 
