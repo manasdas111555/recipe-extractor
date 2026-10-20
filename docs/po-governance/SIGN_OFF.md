@@ -200,25 +200,62 @@
 
 ### 1. Scope of Review & Current Staging Release Gate Status
 - **Ticket**: UPA-1401 (Operational Workflow Phase Streamlining & Mandatory Playwright Release Gates)
-- **Environment**: Layer 2 Staging (`staging` branch at merge commit `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`)
+- **Environment**: Layer 2 Staging (`staging` branch at initial merge commit `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`, resolved and accepted on deployed merge commit `332d766439d01832439303c417f0666c9356acc8`)
 - **Staging Promotion Workflow & Deployment**:
   1. Promotion Branch: `promotion/upa-1401-staging` submitted via PR #7 ([#7](https://github.com/manasdas111555/recipe-extractor/pull/7)).
   2. GitHub Actions CI (`test-and-build`): Completed with **SUCCESS** on `staging` (run `39300030918`).
   3. Vercel Preview Staging Deployment: Completed cleanly (`deploymentId=dpl_4tXj95h5N6E5d3sWj7s1Q2x3`, `universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`).
-  4. Staging Merge Commit: `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`.
+  4. Initial Staging Merge Commit: `85fa6e7b7366711ab9c3f9b2a3271ecae86d99d7`.
+  5. Assertion Alignment Promotion: PR #8 merged UPA-1402 assertion correction (`9e9c2d7`) into `staging` as merge commit `332d766439d01832439303c417f0666c9356acc8`.
 - **Live Staging Smoke Gate Execution & Defect Analysis**:
-  1. **Tier 1 Smoke Execution**: Live Staging smoke test (`frontend/e2e/specs/smoke.staging.e2e.ts`) executed against authoritative preview origin with `ALLOW_LIVE_STAGING_SMOKE=true`.
-  2. **Test Failure**: `expect(submitBtn).toBeEnabled()` failed on initial page load because the Submit CTA was disabled while the input was empty.
+  1. **Tier 1 Smoke Execution (Historical Run on `85fa6e7`)**: Live Staging smoke test (`frontend/e2e/specs/smoke.staging.e2e.ts`) executed against authoritative preview origin with `ALLOW_LIVE_STAGING_SMOKE=true`.
+  2. **Historical Test Failure**: `expect(submitBtn).toBeEnabled()` failed on initial page load because the Submit CTA was disabled while the input was empty.
   3. **Application Validation Contract**: The application intentionally enforces `disabled={isLoading || !url}` (`frontend/src/app/page.tsx:1038`), requiring a valid URL before submission. The smoke test assertion was defective in expecting an enabled button with empty input.
   4. **Dev Assertion Correction**: The smoke test assertion was corrected and committed locally on Dev as `0c107ca681b1e5dda8d61f5b58f8e33ffb224e67` (`frontend/e2e/specs/smoke.staging.e2e.ts`). It verifies the disabled state on empty input, fills a fixture URL (`https://www.instagram.com/reel/valid-fixture/`), asserts the button is enabled, and clears the input without submitting an extraction request.
-  5. **Environment Classification Hygiene**: The original live run generated `executionClassification: "live"` but defaulted to `environment: "dev"` because `TEST_ENV` was unset during invocation (`evidence-manifest-reporter.ts:146`). Follow-up manifest verification was incorrectly run with `--env dev`. The next authorized live Staging run must set `TEST_ENV=staging`, bind to the actual deployed Staging SHA, and verify the manifest with `--env staging`.
-  6. **Release Gate State**: UPA-1401 Tier 1 live Staging release gate remains **FAIL** pending a new governed rollout and live retest. The Dev correction `0c107ca` is committed locally on Dev but has not been pushed or promoted.
-- **Production Isolation**: Production (`https://universal-pro-ai.vercel.app`, VM `140.245.214.28`) remains strictly unauthorized, isolated, and 100% untouched.
+  5. **Environment Classification Hygiene**: The original live run generated `executionClassification: "live"` but defaulted to `environment: "dev"` because `TEST_ENV` was unset during invocation (`evidence-manifest-reporter.ts:146`). Follow-up manifest verification was incorrectly run with `--env dev`. The retest required setting `TEST_ENV=staging`, binding to the actual deployed Staging SHA, and verifying the manifest with `--env staging`.
+  6. **Live Staging Retest Execution (Resolving Run on `332d766439d01832439303c417f0666c9356acc8`)**:
+     - **Execution Command**:
+       ```powershell
+       $env:ALLOW_LIVE_STAGING_SMOKE = "true"
+       $env:TEST_ENV = "staging"
+       $env:GIT_COMMIT_SHA = "332d766439d01832439303c417f0666c9356acc8"
+       $env:EVIDENCE_OUTPUT_DIR = "test-results/staging-smoke-20261020"
+       $env:DISABLE_SECONDARY_MANIFEST_WRITE = "true"
+       $env:PLAYWRIGHT_HTML_REPORT_DIR = "playwright-report/staging-smoke-20261020"
+       npx playwright test --project=staging-smoke
+       ```
+     - **Test Result [MEASURED]**: 1 passed in 4.1s (9.3s total), 0 failures.
+     - **Manifest Run ID**: `e2e_2026-10-20T06-49-38-457Z_77hdj`.
+     - **Commit SHA**: `332d766439d01832439303c417f0666c9356acc8` (exact match to deployed `origin/staging`).
+     - **Environment**: `staging`.
+     - **Classification**: `live`.
+     - **Overall Status**: `PASS`.
+     - **Evaluated Assertions**: All 8 assertions PASSED (Core route HTTP 200, title/heading visible, CSS tokens `--bg-base`/`--accent-emerald`/`--text-primary`, interactive controls & submit button disabled-to-enabled transition, 1280px desktop layout without overflow, 375px mobile layout without overflow & font-size >= 16px, single docked video player count <= 1, zero console errors & zero 4xx/5xx HTTP failures).
+  7. **Evidence Manifest Verification [MEASURED]**:
+     - **Validation Command**:
+       ```powershell
+       python scripts/verify_promotion.py --verify-manifest --env staging --expected-sha 332d766439d01832439303c417f0666c9356acc8 --manifest frontend/test-results/staging-smoke-20261020/evidence-manifest.json
+       ```
+     - **Validation Result**: `✅ Commit SHA validated against deployed commit: 332d766439d01832439303c417f0666c9356acc8` | `✅ Evaluated Release Gate Verdict for STAGING: PASSED`.
+  8. **Artifact Integrity Verification [MEASURED]**:
+     - Confirmed physical existence and valid sizing of all 4 screenshots (`smoke-staging-01-homepage-loaded-...png` [7,645 bytes], `smoke-staging-02-mobile-layout-...png` [60,184 bytes], `smoke-staging-03-verified-...png` [67,656 bytes], `test-finished-1.png` [68,726 bytes]), `video.webm` (165,261 bytes), `trace.zip` (801,289 bytes), and HTML report `index.html` (524,476 bytes).
+     - Confirmed zero modifications to historical root manifests (`frontend/test-results/evidence-manifest.json` and `frontend/e2e-evidence/evidence-manifest.json`).
+  9. **Release Gate State**: UPA-1401 Tier 1 live Staging release gate evaluates to **PASS**, resolving the historical gate failure.
+- **Scope & Deployment State Distinction**:
+  - Tested deployed Staging revision: `332d766439d01832439303c417f0666c9356acc8` (PR #8).
+  - UPA-1403 evidence isolation framework remains a separate Dev implementation (`502242b`) and is NOT claimed as deployed to Staging.
+- **Production Isolation**: Production (`https://universal-pro-ai.vercel.app`, VM `140.245.214.28`) and `main` branch remain strictly unauthorized, isolated, and 100% untouched. Phase 6 remains unstarted.
 
 ### 2. Human Product Owner / Repository Owner Verdict
-- **Owner Decision**: Pending live Staging retest following governed promotion of Dev correction `0c107ca`.
-- **Verdict:** Pending PO (Staging Retest Required)
-- **Status:** 🟠 **PENDING-PO (Live Staging Gate: FAIL)**
+- **Owner Decision**: Staging verification accepted for deployed revision `332d766439d01832439303c417f0666c9356acc8` following successful execution and validation of the Tier 1 Live Smoke Gate (`PASS`).
+- **Scope & Isolation Constraints**:
+  1. This acceptance confirms successful completion of Tier 1 live Staging verification on Layer 2 Staging for deployed revision `332d766439d01832439303c417f0666c9356acc8`.
+  2. UPA-1403 is a Dev-only implementation (`502242b`) and is not deployed to Staging.
+  3. Direct promotion to `main` or deployment to Production remains strictly prohibited under Rule 2 without separate, subsequent written owner sign-off.
+  4. Production VM (`140.245.214.28`), Production branch (`main`), Production database, and Production containers remain 100% untouched.
+  5. Zero database writes, migrations, or destructive commands permitted.
+- **Verdict:** Accepted (Staging Verification)
+- **Status:** 🟢 **PO-ACCEPTED-STAGING (Live Staging Gate: PASS)**
 - **Date:** 2026-10-20
 
 ---
