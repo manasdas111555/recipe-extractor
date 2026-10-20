@@ -252,14 +252,50 @@ def test_get_manifest_verify_cmd_with_manifest_path(tmp_path: Path):
     assert cmd[cmd.index("--manifest") + 1] == str(manifest_file)
 
 
-def test_resolve_source_sha_resolves_branches():
+def test_resolve_source_sha_resolves_branches(monkeypatch):
+    executed_cmds = []
+    mock_dev_sha = "640f5d766f6749dd07c0550c9f7baf5fefaff1e8"
+    mock_staging_sha = "48a426cd71f5e89dadfc4ee32e8f85847b5ca88a"
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        executed_cmds.append(cmd)
+        if cmd[0] == "git" and len(cmd) >= 3 and cmd[1] == "rev-parse":
+            branch = cmd[2]
+            if branch == "Dev":
+                return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=f"{mock_dev_sha}\n", stderr="")
+            if branch == "staging":
+                return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=f"{mock_staging_sha}\n", stderr="")
+        return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="fatal: ambiguous argument")
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+
     dev_sha = resolve_source_sha("Dev")
+    assert dev_sha == mock_dev_sha
     assert len(dev_sha) == 40
     assert all(c in "0123456789abcdefABCDEF" for c in dev_sha)
+    assert ["git", "rev-parse", "Dev"] in executed_cmds
 
     staging_sha = resolve_source_sha("staging")
+    assert staging_sha == mock_staging_sha
     assert len(staging_sha) == 40
     assert all(c in "0123456789abcdefABCDEF" for c in staging_sha)
+    assert ["git", "rev-parse", "staging"] in executed_cmds
+
+
+def test_resolve_source_sha_failure_raises_runtime_error(monkeypatch):
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=128,
+            stdout="",
+            stderr="fatal: ambiguous argument 'unknown_branch'",
+        )
+
+    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
+    with pytest.raises(RuntimeError) as exc_info:
+        resolve_source_sha("unknown_branch")
+    assert "Failed to resolve commit SHA for promotion source 'unknown_branch'" in str(exc_info.value)
+    assert "fatal: ambiguous argument 'unknown_branch'" in str(exc_info.value)
 
 
 def test_verify_promotion_preflight_aborts_on_manifest_failure(monkeypatch):

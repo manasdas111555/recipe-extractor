@@ -284,3 +284,37 @@
 - **Verdict:** Pending PO (Dev Verification Complete)
 - **Status:** 🟠 **PENDING-PO**
 - **Date:** 2026-10-20
+
+---
+
+## Product Owner Verification Audit — UPA-1404
+
+### 1. Scope of Review & Dev Implementation Status
+- **Ticket**: UPA-1404 (Make Promotion Branch-Resolution Tests Checkout-Independent)
+- **Objective**: Fix the GitHub Actions CI failure on Dev commit `40df9f1f1a252df4010e97f2420d0f13e8ce5756` (workflow run `39403691187`) where `tests/test_verify_promotion_manifest.py::test_resolve_source_sha_resolves_branches` failed because `resolve_source_sha("staging")` assumed a local `staging` branch ref existed in clean single-branch CI runners.
+- **Implementation on Dev Sandbox (`scratch/worktrees/dev`)**:
+  1. `tests/test_verify_promotion_manifest.py`:
+     - Updated `test_resolve_source_sha_resolves_branches` with pytest `monkeypatch` to mock `subprocess.run` calls to `git rev-parse` for `Dev` and `staging`, returning deterministic 40-character SHAs and asserting executed commands.
+     - Added `test_resolve_source_sha_failure_raises_runtime_error` using `monkeypatch` to verify that `resolve_source_sha` fails closed with `RuntimeError` when `git rev-parse` returns non-zero exit code 128.
+  2. Production & CI Preserved:
+     - `scripts/promote.py` and `.github/workflows/ci.yml` strictly preserved untouched.
+- **Offline Dev Verification Pipeline [MEASURED]**:
+  - Focused test suite: `pytest tests/test_verify_promotion_manifest.py -v` -> **51 passed in 0.71s**.
+  - Backend suite: `pytest tests/` -> **406 passed, 3 deselected in 49.54s**.
+  - Frontend Vitest suite: `npm test` -> **70/70 passed in 2.22s**.
+  - TypeScript: `npx tsc --noEmit` -> **0 errors**.
+  - ESLint: `npm run lint` -> **0 errors**.
+  - Next.js Production Build: `npm run build` -> **Compiled successfully**.
+  - Full CI check: `python scripts/ci_check.py` -> **Exit code 0**.
+  - Whitespace check: `git diff --check` -> **Exit code 0**.
+- **Remote CI & Gate 2 Verification Status**:
+  - Remote CI workflow run `39403691187` failed on the prior Dev commit `40df9f1f1a252df4010e97f2420d0f13e8ce5756`.
+  - Gate 2 overall verdict remains **FAIL** / pending publication of the verified fix commit.
+  - No post-fix remote CI run exists yet. Remote CI validation and Gate 2 clearance remain pending next push.
+- **Production Isolation**: Production environment (`https://universal-pro-ai.vercel.app`, VM `140.245.214.28`) and databases remain 100% untouched. Phase 6 remains unstarted.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: Pending Product Owner Review & Remote CI Gate Verification.
+- **Verdict:** Pending PO (Local Verification Complete / Remote CI Pending)
+- **Status:** 🟠 **PENDING-PO**
+- **Date:** 2026-10-20

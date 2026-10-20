@@ -48,6 +48,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-052** | 2026-10-19 | Governance & CI/CD | Operational Workflow Streamlining & Mandatory Two-Tier Playwright Release Gates (UPA-1401) | ✅ Resolved on Dev |
 | **ISSUE-053** | 2026-10-19 | Quality Assurance & E2E | Tier 1 Staging Smoke Submit CTA Assertion Failure & Environment Classification Audit (UPA-1401) | 🟡 Resolved on Dev / Staging Retest Pending |
 | **ISSUE-054** | 2026-10-20 | Quality Assurance & E2E | E2E Evidence Overwrite Collision Risk During Multi-Run Live Staging Releases (UPA-1403) | ✅ Resolved on Dev |
+| **ISSUE-055** | 2026-10-20 | Testing & CI/CD | Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404) | 🟡 Resolved on Dev / Remote CI Pending |
 
 ---
 
@@ -1698,6 +1699,43 @@ During Phase 5 live Staging smoke testing and subsequent re-test attempts, execu
 - **Next.js Production Build**: `npm run build` -> **Compiled successfully [MEASURED]**.
 - **Backend Pytest Suite**: `pytest tests/` -> **405 passed in 49.61s [MEASURED]** (includes 6 isolation unit tests).
 - **Status**: **Resolved on Dev (UPA-1403)**.
+
+---
+
+### 🚨 ISSUE-055: Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404)
+- **Date**: 2026-10-20
+- **Affected Files**: `tests/test_verify_promotion_manifest.py`
+- **Related Tickets**: `UPA-1404`
+
+#### 1. What Happened (Symptom):
+During GitHub Actions CI execution for Dev commit `40df9f1f1a252df4010e97f2420d0f13e8ce5756` (workflow run `39403691187`), the backend pytest suite failed with 404 passed, 1 failed, 3 deselected:
+```text
+FAILED tests/test_verify_promotion_manifest.py::test_resolve_source_sha_resolves_branches - RuntimeError: Failed to resolve commit SHA for promotion source 'staging': fatal: ambiguous argument 'staging': unknown revision or path not in the working tree.
+```
+While local developer sandboxes with multiple local branch refs checked out had passed, the clean GitHub Actions environment (`actions/checkout` on `Dev`) performs a single-branch checkout where local branch `staging` does not exist, causing `git rev-parse staging` to fail closed with exit code 128.
+
+#### 2. Root Cause:
+`tests/test_verify_promotion_manifest.py::test_resolve_source_sha_resolves_branches` invoked `resolve_source_sha("staging")` without mocking `subprocess.run`. In `scripts/promote.py`, `resolve_source_sha` calls `git rev-parse <source>`. In automated CI runners where only the target branch (`Dev`) is checked out into the runner workspace, `git rev-parse staging` fails with `fatal: ambiguous argument 'staging'`, raising an unhandled `RuntimeError`.
+
+#### 3. Resolution (Code Changes):
+In `tests/test_verify_promotion_manifest.py`:
+1. **Isolated Branch Resolution Test**:
+   Updated `test_resolve_source_sha_resolves_branches(monkeypatch)` to mock `subprocess.run` via pytest's `monkeypatch` fixture. When `git rev-parse` is invoked for `"Dev"` or `"staging"`, it returns deterministic 40-character SHA mock responses (`mock_dev_sha` and `mock_staging_sha`) and asserts that the expected git commands were dispatched, decoupling the unit test from the external repository branch topology.
+2. **Deterministic Failure Handling Test**:
+   Added `test_resolve_source_sha_failure_raises_runtime_error(monkeypatch)` to explicitly verify the fail-closed error path: when `git rev-parse` returns a non-zero exit code (e.g. exit code 128 for an unknown branch), `resolve_source_sha` correctly raises `RuntimeError` containing the underlying stderr message.
+3. **Preserved Production Code**:
+   Preserved `scripts/promote.py` and `.github/workflows/ci.yml` untouched, maintaining the production branch resolver contract.
+
+#### 4. Testing & Verification:
+- **Focused Unit Tests**: `pytest tests/test_verify_promotion_manifest.py -v` -> **51 passed in 0.71s [MEASURED]**.
+- **Backend Pytest Suite**: `pytest tests/` -> **406 passed, 3 deselected, 12 warnings in 49.54s [MEASURED]**.
+- **Frontend Vitest Suite**: `npm test` -> **70/70 passed in 2.22s [MEASURED]**.
+- **TypeScript Static Check**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
+- **ESLint**: `npm run lint` -> **0 errors [MEASURED]**.
+- **Next.js Production Build**: `npm run build` -> **Compiled successfully [MEASURED]**.
+- **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
+- **Syntax & Whitespace Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
+- **Status**: **Resolved locally on Dev; Remote CI verification pending publication**.
 
 ---
 
