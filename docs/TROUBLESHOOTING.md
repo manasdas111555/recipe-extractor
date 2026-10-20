@@ -47,6 +47,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-051** | 2026-10-18 | Governance & Tests | Governance Heading Assertion Brittleness in Sprint 14 Commerce Suite (UPA-1311) | ✅ Resolved |
 | **ISSUE-052** | 2026-10-19 | Governance & CI/CD | Operational Workflow Streamlining & Mandatory Two-Tier Playwright Release Gates (UPA-1401) | ✅ Resolved on Dev |
 | **ISSUE-053** | 2026-10-19 | Quality Assurance & E2E | Tier 1 Staging Smoke Submit CTA Assertion Failure & Environment Classification Audit (UPA-1401) | 🟡 Resolved on Dev / Staging Retest Pending |
+| **ISSUE-054** | 2026-10-20 | Quality Assurance & E2E | E2E Evidence Overwrite Collision Risk During Multi-Run Live Staging Releases (UPA-1403) | ✅ Resolved on Dev |
 
 ---
 
@@ -1665,6 +1666,38 @@ Additionally, the generated evidence manifest recorded `executionClassification:
 - **Backend Manifest Pytest**: `pytest tests/test_verify_promotion_manifest.py` -> **50 passed in 0.77s [MEASURED]**.
 - **Working Tree Preservation**: Zero changes to application validation logic (`page.tsx`), and main working tree files strictly preserved.
 - **Status**: **Resolved on Dev (commit `0c107ca`); live Staging release gate remains FAIL pending subsequent fix promotion and live retest**.
+
+---
+
+### 🚨 ISSUE-054: E2E Evidence Overwrite Collision Risk During Multi-Run Live Staging Releases (UPA-1403)
+
+#### 1. What Happened (Symptom):
+During Phase 5 live Staging smoke testing and subsequent re-test attempts, executing Playwright runs posed an immediate risk of clobbering historical evidence manifests (`frontend/test-results/evidence-manifest.json` and `frontend/e2e-evidence/evidence-manifest.json`) and screenshots. If an operator ran a live smoke test, the hardcoded reporter paths unconditionally overwrote prior test results via `fs.writeFileSync`, preventing multi-run auditability and violating the owner's non-destructive evidence retention directive.
+
+#### 2. Root Cause:
+1. **Hardcoded Reporter Output Paths**: In `frontend/e2e/reporters/evidence-manifest-reporter.ts:172-183`, output directories were hardcoded to `process.cwd()/test-results` and `process.cwd()/e2e-evidence` without respecting custom output directory environment variables.
+2. **Hardcoded Screenshot Destination**: In `frontend/e2e/helpers/evidence-tracker.ts:71`, `captureStepScreenshot` hardcoded `path.resolve(process.cwd(), 'test-results', 'screenshots')`.
+3. **Hardcoded Playwright Configuration**: In `frontend/playwright.config.ts`, `outputFolder` for HTML reports was hardcoded to `'playwright-report'`, and `outputDir` was omitted (defaulting to `'test-results'`).
+
+#### 3. Resolution (Code Changes):
+1. **Dynamic Reporter Output Directories (`frontend/e2e/reporters/evidence-manifest-reporter.ts`)**:
+   Updated the reporter to support `EVIDENCE_OUTPUT_DIR`, `DISABLE_SECONDARY_MANIFEST_WRITE`, `E2E_SECONDARY_EVIDENCE_DIR`, `EVIDENCE_MANIFEST_FILENAME`, and `PLAYWRIGHT_HTML_REPORT_DIR`. When `EVIDENCE_OUTPUT_DIR` is set, secondary writes to `e2e-evidence/` are suppressed unless explicitly requested, preserving historical records.
+2. **Dynamic Screenshot Resolution (`frontend/e2e/helpers/evidence-tracker.ts`)**:
+   Updated `captureStepScreenshot` to resolve destination directory against `process.env.EVIDENCE_OUTPUT_DIR || 'test-results'`.
+3. **Configurable Playwright Output (`frontend/playwright.config.ts`)**:
+   Configured `outputDir: process.env.EVIDENCE_OUTPUT_DIR || 'test-results'` and HTML reporter `outputFolder: process.env.PLAYWRIGHT_HTML_REPORT_DIR || 'playwright-report'`.
+4. **Promotion Verifier Integration (`scripts/verify_promotion.py`)**:
+   Updated `verify_evidence_manifest` to auto-detect `EVIDENCE_MANIFEST_PATH` and `EVIDENCE_OUTPUT_DIR`, with full backward compatibility fallback.
+5. **Regression Unit Test Suites**:
+   Created `frontend/src/lib/__tests__/evidenceIsolation.test.ts` (8 Vitest tests) and `tests/test_evidence_isolation.py` (6 pytest tests) without touching existing test files (Rule 1).
+
+#### 4. Testing & Verification:
+- **TypeScript Static Check**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
+- **Frontend Vitest Suite**: `npm test` -> **70 passed in 2.17s [MEASURED]** (includes 8 isolation unit tests).
+- **ESLint**: `npm run lint` -> **0 errors [MEASURED]**.
+- **Next.js Production Build**: `npm run build` -> **Compiled successfully [MEASURED]**.
+- **Backend Pytest Suite**: `pytest tests/` -> **405 passed in 49.61s [MEASURED]** (includes 6 isolation unit tests).
+- **Status**: **Resolved on Dev (UPA-1403)**.
 
 ---
 

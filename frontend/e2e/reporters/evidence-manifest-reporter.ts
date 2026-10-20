@@ -126,7 +126,7 @@ export default class EvidenceManifestReporter implements Reporter {
         screenshots,
         video,
         trace,
-        htmlReport: 'playwright-report/index.html',
+        htmlReport: `${(process.env.PLAYWRIGHT_HTML_REPORT_DIR || 'playwright-report').replace(/\\/g, '/')}/index.html`,
       },
       capturedConsoleErrors,
       capturedHttpFailures,
@@ -168,18 +168,32 @@ export default class EvidenceManifestReporter implements Reporter {
       throw new Error(`[EvidenceManifestReporter] Mandatory release gate BLOCKED: Evidence validation failed:\n  - ${validation.errors.join('\n  - ')}`);
     }
 
-    // Write to both test-results/evidence-manifest.json and e2e-evidence/manifest.json
-    const outputDirs = [
-      path.resolve(process.cwd(), 'test-results'),
-      path.resolve(process.cwd(), 'e2e-evidence'),
-    ];
+    // Write to primary and optional secondary directory
+    const primaryDir = process.env.EVIDENCE_OUTPUT_DIR
+      ? path.resolve(process.cwd(), process.env.EVIDENCE_OUTPUT_DIR)
+      : path.resolve(process.cwd(), 'test-results');
+
+    const outputDirs: string[] = [primaryDir];
+
+    // Determine secondary output directory
+    const disableSecondary = process.env.DISABLE_SECONDARY_MANIFEST_WRITE === 'true';
+    if (!disableSecondary) {
+      if (process.env.E2E_SECONDARY_EVIDENCE_DIR) {
+        outputDirs.push(path.resolve(process.cwd(), process.env.E2E_SECONDARY_EVIDENCE_DIR));
+      } else if (!process.env.EVIDENCE_OUTPUT_DIR) {
+        // Default historical behavior: write to e2e-evidence as secondary only when EVIDENCE_OUTPUT_DIR is unset
+        outputDirs.push(path.resolve(process.cwd(), 'e2e-evidence'));
+      }
+    }
+
+    const manifestFileName = process.env.EVIDENCE_MANIFEST_FILENAME || 'evidence-manifest.json';
 
     for (const outDir of outputDirs) {
       try {
         if (!fs.existsSync(outDir)) {
           fs.mkdirSync(outDir, { recursive: true });
         }
-        const manifestFile = path.join(outDir, 'evidence-manifest.json');
+        const manifestFile = path.join(outDir, manifestFileName);
         fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2), 'utf-8');
       } catch (e) {
         process.exitCode = 1;
@@ -201,8 +215,8 @@ export default class EvidenceManifestReporter implements Reporter {
     console.log(`  Passed:                  ${manifest.summary.passed}`);
     console.log(`  Failed:                  ${manifest.summary.failed}`);
     console.log(`  Blocked / Not Run:       ${manifest.summary.notRun + manifest.summary.blocked}`);
-    console.log(`  Evidence Manifest:       test-results/evidence-manifest.json`);
-    console.log(`  HTML Report:             playwright-report/index.html`);
+    console.log(`  Evidence Manifest:       ${path.relative(process.cwd(), path.join(primaryDir, manifestFileName)).replace(/\\/g, '/')}`);
+    console.log(`  HTML Report:             ${(process.env.PLAYWRIGHT_HTML_REPORT_DIR || 'playwright-report').replace(/\\/g, '/')}/index.html`);
     console.log('============================================================\n');
   }
 }

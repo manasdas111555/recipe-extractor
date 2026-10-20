@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const outputDir = process.env.EVIDENCE_OUTPUT_DIR || 'test-results';
+const htmlReportDir = process.env.PLAYWRIGHT_HTML_REPORT_DIR || 'playwright-report';
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: /.*\.e2e\.ts$/,
@@ -7,9 +10,10 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
+  outputDir,
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['html', { outputFolder: htmlReportDir, open: 'never' }],
     ['./e2e/reporters/evidence-manifest-reporter.ts'],
   ],
   use: {

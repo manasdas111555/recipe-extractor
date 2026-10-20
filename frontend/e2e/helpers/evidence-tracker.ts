@@ -68,7 +68,8 @@ export class EvidenceTracker {
    * Capture a reviewable evidence screenshot of a key UI state and attach it to test results.
    */
   async captureStepScreenshot(stepName: string): Promise<string> {
-    const screenshotDir = path.resolve(process.cwd(), 'test-results', 'screenshots');
+    const baseOutputDir = process.env.EVIDENCE_OUTPUT_DIR || 'test-results';
+    const screenshotDir = path.resolve(process.cwd(), baseOutputDir, 'screenshots');
     if (!fs.existsSync(screenshotDir)) {
       fs.mkdirSync(screenshotDir, { recursive: true });
     }
