@@ -720,6 +720,8 @@ If conditional un-mocked live extraction fails:
    ```
 3. Check quota and rate limits: Ensure test account has quota available in Upstash Redis.
 4. If upstream media download (`yt-dlp`) or Gemini inference fails, capture the job error JSON via `GET /api/v1/extract/status/{job_id}`.
+5. **Cache-Hit Rejection & Target URL Rotation (`STAGING_TEST_URL`)**: If the test fails with `[UPA-1305 VALIDATION BLOCKED] Target URL was served from viral cache (HTTP 200 or is_cached: true)`, the URL under test has already been processed and cached in Redis or Supabase. Because cached responses bypass `media_downloader.py`, the test fails closed to prevent false confidence in downloader health. Rotate the test target by supplying a fresh, un-cached test video URL via the `STAGING_TEST_URL` environment variable.
+6. **Worker Stage Evidence & Status Tracking**: If the test fails with `[UPA-1305 VALIDATION FAILED] No intermediate worker stages were observed during processing`, the polling loop did not capture active worker execution (`downloading_media` or `multimodal_ai_inference`) for `targetJobId`. Verify backend Celery task execution logs on Staging to determine if the task skipped stages or transitioned instantaneously to `completed`. Diagnostics sanitize in-flight URLs to prevent secret leakage in test artifacts.
 
 #### Step 4: Governed, Bounded Production Rollback Protocol
 If mandatory post-deployment live smoke verification on `https://universal-pro-ai.vercel.app` or OCI VM `140.245.214.28` fails:

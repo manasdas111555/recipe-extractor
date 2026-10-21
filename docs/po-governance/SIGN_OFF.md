@@ -318,3 +318,40 @@
 - **Verdict:** Pending PO (Local Verification Complete / Remote CI Pending)
 - **Status:** 🟠 **PENDING-PO**
 - **Date:** 2026-10-20
+
+---
+
+## Product Owner Verification Audit — UPA-1405
+
+### 1. Scope of Review & Dev Implementation Status
+- **Ticket**: UPA-1405 (Tier 2 Live Staging E2E Cache-Miss & Worker Stage Hardening)
+- **Objective**: Prevent false-green evaluations on the Tier 2 live Staging release gate (`frontend/e2e/specs/staging.live.e2e.ts`) by strictly rejecting viral cache hits, associating candidate status responses strictly with the target `job_id`, requiring observation of intermediate worker processing stages (`downloading_media` or `multimodal_ai_inference`), excluding terminal `completed` status alone, and sanitizing diagnostic URLs.
+- **Implementation on Dev Sandbox (`scratch/worktrees/dev`)**:
+  1. `frontend/e2e/specs/staging.live.e2e.ts`:
+     - Applied verified hardening patch from `%TEMP%\UPA-1401-staging-live-hardening.patch` (+271 / -20 lines).
+     - Gated extraction submission to fail closed on cached responses (`initialStatus === 200 || initialJson.is_cached === true`).
+     - Correlated candidate status polling responses strictly to `targetJobId`, detecting URL path mismatches and body `job_id` conflicts.
+     - Required observation of `downloading_media` or `multimodal_ai_inference` worker stages during polling; excluded terminal `completed` status alone.
+     - Wrapped status polling in bounded 90-second timeout with deterministic `try...finally` listener and timer cleanup.
+     - Sanitized logged URLs and diagnostics using `sanitizeUrl` and `sanitizeText`.
+- **Local Dev Verification Pipeline [MEASURED]**:
+  - Implementation and local verification reported complete.
+  - Frontend Vitest suite: `npm test` -> **70/70 passed in 2.35s**.
+  - Mocked Playwright suite: `npm run test:e2e:mocked` -> **7/7 passed in 17.3s**.
+  - Backend Pytest suite: `pytest tests/` -> **406 passed, 3 deselected, 12 warnings in 48.53s**.
+  - TypeScript: `npx tsc --noEmit` -> **0 errors**.
+  - ESLint: `npm run lint` -> **0 errors**.
+  - Next.js Production Build: `npm run build` -> **Compiled successfully**.
+  - Full local pipeline: `python scripts/ci_check.py` -> **Exit code 0**.
+  - Whitespace check: `git diff --check` -> **Exit code 0**.
+- **Live Staging & Remote Verification Status**:
+  - Live, un-mocked staging extraction was not run (requires separate explicit authorization and an approved staging test URL).
+  - Remote CI for the UPA-1405 change has not yet been triggered or verified.
+  - Does not imply that the live staging downloader or real worker-stage validation has passed.
+- **Production Isolation**: Production environment (`https://universal-pro-ai.vercel.app`, VM `140.245.214.28`) and databases remain 100% untouched.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: Pending Product Owner Review & Staging Promotion Sign-Off.
+- **Verdict:** Pending PO (Local Verification Complete / Live Staging Extraction & Remote CI Pending)
+- **Status:** 🟠 **PENDING-PO**
+- **Date:** 2026-10-20

@@ -727,6 +727,7 @@ Please review each module deliverable and provide your official sign-off status 
    - **Tier 2 — Conditional Live Extraction E2E Gate (`frontend/e2e/specs/staging.live.e2e.ts`)**:
      - Conditionally triggered whenever changes touch media downloaders, request routing, worker tasks, or AI inference.
      - Operates with `ALLOW_DB_WRITES=false` via ephemeral Redis/in-memory `JobManager` results with zero dirty rows written to PostgreSQL.
+     - **Cache-Miss & Worker Stage Hardening (`UPA-1405`)**: Strictly rejects viral cache hits (initial HTTP 200 or `is_cached: true` fails closed with `[UPA-1305 VALIDATION BLOCKED]`) so the test cannot falsely report passing when media download was bypassed; enforces observation of intermediate worker progress stages (`downloading_media` or `multimodal_ai_inference`) specifically correlated to `targetJobId`, strictly excluding terminal `completed` status alone; sanitizes diagnostic URLs in logs and traces to prevent credential exposure; supports target URL rotation via `STAGING_TEST_URL`.
    - **Mocked CI Invariant**: Deterministic mocked Playwright tests (`npm run test:e2e:mocked`) remain isolated in `mocked-ui` project and never substitute for required live Staging or Production release gates. Mocked evidence cannot satisfy Staging or Production release gates.
 
 3. **CI & Promotion Tooling Synchronization**:

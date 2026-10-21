@@ -163,6 +163,7 @@ Universal Pro AI implements a strict multi-tier testing framework separating off
 - **Tier 2 — Conditional Live Extraction E2E Gate**:
   - `npx playwright test --project=staging-live` (mandatory when changes touch media extraction, request routing, or background workers).
   - Runs with `ALLOW_DB_WRITES=false` ensuring zero dirty rows in PostgreSQL.
+  - **Cache-Miss & Worker Stage Hardening (`UPA-1405`)**: Strictly rejects viral cache hits (initial HTTP 200 or `is_cached: true` fails closed with `[UPA-1305 VALIDATION BLOCKED]`) to guarantee that media downloader and ingestion stages are genuinely exercised; requires observing intermediate worker progress stages (`downloading_media` or `multimodal_ai_inference`) specifically correlated to the submitted `targetJobId` (terminal `completed` status alone is strictly excluded); sanitizes in-flight URLs in failure diagnostics to prevent secret leakage in logs; test target URL can be configured via `STAGING_TEST_URL`.
 - **Evidence Artifact Isolation Framework (`UPA-1403`)**:
   - To prevent clobbering historical evidence manifests or test screenshots during repeated Staging or Dev test runs, pass `EVIDENCE_OUTPUT_DIR=test-results/staging-smoke-<timestamp>` and `DISABLE_SECONDARY_MANIFEST_WRITE=true`.
   - All Playwright attachments, traces, step screenshots, and `evidence-manifest.json` are isolated to that specified directory without mutating `frontend/e2e-evidence/`.

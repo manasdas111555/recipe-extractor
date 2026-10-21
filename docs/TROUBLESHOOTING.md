@@ -49,6 +49,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-053** | 2026-10-19 | Quality Assurance & E2E | Tier 1 Staging Smoke Submit CTA Assertion Failure & Environment Classification Audit (UPA-1401) | 🟡 Resolved on Dev / Staging Retest Pending |
 | **ISSUE-054** | 2026-10-20 | Quality Assurance & E2E | E2E Evidence Overwrite Collision Risk During Multi-Run Live Staging Releases (UPA-1403) | ✅ Resolved on Dev |
 | **ISSUE-055** | 2026-10-20 | Testing & CI/CD | Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404) | 🟡 Resolved on Dev / Remote CI Pending |
+| **ISSUE-056** | 2026-10-20 | Quality Assurance & E2E | Tier 2 Live Staging Extraction Cache-Hit Bypass & Worker Stage Validation Gap (UPA-1405) | ✅ Resolved on Dev |
 
 ---
 
@@ -1736,6 +1737,59 @@ In `tests/test_verify_promotion_manifest.py`:
 - **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
 - **Syntax & Whitespace Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
 - **Status**: **Resolved locally on Dev; Remote CI verification pending publication**.
+
+---
+
+### 🚨 ISSUE-056: Tier 2 Live Staging Extraction Cache-Hit Bypass & Worker Stage Validation Gap (UPA-1405)
+- **Date**: 2026-10-20
+- **Affected Files**: `frontend/e2e/specs/staging.live.e2e.ts`
+- **Related Tickets**: `UPA-1405`
+
+#### 1. What Happened (Symptom):
+During live Staging release gate evaluation (`frontend/e2e/specs/staging.live.e2e.ts`), if the submitted target URL was already present in the database or Redis extraction cache (`is_cached: true`), the API immediately returned an HTTP 200 payload without queueing an asynchronous worker task. As a result, the live release gate evaluated to a false-green `PASS` without ever exercising `media_downloader.py`, the `yt-dlp` format selectors, or the Celery worker processing pipeline. Furthermore, status response polling did not correlate candidate events to the submitted `job_id`, accepted a terminal `completed` status without verifying intermediate stages, and un-sanitized diagnostic URLs risked logging query parameters or credentials.
+
+#### 2. Root Cause:
+`staging.live.e2e.ts` only checked for terminal HTTP 200 completion without asserting `is_cached: false` on the initial extraction POST. Because viral reels may be processed multiple times across different tests, a viral cache hit completely bypassed the downloader and background worker. Additionally, the response listener did not match candidate status events to the target `job_id`, meaning events from concurrent background tasks could satisfy the test, and terminal `completed` status was accepted even if no intermediate downloader or inference stage was observed.
+
+#### 3. Resolution (Code Changes):
+In `frontend/e2e/specs/staging.live.e2e.ts`:
+1. **Cache-Miss Guard**:
+   Enforced that the initial extraction POST must return HTTP 202 Accepted with `is_cached: false`, failing closed with an explicit `[UPA-1305 VALIDATION BLOCKED]` error if served from cache.
+   ```typescript
+   if (initialStatus === 200 || initialJson.is_cached === true) {
+     throw new Error(
+       `[UPA-1305 VALIDATION BLOCKED] Target URL "${sanitizedDisplayTargetUrl}" was served from viral cache (HTTP ${initialStatus}, is_cached: ${initialJson.is_cached}). ` +
+       'A cached extraction bypasses media_downloader.py and cannot validate the UPA-1305 downloader fix. ' +
+       'Please supply an uncached, permitted Instagram or TikTok URL via STAGING_TEST_URL.'
+     );
+   }
+   ```
+2. **Strict `job_id` Event Correlation**:
+   Tracked candidate status polling responses strictly matching the path segment `/api/v1/extract/status/{job_id}` for `targetJobId`. Raised fail-closed errors on status response parse errors or conflicting body `job_id` values.
+3. **Worker Stage Evidence Requirement**:
+   Required that intermediate stages `downloading_media` or `multimodal_ai_inference` are observed during status polling. Explicitly excluded terminal `completed` status alone as proof of worker execution.
+   ```typescript
+   const hasWorkerStageEvidence =
+     observedStages.has('downloading_media') ||
+     observedStages.has('multimodal_ai_inference');
+   expect(
+     hasWorkerStageEvidence,
+     `Real worker processing stage must be observed during background extraction polling for job "${targetJobId}" (expected "downloading_media" or "multimodal_ai_inference"). Observed stages: [${observedStageList.join(', ')}]`
+   ).toBe(true);
+   ```
+4. **Diagnostic Sanitization & Bounded Teardown**:
+   Sanitized URLs and error messages with `sanitizeUrl` and `sanitizeText`. Wrapped polling in a bounded 90s timeout with deterministic listener cleanup in an unskippable `finally:` block.
+
+#### 4. Testing & Verification:
+- **TypeScript Static Check**: `npx tsc --noEmit` -> **0 errors [MEASURED]**.
+- **ESLint**: `npm run lint` -> **0 errors [MEASURED]**.
+- **Frontend Vitest Suite**: `npm test` -> **70/70 passed in 2.35s [MEASURED]**.
+- **Mocked Playwright E2E Suite**: `npm run test:e2e:mocked` -> **7/7 passed in 17.3s [MEASURED]**.
+- **Next.js Production Build**: `npm run build` -> **Compiled successfully [MEASURED]**.
+- **Backend Pytest Suite**: `pytest tests/` -> **406 passed, 3 deselected, 12 warnings in 48.53s [MEASURED]**.
+- **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
+- **Syntax & Whitespace Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
+- **Status**: **Resolved locally on Dev; Live un-mocked staging extraction and remote CI pending next push**.
 
 ---
 
