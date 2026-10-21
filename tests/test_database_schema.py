@@ -76,5 +76,17 @@ class TestDatabaseSchema(unittest.TestCase):
         self.assertEqual(parsed["domain"], "recipe")
         self.assertEqual(len(parsed["ingredients"]), 2)
 
+    def test_initial_schema_explicit_grants_and_parity(self):
+        """Verify explicit table grants, schema usage, and function protections in 001_initial_schema.sql (UPA-1406)."""
+        content = SQL_FILE.read_text(encoding="utf-8").lower()
+        self.assertIn("grant usage on schema public to anon, authenticated, service_role", content)
+        self.assertIn("grant select, update on public.profiles to service_role", content)
+        self.assertIn("grant select, insert, delete on public.extractions to service_role", content)
+        self.assertIn("grant select on public.extractions to anon, authenticated", content)
+        self.assertIn("grant select, insert on public.affiliate_clicks to service_role", content)
+        self.assertIn("alter function public.increment_user_extraction_count(uuid) set search_path = public, pg_temp", content)
+        self.assertIn("revoke execute on function public.increment_user_extraction_count(uuid) from public, anon, authenticated", content)
+        self.assertIn("grant execute on function public.increment_user_extraction_count(uuid) to service_role", content)
+
 if __name__ == "__main__":
     unittest.main()

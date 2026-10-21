@@ -142,10 +142,24 @@ Universal Pro AI implements a strict multi-tier testing framework separating off
 - **Unit & Component Tests**:
   - Frontend Vitest: `npm test` (executes component and utility unit tests).
   - Backend Pytest: `pytest tests/` (executes all unit, security, and integration test suites).
+  - Database Grant Suite: `pytest tests/test_database_grants.py` (verifies table grants, directory parity, RLS, and search paths).
 - **Deterministic Mocked Playwright Suite**:
   - `npm run test:e2e:mocked` (runs Playwright against `http://localhost:3000` with network mocks; never contacts external servers or triggers AI inference).
 - **Definitive Rule 16 Verification Pipeline**:
-  - `python scripts/ci_check.py` (executes the complete 5-step pipeline: `tsc`, `lint`, `vitest`, `build`, `pytest`).
+  - `python scripts/ci_check.py` (executes the complete 6-step pipeline: `tsc`, `lint`, `vitest`, `build`, `test_database_grants`, `pytest`).
+
+### 1b. Database Schema Migrations & Grant-Readiness Verification (UPA-1406)
+- **Canonical Source & Directory Parity**: `backend/database/` is the canonical source of truth for all database migrations. Root `database/` is maintained as a verified 1-to-1 byte mirror.
+- **Migration Replay Chain**:
+  - `001_initial_schema.sql` $\rightarrow$ `009_beta_telemetry_feed.sql` $\rightarrow$ `010_telemetry_events.sql` $\rightarrow$ `011_privilege_hardening.sql` $\rightarrow$ `012_extraction_public_ownership.sql`.
+- **Explicit Least-Privilege Grants**:
+  - The Supabase PostgREST Data API requires explicit table-level grants following Supabase's October 30, 2026 automatic grant deprecation.
+  - Tables `profiles`, `extractions`, `affiliate_clicks`, `beta_telemetry_feed`, and `telemetry_events` declare explicit grants tailored strictly to application access paths (`service_role` for backend ops, `anon`/`authenticated` for public extraction reads). Client write access is revoked on all internal tables.
+- **Automated Verification**:
+  - `pytest tests/test_database_grants.py` validates directory parity, explicit table grants, rejection of wildcard grants, function search-path protections, and RLS.
+- **Fresh Provisioning vs Existing Database Updates**:
+  - *Fresh database*: Apply migrations sequentially from `001` through `012`.
+  - *Existing deployed database*: Apply only subsequent unapplied migrations (e.g. `011` and `012`), as `011` idempotently hardens table grants and function search paths on pre-existing tables.
 
 ### 2. Live Staging Release Gates (`staging` Branch)
 - **Commit-Bound Manifest & Source-Aware Promotion Preflight**:

@@ -384,6 +384,48 @@ flowchart TD
 
 ---
 
+### 3.7 Supabase PostgREST Data API Role-Permission Flow & Migration Replay Sequence
+
+Universal Pro AI connects to PostgreSQL exclusively via PostgREST HTTP Data API without direct database TCP wire connections. PostgREST evaluates PostgreSQL table-level grants before Row Level Security (RLS) policies:
+
+```mermaid
+flowchart TD
+    Client["Client / PWA / Worker"] -->|"HTTP GET/POST/PATCH/DELETE"| PostgREST["Supabase PostgREST Gateway (/rest/v1/*)"]
+    PostgREST --> AuthResolution{"Extract Bearer Token / API Key"}
+
+    AuthResolution -->|"anon key / none"| RoleAnon["PostgreSQL Role: anon"]
+    AuthResolution -->|"user JWT"| RoleAuth["PostgreSQL Role: authenticated"]
+    AuthResolution -->|"service_role key"| RoleService["PostgreSQL Role: service_role"]
+
+    RoleAnon --> TableGrantCheck{"Table-Level GRANT Check (information_schema)"}
+    RoleAuth --> TableGrantCheck
+    RoleService --> TableGrantCheck
+
+    TableGrantCheck -->|"Grant Missing (Post-Oct 30 Deprecation)"| ErrGrant["HTTP 404 / HTTP 42501 (insufficient_privilege)"]
+    TableGrantCheck -->|"Grant Present"| RLSCheck{"Row Level Security (RLS) Active?"}
+
+    RLSCheck -->|"service_role (BYPASSRLS)"| DirectExec["Execute SQL Operation & Return Payload (200/201/204)"]
+    RLSCheck -->|"anon / authenticated"| RLSEval{"Evaluate RLS Policy (USING / WITH CHECK)"}
+
+    RLSEval -->|"Permitted by Policy"| DirectExec
+    RLSEval -->|"Denied by Policy"| ErrRLS["HTTP 200 (Empty Array []) or HTTP 403 Forbidden"]
+```
+
+#### Migration Replay Sequence & Parity Architecture:
+All database schema and permission definitions are version-controlled with guaranteed byte parity across directories:
+- **Canonical Source**: `backend/database/`
+- **Mirrored Repository Root**: `database/`
+
+```mermaid
+flowchart LR
+    M001["001_initial_schema.sql<br>(profiles, extractions, affiliate_clicks,<br>RLS, search_path, explicit grants)"] --> M009["009_beta_telemetry_feed.sql<br>(beta_telemetry_feed, service_role INSERT)"]
+    M009 --> M010["010_telemetry_events.sql<br>(telemetry_events, service_role SELECT/INSERT)"]
+    M010 --> M011["011_privilege_hardening.sql<br>(Idempotent least-privilege grants across all 5 tables)"]
+    M011 --> M012["012_extraction_public_ownership.sql<br>(Public extraction RLS ownership & visibility policy)"]
+```
+
+---
+
 ## 4. SUBSYSTEM CALL HIERARCHY & DEPENDENCY MAP
 
 | Entry Point / Route | Primary Module | Downstream Calls & Libraries | System of Record | Fallback Path |
@@ -404,4 +446,5 @@ flowchart TD
 | Tier 2 Conditional Extraction E2E | `frontend/e2e/specs/staging.live.e2e.ts` | Media downloader, OCI Staging VM (`129.225.86.241`), `ALLOW_DB_WRITES=false`, cache-miss guard (`is_cached: false`, HTTP 202 required, fail closed on HTTP 200 / cache hit `[UPA-1305 VALIDATION BLOCKED]`), intermediate worker stage verification (`downloading_media` or `multimodal_ai_inference` for `targetJobId`, `completed` alone excluded), diagnostic URL sanitization | Ephemeral Redis/memory JobManager | Block Staging sign-off on failure |
 | Promotion Manifest & Branch Verification | `scripts/promote.py` & `scripts/verify_promotion.py` | `verify_evidence_manifest`, `validateEvidenceManifest`, `validate_ticket_format`, `check_branch_exists`, commit SHA check | Commit-bound `evidence-manifest.json` & Git remote heads | Rejects mocked evidence for staging/prod; blocks promotion on missing/mismatched SHA or collision/remote query failure |
 | E2E Evidence Artifact Isolation | `frontend/e2e/reporters/evidence-manifest-reporter.ts` & `frontend/e2e/helpers/evidence-tracker.ts` | `EVIDENCE_OUTPUT_DIR`, `DISABLE_SECONDARY_MANIFEST_WRITE`, `E2E_SECONDARY_EVIDENCE_DIR`, `EVIDENCE_MANIFEST_FILENAME`, `PLAYWRIGHT_HTML_REPORT_DIR`, `verify_evidence_manifest` | Isolated output directories | Falls back to default `test-results` and `e2e-evidence` paths; protects historical evidence manifests |
-| Definitive Rule 16 CI Pipeline | `scripts/ci_check.py` | `npx tsc`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/` | Immutable Rule 16 Contract | Zero-defect promotion blocker |
+| Database Grant & Parity Suite | `tests/test_database_grants.py` & `tests/test_database_schema.py` | Explicit grants check, directory parity check (`backend/database/` vs `database/`), RLS assertion, search-path protection, zero sequences | PostgreSQL Schema Migrations | Block CI if table grants or parity fail |
+| Definitive Rule 16 CI Pipeline | `scripts/ci_check.py` | `npx tsc`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/test_database_grants.py`, `pytest tests/` | Immutable Rule 16 Contract | Zero-defect promotion blocker |

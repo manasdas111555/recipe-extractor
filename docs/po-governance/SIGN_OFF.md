@@ -355,3 +355,34 @@
 - **Verdict:** Pending PO (Local Verification Complete / Live Staging Extraction & Remote CI Pending)
 - **Status:** 🟠 **PENDING-PO**
 - **Date:** 2026-10-20
+
+---
+
+## Product Owner Verification Audit — UPA-1406
+
+### 1. Scope of Review & Dev Implementation Status
+- **Ticket**: UPA-1406 (Supabase Data API Grant-Readiness, Migration Replay Parity & Disaster Recovery Hardening)
+- **Objective**: Reconcile canonical migrations and directory parity; establish explicit least-privilege table grants in readiness for Supabase's October 30, 2026 automatic grant deprecation; harden function search paths and execution privileges; add automated static tests and CI gate protection; document disaster recovery protocols within the two-project Free-tier constraint.
+- **Implementation on Dev Sandbox (`scratch/worktrees/dev`)**:
+  1. `backend/database/001_initial_schema.sql`: Added explicit schema usage (`GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role`), explicit table permissions (`profiles`: `SELECT, UPDATE` to `service_role`; `extractions`: `SELECT, INSERT, DELETE` to `service_role`, `SELECT` to `anon, authenticated`; `affiliate_clicks`: `SELECT, INSERT` to `service_role`), and function search-path/execute restrictions (`increment_user_extraction_count`, `reset_daily_extraction_quotas`, `handle_new_user`).
+  2. `backend/database/009_beta_telemetry_feed.sql`: Explicit `service_role` `INSERT` grant and revoked client/public access.
+  3. `backend/database/010_telemetry_events.sql`: Hardened `GRANT ALL` to explicit `service_role` `SELECT, INSERT` grant and revoked client/public access.
+  4. `backend/database/011_privilege_hardening.sql`: Validated idempotent minimum-privilege grants across all 5 tables and search-path hardening.
+  5. `backend/database/012_extraction_public_ownership.sql`: Validated public extraction RLS ownership and visibility policies.
+  6. `backend/database/README.md`: Documented migration replay sequence `001 -> 009 -> 010 -> 011 -> 012`, distinguishing fresh provisioning from existing environment updates.
+  7. `database/`: Reconciled all 6 files (`001`, `009`, `010`, `011`, `012`, `README.md`) to 100% byte parity with canonical `backend/database/`.
+  8. `tests/test_database_grants.py`: Added 9 automated tests verifying directory parity, table grants, rejection of wildcard grants, function search paths, execution restrictions, and RLS.
+  9. `tests/test_database_schema.py`: Appended `test_initial_schema_explicit_grants_and_parity`.
+  10. `scripts/ci_check.py`: Integrated `test_database_grants.py` as Step 5 before full backend pytest suite.
+  11. Living Architecture Docs: Synchronized `DISASTER_RECOVERY.md` (Runbook 2 updated, Runbook 26 added), `DECISIONS.md` (ADR-009 added), `FLOW.md` (Section 3.7 & Section 4 updated), `TROUBLESHOOTING.md` (ISSUE-057 added), and `USER_MANUAL.md` (Section 9 Step 1 & 1b added).
+- **Cloud Database & Production Isolation**:
+  - Zero connections, zero SQL executions, zero migrations run against Supabase (Production or Staging).
+  - Production and Staging cloud instances remain 100% untouched.
+  - Zero commits, pushes, PRs, or promotions executed.
+  - Pre-existing Phase 2 modification to `docs/po-governance/JIRA_BACKLOG.md` preserved exactly.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: Pending Product Owner Review.
+- **Verdict:** Pending PO (Phase 3 Local Implementation & Verification Complete / Cloud DB & Promotion Pending)
+- **Status:** 🟠 **PENDING-PO**
+- **Date:** 2026-10-21

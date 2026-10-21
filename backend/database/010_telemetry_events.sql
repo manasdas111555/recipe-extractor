@@ -31,9 +31,9 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_events_name_created ON public.telemetry
 -- 3. Row Level Security (RLS) & Grant Isolation
 ALTER TABLE public.telemetry_events ENABLE ROW LEVEL SECURITY;
 
--- Grant access ONLY to service_role (FastAPI backend uses service_role_key)
-GRANT ALL ON public.telemetry_events TO service_role;
-REVOKE ALL ON public.telemetry_events FROM anon, authenticated;
+-- Explicit Least-Privilege Grants (FastAPI backend uses service_role_key)
+REVOKE ALL ON public.telemetry_events FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON public.telemetry_events TO service_role;
 
 -- RLS Policies strictly scoped to service_role
 CREATE POLICY "Service role insert telemetry events"

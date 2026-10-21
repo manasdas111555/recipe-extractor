@@ -25,6 +25,7 @@
 | **[ADR-006](#adr-006-3-layer-environment-architecture--production-sign-off-gates)** | 3-Layer Environment Architecture & Production Sign-Off Gates | Rule 2 | **Accepted / Active** | Sprint 11 / Reconciled Sprint 12 |
 | **[ADR-007](#adr-007-resilient-document-governance-assertion--section-scoping-protocol)** | Resilient Document Governance Assertion & Section-Scoping Protocol | Rules 1, 9, 16 | **Accepted / Active** | Sprint 13 (UPA-1311) |
 | **[ADR-008](#adr-008-six-phase-release-lifecycle--mandatory-two-tier-playwright-release-gates)** | Six-Phase Release Lifecycle & Mandatory Two-Tier Playwright Release Gates | Rules 2, 16, 21 | **Proposed / Implemented on Dev** | Sprint 14 (UPA-1401) |
+| **[ADR-009](#adr-009-supabase-data-api-least-privilege-grants-canonical-migration-source--replay-parity)** | Supabase Data API Least-Privilege Grants, Canonical Migration Source & Replay Parity | Rules 2, 4, 14, 16, 21 | **Proposed / Implemented on Dev** | Sprint 14 (UPA-1406) |
 
 ---
 
@@ -316,3 +317,68 @@ We adopted Option B. By codifying the Six-Phase Release Lifecycle in `AGENTS.md`
 * Local development remains strictly offline/mocked; live gates are evaluated exclusively against deployed Staging and Production layers.
 * Mocked test evidence cannot satisfy Staging or Production promotion gates; promotion automation fails closed if only mocked evidence or mismatched SHAs are provided.
 * Staging promotion branches require explicit ticket identifiers, rejecting generic branch names to prevent collisions across concurrent sprint workflows.
+
+---
+
+## ADR-009: Supabase Data API Least-Privilege Grants, Canonical Migration Source & Replay Parity
+
+* **Status**: Proposed / Implemented on Dev `[VERIFIED IN DEV SANDBOX]`
+* **Date / Sprint**: Sprint 14 (UPA-1406)
+* **Governing Rules**: AGENTS.md Rules 2 (*Sprint Governance & Gate Integrity*), 4 (*Ingestion Guardrails & Cache*), 14 (*Security Invariants*), 16 (*Verification Before Completion*), 21 (*Living Document Synchronization*), 22 (*Architectural Decision Records*)
+
+### Context & Problem Statement
+On October 30, 2026, Supabase will deprecate the legacy PostgreSQL behavior that automatically executed `GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role` for newly created tables.
+
+Universal Pro AI interacts with PostgreSQL exclusively through the PostgREST HTTP Data API; there are zero direct PostgreSQL wire/TCP connections in application runtime. PostgREST role visibility is strictly dictated by PostgreSQL table-level grants.
+
+Prior to UPA-1406:
+1. `001_initial_schema.sql` relied on default privileges and lacked explicit table-level grants for `profiles`, `extractions`, and `affiliate_clicks`.
+2. `009_beta_telemetry_feed.sql` lacked explicit grants, leaving `beta_telemetry_feed` vulnerable to post-October 30 API invisibility.
+3. `010_telemetry_events.sql` used an un-hardened `GRANT ALL ON public.telemetry_events TO service_role`, granting unnecessary privileges (`DROP`, `ALTER`, `DELETE`).
+4. Migration directory drift existed between `backend/database/` (active source) and root `database/` (which lacked migrations `010`, `011`, and `012`).
+5. In fresh provisioning or disaster recovery scenarios, replaying historical migrations would produce tables inaccessible to PostgREST, throwing HTTP 404 or HTTP 42501 (`insufficient_privilege`) errors.
+6. A clear architectural distinction was required between schema rebuild readiness (recreating schema/grants via migrations) and independent data recovery (restoring data rows from external backups), while adhering to Supabase's two-project Free-tier constraint.
+
+### Options Considered
+1. **Option A: Retain Implicit Grants & Rely on Dashboard Manual Permissions**:
+   - *Pros*: Zero migration edits.
+   - *Cons*: Highly error-prone; breaks automated disaster recovery and fresh environment setups; causes immediate HTTP 42501 failures on any newly created Supabase project after October 30, 2026.
+2. **Option B: Broad Blanket Grants (`GRANT ALL ON ALL TABLES IN SCHEMA public ...`)**:
+   - *Pros*: Quick fix.
+   - *Cons*: Violates least-privilege principles; grants excessive permissions (e.g. `DROP`, `TRUNCATE`) to application roles; risks exposing internal telemetry tables to public client writes.
+3. **Option C (Selected): Explicit Least-Privilege Grants per Table, Function Search-Path Protection, Directory Parity & Automated CI Guards**:
+   - *Pros*:
+     - Grants explicitly and only the operations each application access path requires.
+     - Protects function execution and search paths (`search_path = public`).
+     - Reconciles canonical `backend/database/` and mirrored `database/` to 100% byte parity.
+     - Enforces full migration replay chain (`001 -> 009 -> 010 -> 011 -> 012`).
+     - Adds automated pytest suite (`tests/test_database_grants.py`) and static CI check (`scripts/ci_check.py`).
+     - Documents disaster recovery protocols within the two-project Free-tier boundary.
+   - *Cons*: Requires updating and maintaining mirror parity across both migration directories for all future database changes.
+
+### Decision & Rationale
+We implemented Option C:
+1. **Explicit Table-Level Least-Privilege Grants**:
+   - `public.profiles`: `GRANT SELECT, UPDATE ON public.profiles TO service_role` (application reads and updates quotas/tags; no public client access).
+   - `public.extractions`: `GRANT SELECT, INSERT, DELETE ON public.extractions TO service_role` (worker writes, cache reads, and cleanup); `GRANT SELECT ON public.extractions TO anon, authenticated` (read-only client extraction viewer).
+   - `public.affiliate_clicks`: `GRANT SELECT, INSERT ON public.affiliate_clicks TO service_role` (telemetry logging; no public client access).
+   - `public.beta_telemetry_feed`: `GRANT INSERT ON public.beta_telemetry_feed TO service_role` (worker telemetry ingest; client access revoked).
+   - `public.telemetry_events`: `GRANT SELECT, INSERT ON public.telemetry_events TO service_role` (hardened from `GRANT ALL`; client access revoked).
+2. **Schema Usage & Function Hardening**:
+   - `GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role`.
+   - Explicit `SET search_path = public` on reviewed functions (`increment_user_extraction_count`, `reset_daily_extraction_quotas`, `handle_new_user`).
+   - Function execution revocations strictly narrowed to reviewed functions (`REVOKE EXECUTE ... FROM PUBLIC; GRANT EXECUTE ... TO service_role`), preventing unintended disruption of PostgreSQL built-ins (`uuid-ossp`, `pgcrypto`).
+3. **Canonical Migration Directory & Parity**:
+   - `backend/database/` is designated as the canonical source of truth.
+   - Root `database/` is maintained as an exact 1-to-1 mirror.
+   - The replay sequence is formalized: `001_initial_schema.sql` $\rightarrow$ `009_beta_telemetry_feed.sql` $\rightarrow$ `010_telemetry_events.sql` $\rightarrow$ `011_privilege_hardening.sql` $\rightarrow$ `012_extraction_public_ownership.sql`.
+4. **Disaster Recovery & Capacity Alignment**:
+   - Schema rebuild readiness (DDL + explicit grants) is distinguished from independent data recovery (encrypted logical `pg_dump` backups and Supabase Storage backups).
+   - Free-tier 2-project limit (Production & Staging) is accounted for; no third project or Staging backup tables are permitted.
+5. **Automated Static CI Protection**:
+   - Dedicated test suite `tests/test_database_grants.py` asserts table grants, directory parity, search-path protections, execute restrictions, and RLS across all tables.
+   - Step 5 in `scripts/ci_check.py` validates database grants as an unskippable gate before PR or promotion.
+
+### Accepted Trade-Offs
+* Any future table introduced in `public` must declare explicit table-level grants for `service_role` and optionally `anon`/`authenticated`, or `tests/test_database_grants.py` will fail closed.
+* All future migration additions must be mirrored across both `backend/database/` and `database/` to satisfy directory parity checks.

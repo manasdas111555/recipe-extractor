@@ -172,3 +172,36 @@ create policy "Anyone can insert affiliate click telemetry"
 create policy "Users can view their own click history"
     on public.affiliate_clicks for select
     using (auth.uid() = user_id);
+
+-- ==============================================================================
+-- EXPLICIT LEAST-PRIVILEGE DATA API GRANTS (UPA-1406)
+-- Required for Supabase Data API grant-readiness (PostgreSQL 15+ / PostgREST)
+-- ==============================================================================
+
+-- 1. Schema Usage Controls
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+-- 2. Explicit Table Permissions
+-- public.profiles: service_role manages read & update of user quotas/profiles
+GRANT SELECT, UPDATE ON public.profiles TO service_role;
+
+-- public.extractions: service_role manages records; public/auth roles read via RLS
+GRANT SELECT, INSERT, DELETE ON public.extractions TO service_role;
+GRANT SELECT ON public.extractions TO anon, authenticated;
+
+-- public.affiliate_clicks: service_role logs outbound affiliate conversions
+GRANT SELECT, INSERT ON public.affiliate_clicks TO service_role;
+
+-- 3. Security Definer Search-Path Hardening
+ALTER FUNCTION public.increment_user_extraction_count(uuid) SET search_path = public, pg_temp;
+ALTER FUNCTION public.reset_daily_extraction_quotas() SET search_path = public, pg_temp;
+ALTER FUNCTION public.handle_new_user() SET search_path = public, pg_temp;
+
+-- 4. Reviewed Function Execute Privilege Restrictions
+REVOKE EXECUTE ON FUNCTION public.increment_user_extraction_count(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_user_extraction_count(uuid) TO service_role;
+
+REVOKE EXECUTE ON FUNCTION public.reset_daily_extraction_quotas() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reset_daily_extraction_quotas() TO service_role;
+
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;

@@ -50,6 +50,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-054** | 2026-10-20 | Quality Assurance & E2E | E2E Evidence Overwrite Collision Risk During Multi-Run Live Staging Releases (UPA-1403) | ✅ Resolved on Dev |
 | **ISSUE-055** | 2026-10-20 | Testing & CI/CD | Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404) | 🟡 Resolved on Dev / Remote CI Pending |
 | **ISSUE-056** | 2026-10-20 | Quality Assurance & E2E | Tier 2 Live Staging Extraction Cache-Hit Bypass & Worker Stage Validation Gap (UPA-1405) | ✅ Resolved on Dev |
+| **ISSUE-057** | 2026-10-21 | Database & Security | Supabase PostgREST Data API Grant-Readiness, Function Hardening & Migration Directory Parity (UPA-1406) | ✅ Resolved on Dev |
 
 ---
 
@@ -1790,6 +1791,59 @@ In `frontend/e2e/specs/staging.live.e2e.ts`:
 - **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
 - **Syntax & Whitespace Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
 - **Status**: **Resolved locally on Dev; Live un-mocked staging extraction and remote CI pending next push**.
+
+---
+
+### 🚨 ISSUE-057: Supabase Data API Automatic Grant Deprecation & Migration Directory Parity Gap (UPA-1406)
+- **Date**: 2026-10-21
+- **Affected Files**: `backend/database/001_initial_schema.sql`, `backend/database/009_beta_telemetry_feed.sql`, `backend/database/010_telemetry_events.sql`, `backend/database/README.md`, `database/*.sql`, `tests/test_database_grants.py`, `tests/test_database_schema.py`, `scripts/ci_check.py`
+
+#### 1. What Happened (Symptom):
+Under an upcoming Supabase platform update taking effect on October 30, 2026, newly created tables in the `public` schema will no longer automatically receive default privileges (`GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role`). In fresh provisioning or disaster recovery rebuilds, PostgREST HTTP queries targeting `profiles`, `extractions`, `affiliate_clicks`, `beta_telemetry_feed`, or `telemetry_events` would fail with HTTP 404 (table hidden from API schema) or HTTP 42501 (`insufficient_privilege`). Additionally, migration directory drift existed between `backend/database/` and root `database/`, with root missing migrations `010`, `011`, and `012`.
+
+#### 2. Root Cause:
+1. `001_initial_schema.sql` relied on PostgreSQL default privileges and omitted explicit table-level grants for `service_role` and `anon`/`authenticated`.
+2. `009_beta_telemetry_feed.sql` lacked explicit grants, leaving worker telemetry inserts vulnerable to permission denial.
+3. `010_telemetry_events.sql` used an un-hardened `GRANT ALL ON public.telemetry_events TO service_role`, granting unnecessary privileges (`DROP`, `ALTER`, `DELETE`).
+4. Root `database/` had not been maintained in sync with `backend/database/`, lacking migrations `010`, `011`, and `012`.
+5. Rebuilding the database schema was not formally distinguished from data recovery, and Supabase Free-tier limits (2 project slots occupied by Production and Staging) were not documented in DR runbooks.
+
+#### 3. Resolution (Code Changes):
+1. **Explicit Least-Privilege Table Grants**:
+   - In `001_initial_schema.sql`:
+     ```sql
+     GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+     GRANT SELECT, UPDATE ON public.profiles TO service_role;
+     GRANT SELECT, INSERT, DELETE ON public.extractions TO service_role;
+     GRANT SELECT ON public.extractions TO anon, authenticated;
+     GRANT SELECT, INSERT ON public.affiliate_clicks TO service_role;
+     ```
+   - In `009_beta_telemetry_feed.sql`:
+     ```sql
+     GRANT INSERT ON public.beta_telemetry_feed TO service_role;
+     REVOKE ALL ON public.beta_telemetry_feed FROM anon, authenticated, PUBLIC;
+     ```
+   - In `010_telemetry_events.sql`:
+     ```sql
+     GRANT SELECT, INSERT ON public.telemetry_events TO service_role;
+     REVOKE ALL ON public.telemetry_events FROM anon, authenticated, PUBLIC;
+     ```
+2. **Function Search-Path & Execution Hardening**:
+   - Added explicit `SET search_path = public` to `increment_user_extraction_count`, `reset_daily_extraction_quotas`, and `handle_new_user`.
+   - Narrowed execute revocations to reviewed functions (`REVOKE EXECUTE ... FROM PUBLIC; GRANT EXECUTE ... TO service_role`) to protect PostgreSQL built-ins (`uuid-ossp`, `pgcrypto`).
+3. **Directory Parity**:
+   - Mirrored all migrations and README from `backend/database/` to root `database/` with 100% byte parity.
+4. **Automated Static CI Protection**:
+   - Added `tests/test_database_grants.py` asserting table grants, directory parity, search-path protections, execute restrictions, and RLS across all 5 tables.
+   - Added Step 5 to `scripts/ci_check.py` executing `test_database_grants.py`.
+
+#### 4. Testing & Verification:
+- **Focused Database Grant Suite**: `pytest tests/test_database_grants.py -v` -> **9/9 passed in 0.23s [MEASURED]**.
+- **Database Schema Suite**: `pytest tests/test_database_schema.py -v` -> **7/7 passed in 0.22s [MEASURED]**.
+- **Backend Pytest Suite**: `pytest tests/` -> **415 passed, 3 deselected in 48.91s [MEASURED]**.
+- **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
+- **Whitespace & Parity Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
+- **Status**: **Resolved locally on Dev; Cloud databases remained 100% untouched**.
 
 ---
 

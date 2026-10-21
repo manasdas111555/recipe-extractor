@@ -172,13 +172,18 @@ git push origin main
 ### 📘 Runbook 2: Accidental Database Table Drop / Supabase Corrupted
 **Symptom**: API calls return HTTP 404 or `relation "public.extractions" does not exist`.
 
-#### Step 1: Re-apply the Initial Schema Migration (60 Seconds)
+#### Step 1: Re-apply the Canonical Schema Migration Sequence (2 Minutes)
 1. Log in to [supabase.com/dashboard](https://supabase.com/dashboard).
 2. Select your `universal-pro-ai` project.
 3. Click **SQL Editor** (`>_`) in the left sidebar.
-4. Open the file [database/001_initial_schema.sql](file:///d:/Personal%20Projects/recipe-extractor/database/001_initial_schema.sql) in your editor, copy all text, and paste into Supabase.
-5. Click **Run**.
-6. All 3 tables (`profiles`, `extractions`, `affiliate_clicks`), RLS policies, RPC functions, and triggers are recreated with `IF NOT EXISTS` safety.
+4. Execute the canonical migrations in strict numerical sequence from [backend/database/](file:///d:/Personal%20Projects/recipe-extractor/backend/database/) (or mirrored [database/](file:///d:/Personal%20Projects/recipe-extractor/database/)):
+   - `001_initial_schema.sql` (Creates `profiles`, `extractions`, `affiliate_clicks`, RLS, and explicit table grants)
+   - `009_beta_telemetry_feed.sql` (Creates `beta_telemetry_feed` with `service_role` INSERT grant)
+   - `010_telemetry_events.sql` (Creates `telemetry_events` with `service_role` SELECT/INSERT grant)
+   - `011_privilege_hardening.sql` (Idempotently hardens table grants and function search paths across all tables)
+   - `012_extraction_public_ownership.sql` (Enforces public ownership and RLS visibility policies)
+5. Click **Run** for each migration. All 5 tables, RLS policies, atomic RPC functions, and explicit Data API grants are recreated with `IF NOT EXISTS` safety.
+6. For full details on schema rebuild readiness versus independent data recovery, see **Runbook 26**.
 
 #### Step 2: Verify Restoration
 Run the connection check from terminal:
@@ -748,6 +753,79 @@ If mandatory post-deployment live smoke verification on `https://universal-pro-a
      - **NEVER** bypass required PR review or Product Owner authorization gates.
 5. **Operator Intervention Gate**:
    - If automated rollback cannot execute safely within verified parameters, **STOP** and await explicit human operator/owner intervention.
+
+---
+
+### 📘 Runbook 26: Supabase Data API Migration Replay, Schema Rebuild Readiness & Disaster Recovery (UPA-1406)
+**Symptom**: PostgREST Data API returns HTTP 404 Not Found or HTTP 42501 `permission denied for table ...` following a schema rebuild, fresh environment provisioning, or after Supabase's October 30, 2026 automatic grant deprecation; or a database disaster requiring schema rebuild and data recovery.
+
+#### Step 1: Fundamental Architectural Distinction — Schema Rebuild Readiness vs. Independent Data Recovery
+When responding to a database disaster or setting up a new environment, engineers and operators must distinguish between two fundamentally different recovery planes:
+
+1. **Schema Rebuild Readiness**:
+   - Re-running the canonical migration chain (`001 -> 009 -> 010 -> 011 -> 012`) deterministically recreates the entire relational structure: all 5 tables (`public.profiles`, `public.extractions`, `public.affiliate_clicks`, `public.beta_telemetry_feed`, `public.telemetry_events`), indexes, constraints, Row Level Security (RLS) policies, atomic RPC functions (`increment_user_extraction_count`, `reset_daily_extraction_quotas`, `handle_new_user`), and explicit least-privilege table grants (`service_role`, `anon`, `authenticated`).
+   - Rebuilding the schema ensures that PostgREST Data API can route incoming HTTP calls without permission errors or missing schema definitions.
+   - **Limitation**: Schema rebuild readiness creates *empty* tables with proper permissions. It does **NOT** restore lost rows, historical user quotas, custom creator tags, viral cache payloads, or telemetry events.
+
+2. **Independent Data Recovery**:
+   - Recovering lost application state, user accounts, and cached viral extractions requires restoring from **independent, external data backups** (logical SQL dumps via `pg_dump` or Supabase physical backups) and separate backups of Supabase Storage bucket objects.
+   - Schema migrations alone cannot substitute for data backups.
+
+#### Step 2: Supabase Two-Project Free-Tier Capacity Constraints
+Universal Pro AI operates within explicit cloud infrastructure boundaries:
+- **Two-Project Limit**: The organization utilizes the two allowed Supabase Free-tier project slots for **Production** (`scrqvbgjybnrvcpxbygf`) and **Staging** (`mzpkdmaxsuhwezsooidu`).
+- **No Third Standing Project**: A third Supabase project cannot be provisioned under the current Free-tier quota.
+- **Strict Environment Isolation**: Staging database tables **MUST NEVER** be used to store Production backups or warm standby tables. Staging tables are subject to ephemeral testing, schema experiments, and automated test data cleanup; mixing production data into Staging violates environment isolation and introduces data leakage risks.
+- **Primary DR Architecture**: Disaster recovery must rely on encrypted, external, off-site logical backups rather than a warm multi-project cloud standby.
+
+#### Step 3: Canonical Migration Replay Sequence for Schema Rebuild
+To rebuild the complete database schema from scratch on any PostgreSQL 15+ / Supabase instance:
+1. Ensure access to the canonical migration directory [backend/database/](file:///d:/Personal%20Projects/recipe-extractor/backend/database/) (or mirrored [database/](file:///d:/Personal%20Projects/recipe-extractor/database/)).
+2. Execute the migration files in strict numerical order via Supabase SQL Editor or `psql`:
+   - `001_initial_schema.sql`: Core schema, `profiles`, `extractions`, `affiliate_clicks`, triggers, RLS, function search-path protections, and explicit table grants for `service_role` and `anon`/`authenticated`.
+   - `009_beta_telemetry_feed.sql`: `beta_telemetry_feed` table with explicit `service_role` INSERT grant.
+   - `010_telemetry_events.sql`: `telemetry_events` table with explicit `service_role` SELECT/INSERT grant.
+   - `011_privilege_hardening.sql`: Idempotent privilege hardening ensuring all 5 tables have explicit least-privilege grants and locked search paths.
+   - `012_extraction_public_ownership.sql`: RLS public ownership policy allowing `anon` and `authenticated` roles to view public extraction records.
+3. Validate that directory parity is maintained across `backend/database/` and root `database/` using `pytest tests/test_database_grants.py`.
+
+#### Step 4: Procedures to Establish — Encrypted Off-Site Backups & Isolated Local Restore Verification
+The following operational procedures are documented to be established for full disaster recovery:
+
+1. **Encrypted Off-Site Logical Backups (Procedure to Establish)**:
+   - Configure a scheduled cron or CI/CD job using `pg_dump` with `--clean --if-exists --no-owner --no-privileges` or custom format (`-Fc`).
+   - Encrypt backup archives using GPG or `age` public-key encryption before off-site transmission.
+   - Store encrypted archives in dedicated cold object storage (e.g., AWS S3 Glacier, Cloudflare R2, or encrypted offline storage).
+   - Separately archive Supabase Storage bucket objects and metadata.
+
+2. **Isolated Local Restore Verification (Synthetic Test Procedure)**:
+   To verify that a backup file restores correctly onto the schema without touching cloud databases:
+   ```bash
+   # 1. Spin up an isolated local PostgreSQL container
+   docker run --name upa-restore-sandbox -e POSTGRES_PASSWORD=test_password -p 5433:5432 -d postgres:15-alpine
+
+   # 2. Wait for PostgreSQL initialization
+   docker exec -it upa-restore-sandbox pg_isready -U postgres
+
+   # 3. Apply canonical migrations in sequence
+   psql -h localhost -p 5433 -U postgres -d postgres -f backend/database/001_initial_schema.sql
+   psql -h localhost -p 5433 -U postgres -d postgres -f backend/database/009_beta_telemetry_feed.sql
+   psql -h localhost -p 5433 -U postgres -d postgres -f backend/database/010_telemetry_events.sql
+   psql -h localhost -p 5433 -U postgres -d postgres -f backend/database/011_privilege_hardening.sql
+   psql -h localhost -p 5433 -U postgres -d postgres -f backend/database/012_extraction_public_ownership.sql
+
+   # 4. Restore synthetic test data dump
+   psql -h localhost -p 5433 -U postgres -d postgres -f path/to/synthetic_backup.sql
+
+   # 5. Verify row counts and explicit table privileges
+   psql -h localhost -p 5433 -U postgres -d postgres -c "SELECT table_name, grantee, privilege_type FROM information_schema.role_table_grants WHERE table_schema = 'public';"
+
+   # 6. Teardown isolated container
+   docker stop upa-restore-sandbox && docker rm upa-restore-sandbox
+   ```
+
+> [!IMPORTANT]
+> **Operational Boundary & Evidence Note**: The encrypted off-site backup pipeline and local restore test above are documented operational procedures to establish. During UPA-1406 Phase 3, zero database connections, zero SQL executions, and zero backup/restore actions were performed against either Staging or Production cloud Supabase instances.
 
 ---
 

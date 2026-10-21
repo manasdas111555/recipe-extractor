@@ -17,9 +17,9 @@
 DO $$
 BEGIN
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-          AND table_name = 'extractions' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'extractions'
           AND column_name = 'is_public'
     ) THEN
         -- Ensure default is FALSE for newly created private extractions
@@ -31,10 +31,10 @@ END $$;
 -- ----------------------------------------------------------------------------
 -- 2. DEDICATED VISIBILITY & OWNERSHIP INDEXES
 -- ----------------------------------------------------------------------------
-CREATE INDEX IF NOT EXISTS idx_extractions_is_public 
+CREATE INDEX IF NOT EXISTS idx_extractions_is_public
     ON public.extractions (is_public);
 
-CREATE INDEX IF NOT EXISTS idx_extractions_user_public 
+CREATE INDEX IF NOT EXISTS idx_extractions_user_public
     ON public.extractions (user_id, is_public);
 
 CREATE INDEX IF NOT EXISTS idx_extractions_id_is_public
@@ -50,14 +50,14 @@ CREATE INDEX IF NOT EXISTS idx_extractions_id_is_public
 ALTER TABLE public.extractions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Public extractions viewable by anyone" ON public.extractions;
-CREATE POLICY "Public extractions viewable by anyone" 
-    ON public.extractions 
-    FOR SELECT 
+CREATE POLICY "Public extractions viewable by anyone"
+    ON public.extractions
+    FOR SELECT
     USING (is_public = true);
 
 DROP POLICY IF EXISTS "Users view own extractions" ON public.extractions;
-CREATE POLICY "Users view own extractions" 
-    ON public.extractions 
-    FOR SELECT 
-    TO authenticated 
+CREATE POLICY "Users view own extractions"
+    ON public.extractions
+    FOR SELECT
+    TO authenticated
     USING (user_id = auth.uid() OR is_public = true);

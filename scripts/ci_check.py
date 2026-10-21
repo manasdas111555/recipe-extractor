@@ -55,7 +55,11 @@ def main():
     if not run_step("npm run build", frontend_dir, "Frontend Production Build"):
         sys.exit(1)
 
-    # Step 5: Backend Pytest Suite (pytest tests/)
+    # Step 5: Database Migration Parity & Grant Security Suite (UPA-1406)
+    if not run_step("pytest tests/test_database_grants.py", ROOT_DIR, "Database Migration Parity & Grant Security Suite"):
+        sys.exit(1)
+
+    # Step 6: Backend Pytest Suite (pytest tests/)
     if not run_step("pytest tests/", ROOT_DIR, "Backend Pytest Suite"):
         sys.exit(1)
 

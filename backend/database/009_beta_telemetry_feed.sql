@@ -24,3 +24,7 @@ alter table public.beta_telemetry_feed enable row level security;
 
 create policy "Enable insert for backend" on public.beta_telemetry_feed for insert with check (true);
 create policy "Enable read for admin" on public.beta_telemetry_feed for select using (true);
+
+-- 4. Explicit Least-Privilege Data API Grants (UPA-1406)
+REVOKE ALL ON public.beta_telemetry_feed FROM PUBLIC, anon, authenticated;
+GRANT INSERT ON public.beta_telemetry_feed TO service_role;
