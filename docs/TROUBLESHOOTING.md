@@ -51,6 +51,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-055** | 2026-10-20 | Testing & CI/CD | Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404) | 🟡 Resolved on Dev / Remote CI Pending |
 | **ISSUE-056** | 2026-10-20 | Quality Assurance & E2E | Tier 2 Live Staging Extraction Cache-Hit Bypass & Worker Stage Validation Gap (UPA-1405) | ✅ Resolved on Dev |
 | **ISSUE-057** | 2026-10-21 | Database & Security | Supabase PostgREST Data API Grant-Readiness, Function Hardening & Migration Directory Parity (UPA-1406) | ✅ Resolved on Dev |
+| **ISSUE-058** | 2026-10-21 | Database & DevOps | Supabase Free-Tier Project Dormancy Risk & Staging Keep-Alive Monitoring (UPA-1409) | ✅ Resolved on Dev |
 
 ---
 
@@ -1844,6 +1845,47 @@ Under an upcoming Supabase platform update taking effect on October 30, 2026, ne
 - **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
 - **Whitespace & Parity Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
 - **Status**: **Resolved locally on Dev; Cloud databases remained 100% untouched**.
+
+---
+
+### 🚨 ISSUE-058: Supabase Free-Tier Project Dormancy Risk & Staging Keep-Alive Monitoring (UPA-1409)
+- **Date**: 2026-10-21
+- **Affected Files**: `scripts/staging_supabase_keep_alive.py`, `.github/workflows/staging_supabase_keep_alive.yml`, `tests/test_staging_supabase_keep_alive.py`
+
+#### 1. What Happened (Symptom):
+Under Supabase Free-Tier platform policies, projects that receive no database or PostgREST API traffic for 7 consecutive days are automatically placed into project dormancy ("paused" state). When dormant, all incoming API requests fail with HTTP 503 (`Project is paused`), rendering Staging Vercel previews, authentication, and E2E extraction gates completely inoperable until manually unpaused via the Supabase cloud dashboard.
+
+Inspection of the repository's existing keep-alive implementation revealed that legacy `scripts/keep_alive.py` and `.github/workflows/keep_alive.yml` only executed HTTP `GET` requests against decommissioned Streamlit Community Cloud frontend URLs (`https://manas-recipe-extractor.streamlit.app/`, `https://universalpro-stage.streamlit.app/`) and did not touch Supabase or issue database queries. Consequently, existing keep-alive automation provided zero dormancy prevention for Supabase PostgreSQL.
+
+#### 2. Root Cause:
+Supabase dormancy detection tracks genuine PostgreSQL / PostgREST Data API transactions, not frontend pings or container `/health` probes. Low-frequency environments like Staging (which are exercised primarily during sprint release cycles) are exposed to dormancy whenever development sprints pause or testing is inactive for over a week.
+
+#### 3. Resolution (Code Changes):
+1. **Dedicated Staging Keep-Alive Probe Script (`scripts/staging_supabase_keep_alive.py`)**:
+   - Implemented a lightweight, read-only PostgREST probe targeting `GET /rest/v1/extractions?select=id&limit=1` against `public.extractions`.
+   - Reused existing table privileges: `anon` role was granted explicit `SELECT` on `public.extractions` in migration `011_privilege_hardening.sql`, enabling probes via `SUPABASE_STAGING_ANON_KEY` without requiring privileged `service_role` tokens.
+   - Enforced strict hostname validation locked exclusively to `https://mzpkdmaxsuhwezsooidu.supabase.co`. Production URLs, localhost, and unexpected hostnames are rejected fail-closed before any HTTP request is issued.
+   - Implemented finite 15-second request timeouts and safe structured logging that guarantees zero emission of API keys, bearer tokens, or database row contents in logs or results.
+   - Treats both populated rows (`[{"id": "..."}]`) and empty results (`[]`) as successful database transactions, returning exit code 0 on success and 1 on error.
+2. **Dedicated Staging GitHub Actions Workflow (`.github/workflows/staging_supabase_keep_alive.yml`)**:
+   - Configured scheduled cron execution 3 times daily (`17 0,8,16 * * *`) and on-demand `workflow_dispatch`.
+   - Granted least privilege (`permissions: contents: read`) with a 5-minute bounded job timeout.
+   - Injected strictly Staging-scoped secrets: `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY`, preventing cross-environment credential leakage.
+   - Preserved legacy Production keep-alive files 100% untouched.
+3. **Operational Unpause Runbook (If Project Pauses)**:
+   - If a Staging project enters dormancy before keep-alive is active:
+     1. Operator navigates to `https://supabase.com/dashboard/project/mzpkdmaxsuhwezsooidu`.
+     2. Clicks **"Restore project" / "Unpause project"**.
+     3. Awaits project provisioning (~2-3 minutes).
+     4. Runs the manual keep-alive probe via `gh workflow run staging_supabase_keep_alive.yml` or manual curl to verify HTTP 200 OK.
+   - *Note on Free-Tier Guarantees*: The keep-alive probe generates ordinary database activity to reduce dormancy risk, but does not guarantee against platform-level pauses or serve as a backup/disaster-recovery mechanism.
+
+#### 4. Testing & Verification:
+- **Unit Test Suite**: `pytest tests/test_staging_supabase_keep_alive.py -v` -> **22/22 passed in 0.32s [MEASURED]**.
+- **Full Backend Regression Suite**: `pytest tests/` -> **Clean pass**.
+- **Full CI Pipeline**: `python scripts/ci_check.py` -> **Clean pass**.
+- **Whitespace & Diff Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
+- **Status**: **Resolved locally on Dev; Staging secret provisioning and live workflow execution pending owner authorization**.
 
 ---
 

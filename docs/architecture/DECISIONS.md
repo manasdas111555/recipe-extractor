@@ -382,3 +382,56 @@ We implemented Option C:
 ### Accepted Trade-Offs
 * Any future table introduced in `public` must declare explicit table-level grants for `service_role` and optionally `anon`/`authenticated`, or `tests/test_database_grants.py` will fail closed.
 * All future migration additions must be mirrored across both `backend/database/` and `database/` to satisfy directory parity checks.
+
+---
+
+## ADR-010: Supabase Staging Free-Tier Inactivity Keep-Alive, Database Activity Probing & Credential Isolation
+
+* **Status**: Proposed / Implemented on Dev `[VERIFIED IN DEV SANDBOX]`
+* **Date / Sprint**: Sprint 14 (UPA-1409)
+* **Governing Rules**: AGENTS.md Rules 2 (*Sprint Governance & Gate Integrity*), 4 (*Ingestion Guardrails & Cloud Cost Protection*), 6 (*Secret Hygiene & Security Isolation*), 9 (*Mandatory Document Governance*), 14 (*Security Invariants*), 16 (*Verification Before Completion*), 21 (*Living Document Synchronization*), 22 (*Architectural Decision Records*)
+
+### Context & Problem Statement
+Under Supabase platform architecture, projects on the Free tier are automatically paused after 7 consecutive days of zero database activity. Once paused, incoming PostgREST API and PostgreSQL requests fail with HTTP 503 Service Unavailable (`"Project is paused"`).
+
+Universal Pro AI operates within explicit infrastructure boundaries:
+1. **Two-Project Free-Tier Limit**: The organization uses its two Free-tier project slots for **Production** (`scrqvbgjybnrvcpxbygf`) and **Staging** (`mzpkdmaxsuhwezsooidu`).
+2. **Staging Inactivity Exposure**: Between release cycles or active testing sprints, Staging traffic can remain idle for over 7 days, causing Supabase to pause the database. This breaks automated Staging smoke tests (`smoke.staging.e2e.ts`), Vercel Preview validations, and developer testing.
+3. **Legacy Keep-Alive Limitations**: The existing keep-alive setup (`scripts/keep_alive.py` and `.github/workflows/keep_alive.yml`) was originally designed for retired Streamlit frontend apps and pinged the OCI FastAPI backend `/health` endpoint. It issued zero database queries or PostgREST calls and provided zero mitigation against Supabase Free-tier database pausing.
+4. **Production Protection Invariant**: The repository owner strictly directed that the existing Production keep-alive implementation must remain 100% untouched to avoid any risk of regression to Production health monitoring.
+
+### Options Considered
+1. **Option A: Modify Existing `scripts/keep_alive.py` to Probe Staging Database**:
+   - *Pros*: Single script for all keep-alive tasks.
+   - *Cons*: Violates the strict owner constraint that Production keep-alive must remain untouched; conflates Production frontend/backend monitoring with Staging database probing; creates shared blast radius where a Staging secret misconfiguration could break Production alerting.
+2. **Option B: External Third-Party Cron / Webhook Service (e.g. UptimeRobot, cron-job.org)**:
+   - *Pros*: Offloads scheduling from GitHub Actions.
+   - *Cons*: Introduces unnecessary external third-party dependencies; requires provisioning and managing external accounts; stores Staging credentials on third-party servers; increases attack surface and maintenance overhead.
+3. **Option C (Selected): Dedicated, Isolated Staging Keep-Alive Script & GitHub Actions Workflow with Strict Hostname Locking & Least-Privilege `anon` Probing**:
+   - *Pros*:
+     - **Complete Isolation**: Existing Production files (`scripts/keep_alive.py`, `.github/workflows/keep_alive.yml`) remain 100% byte-for-byte untouched.
+     - **Strict Target Locking**: Fails closed before issuing any network request unless the URL strictly matches `https://mzpkdmaxsuhwezsooidu.supabase.co`. Accidental substitution of Production URLs is physically prevented.
+     - **Credential Isolation**: Uses dedicated `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY` secrets with zero fallback to Production.
+     - **Least-Privilege Role**: Uses the `anon` key to query `public.extractions` (`GET /rest/v1/extractions?select=id&limit=1`), utilizing the explicit `GRANT SELECT` established in `011_privilege_hardening.sql`. Never requires `service_role` privileges.
+     - **Zero Secret/Data Logging**: Structured logging emits only environment, status, duration, and HTTP code; never logs keys, bearer tokens, or response rows.
+     - **Deterministic Error Handling**: Empty array responses (`[]`) are accepted as successful database activity; timeouts, network errors, and non-200 HTTP codes cause non-zero exit codes.
+     - **Full Automated Unit Suite**: 22 unit tests verify URL validation, header injection, secret masking, and failure handling using mocked HTTP responses.
+   - *Cons*: Requires separate repository secrets (`SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY`) to be provisioned in GitHub Actions repository settings.
+
+### Decision & Rationale
+We implemented Option C:
+1. **Dedicated Script**: `scripts/staging_supabase_keep_alive.py` implementing URL parsing, hostname locking (`mzpkdmaxsuhwezsooidu.supabase.co`), key validation ($\ge 20$ chars), PostgREST query execution (`GET /rest/v1/extractions?select=id&limit=1`, 15s timeout), and structured secret-free logging.
+2. **Dedicated Workflow**: `.github/workflows/staging_supabase_keep_alive.yml` running on UTC cron `17 0,8,16 * * *` (3 times daily) and `workflow_dispatch`, with bounded 5-minute timeout and minimal `contents: read` permissions.
+3. **Isolated Test Suite**: `tests/test_staging_supabase_keep_alive.py` with 22 comprehensive mocked unit tests verifying all edge cases and asserting that Production keep-alive files remain untouched.
+4. **Architectural & Disaster Recovery Distinction**:
+   - Documented in `DISASTER_RECOVERY.md` Runbook 27 that keep-alive activity probing is an operational dormancy risk mitigation, **NOT** a disaster recovery or backup tool.
+   - Probing reduces pause risk by generating ordinary API/database traffic, but does not guarantee that Supabase will never pause a Free-tier project under its platform policies.
+   - True disaster recovery requires canonical migration replay (`Runbook 26 Step 3`) and independent encrypted logical backups (`Runbook 26 Step 4`).
+   - Documented step-by-step unpause runbook in `DISASTER_RECOVERY.md`.
+5. **Scheduled Workflow Platform Invariant**:
+   - Documented that GitHub Actions scheduled workflows (`schedule` trigger) only run from the repository's **default branch**. Adding the workflow on `Dev` or `staging` enables manual `workflow_dispatch` testing, but background automation takes effect post-promotion to default branch.
+
+### Accepted Trade-Offs
+* The workflow requires two repository secrets (`SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY`) to be provisioned before live runs can succeed; without them, the job fails closed safely.
+* Scheduled runs will not execute automatically on `Dev` or `staging` branches prior to merge into the default branch per GitHub Actions platform rules.
+* Probing generates legitimate PostgREST traffic to reset the inactivity timer, but cannot prevent platform-level pauses or maintenance outages executed by Supabase.

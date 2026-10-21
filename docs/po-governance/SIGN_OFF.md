@@ -386,3 +386,35 @@
 - **Verdict:** Pending PO (Phase 3 Local Implementation & Verification Complete / Cloud DB & Promotion Pending)
 - **Status:** 🟠 **PENDING-PO**
 - **Date:** 2026-10-21
+
+---
+
+## Product Owner Verification Audit — UPA-1409
+
+### 1. Scope of Review & Dev Implementation Status
+- **Ticket**: UPA-1409 (Supabase Staging Free-Tier Keep-Alive & Monitoring)
+- **Objective**: Mitigate Supabase Free-Tier 7-day inactivity project dormancy on Staging (`mzpkdmaxsuhwezsooidu.supabase.co`) via a lightweight, read-only PostgREST keep-alive probe; enforce strict target hostname locking, credential isolation, and least-privilege `anon` role access; prevent regression or changes to the existing Production keep-alive setup; create dedicated GitHub Actions workflow; add comprehensive automated unit tests; document operational and disaster recovery protocols.
+- **Implementation on Dev Sandbox (`scratch/worktrees/dev`)**:
+  1. `scripts/staging_supabase_keep_alive.py`: Dedicated Staging keep-alive script with strict target hostname locking (`mzpkdmaxsuhwezsooidu.supabase.co`), key validation, read-only PostgREST query (`GET /rest/v1/extractions?select=id&limit=1`, 15s timeout), empty-array acceptance, and structured logging with zero secret/row emission.
+  2. `.github/workflows/staging_supabase_keep_alive.yml`: Dedicated GitHub Actions scheduled workflow running 3 times daily (cron: `17 0,8,16 * * *`) and `workflow_dispatch`, bounded 5-minute timeout, minimal permissions (`contents: read`), injecting only `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY`.
+  3. `tests/test_staging_supabase_keep_alive.py`: 22 isolated unit tests covering URL normalization, strict host locking, key validation, query construction, headers, HTTP 200 (rows and `[]`), HTTP 401/403/429/500/503 errors, timeouts, connection errors, malformed responses, zero secret leakage in logs, CLI main exit codes, production file preservation, and workflow YAML integrity.
+  4. Living Architecture Documents Synchronized:
+     - `docs/TROUBLESHOOTING.md`: Documented `ISSUE-058` covering Free-tier 503 project pause symptoms, root causes, unpause runbook, and verification.
+     - `docs/architecture/DISASTER_RECOVERY.md`: Added Runbook 27 distinguishing keep-alive inactivity mitigation from backups/DR, detailing target locking, and providing dashboard unpause procedures.
+     - `docs/architecture/DECISIONS.md`: Recorded `ADR-010: Supabase Staging Free-Tier Inactivity Keep-Alive, Database Activity Probing & Credential Isolation`.
+     - `docs/architecture/FLOW.md`: Added Section 3.8 Mermaid sequence and Subsystem Call Hierarchy entry.
+     - `docs/USER_MANUAL.md`: Added Section 1c documenting Staging keep-alive operational procedures, required secrets, and schedule.
+- **Production & Cloud Isolation Invariants**:
+  - Legacy Production keep-alive files (`scripts/keep_alive.py` and `.github/workflows/keep_alive.yml`) remain 100% byte-for-byte untouched.
+  - Zero live queries, zero migrations, zero SQL executions run against Supabase (Production or Staging).
+  - Production (`https://universal-pro-ai.vercel.app`, VM `140.245.214.28`) and Staging cloud containers remain 100% untouched.
+  - Zero secrets or GitHub variables added or altered.
+  - Zero commits, pushes, PRs, merges, or deployments executed.
+  - Pre-existing Phase 1 uncommitted backlog edits in `docs/po-governance/JIRA_BACKLOG.md` preserved byte-for-byte.
+  - Root workspace (`D:\Personal Projects\recipe-extractor`) remains 100% untouched.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: Pending Product Owner Review.
+- **Verdict:** Pending PO (Phase 2 Local Implementation & Verification Complete / Live Staging & Remote CI Pending)
+- **Status:** 🟠 **PENDING-PO**
+- **Date:** 2026-10-21

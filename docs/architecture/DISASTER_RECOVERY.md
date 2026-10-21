@@ -829,6 +829,55 @@ The following operational procedures are documented to be established for full d
 
 ---
 
+### 📘 Runbook 27: Supabase Staging Free-Tier Inactivity Keep-Alive, Dormancy Recovery & Backup Distinction Protocol (UPA-1409)
+**Symptom**: Staging database queries or PostgREST endpoints return HTTP 503 Service Unavailable with `"Project is paused"` or `"503 Project is paused"`, blocking automated tests, Vercel Preview validations, or staging API operations.
+
+#### Step 1: Fundamental Architectural Distinction — Inactivity Keep-Alive vs. Disaster Recovery & Backups
+When managing Free-tier managed database infrastructure, engineers and operators must distinguish between two completely separate operational domains:
+
+1. **Inactivity Keep-Alive Mitigation**:
+   - The Staging keep-alive probe (`scripts/staging_supabase_keep_alive.py` driven by `.github/workflows/staging_supabase_keep_alive.yml`) executes periodic, lightweight read-only queries (`GET /rest/v1/extractions?select=id&limit=1`) 3 times daily (UTC cron `17 0,8,16 * * *`).
+   - **Operational Purpose**: Generates ordinary HTTP PostgREST API and PostgreSQL database activity to mitigate the risk of automated Free-tier dormancy (Supabase automatically pauses Free-tier projects after 7 days of inactivity).
+   - **Explicit Non-Guarantee Contract**: Emitting keep-alive probes reduces inactivity risk, but does **NOT** guarantee that Supabase will never pause the project. Supabase may pause projects at any time due to platform upgrades, resource policies, or administrative triggers.
+   - **NOT a Disaster Recovery or Backup Mechanism**: Keep-alive queries generate transient network/database read activity. They do **NOT** back up database tables, do not export data, and provide zero protection against accidental data loss, schema corruption, table drops, or credential compromise.
+
+2. **True Disaster Recovery**:
+   - In the event of data corruption, schema breakage, or catastrophic loss, recovery relies exclusively on:
+     - Canonical DDL migration replay (`001` through `012`) to rebuild relational schema and least-privilege grants (see **Runbook 26 Step 3**).
+     - Independent, encrypted off-site logical backups (`pg_dump`) to restore rows and application data (see **Runbook 26 Step 4**).
+
+#### Step 2: Target Locking & Credential Isolation Architecture
+To guarantee absolute environment isolation and zero risk of cross-environment pollution:
+- **Strict Hostname Locking**: The probe script validates that `SUPABASE_STAGING_URL` parses to HTTPS and matches the authoritative Staging hostname `mzpkdmaxsuhwezsooidu.supabase.co` exactly. Any non-HTTPS scheme, unrecognized hostname, or Production project URL (`scrqvbgjybnrvcpxbygf.supabase.co`) is rejected fail-closed before any network socket or HTTP request is initiated.
+- **Dedicated Staging Secrets**: The probe operates strictly using `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY`. Under no circumstances does the script fall back to Production environment variables or default to Production credentials.
+- **Least-Privilege Role**: Uses the `anon` key to execute read-only queries on `public.extractions`, utilizing the explicit `GRANT SELECT ON public.extractions TO anon` established in `011_privilege_hardening.sql`. It never requests or requires administrative `service_role` privileges.
+- **Zero Secret & Data Logging**: Probe logs output timestamp, environment identifier (`staging`), outcome status, HTTP response status code, and execution duration in milliseconds. Logs **never** output API keys, bearer tokens, request headers, query parameters containing tokens, or response row contents.
+
+#### Step 3: Staging Supabase Unpause Procedure (Runbook)
+If the Staging project enters dormancy (e.g., prior to workflow activation or following platform maintenance):
+1. **Access Supabase Dashboard**: Log in to the authorized administrator account at [Supabase Management Dashboard](https://supabase.com/dashboard).
+2. **Locate Staging Project**: Navigate to the organization and select project `Universal Pro AI — Staging` (Reference ID: `mzpkdmaxsuhwezsooidu`).
+3. **Execute Unpause / Restore**:
+   - If the project status badge displays **"Paused"**, click the **"Restore project"** or **"Unpause"** button.
+   - Supabase will initialize compute resources, restore PostgreSQL from storage snapshots, and restart PostgREST.
+   - Wait approximately 1–3 minutes for status to transition to **"Active"**.
+4. **Verify Endpoint Accessibility**:
+   - Manually trigger the GitHub Actions workflow via `workflow_dispatch`:
+     ```bash
+     gh workflow run staging_supabase_keep_alive.yml
+     ```
+   - Alternatively, execute the diagnostic script locally in sandbox mode using Staging credentials:
+     ```bash
+     python scripts/staging_supabase_keep_alive.py
+     ```
+   - Confirm structured log output shows `status=ok` with HTTP 200 and exit code 0.
+
+#### Step 4: Operational Governance of GitHub Actions Scheduled Workflows
+- **Default Branch Requirement**: Per GitHub Actions platform architecture, scheduled workflows triggered by `schedule` (cron) **only execute from the repository's default branch** (`main`).
+- **Dev / Staging Branch Invariant**: The presence of `.github/workflows/staging_supabase_keep_alive.yml` on `Dev` or `staging` branches enables manual testing via `workflow_dispatch` once secrets are configured, but automatic 8-hour background probing will only become operational after governed promotion to the default branch.
+
+---
+
 ## 🔐 Secrets & Credentials Disaster Reference
 
 > [!CAUTION]

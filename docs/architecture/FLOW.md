@@ -424,6 +424,29 @@ flowchart LR
     M011 --> M012["012_extraction_public_ownership.sql<br>(Public extraction RLS ownership & visibility policy)"]
 ```
 
+### 3.8 Supabase Staging Free-Tier Keep-Alive & Activity Probing Sequence (UPA-1409)
+
+To mitigate the 7-day inactivity project pause on Supabase Free-Tier Staging (`mzpkdmaxsuhwezsooidu.supabase.co`), a dedicated scheduled GitHub Actions workflow issues lightweight, read-only PostgREST queries with strict target hostname locking and credential isolation:
+
+```mermaid
+flowchart TD
+    Trigger["Trigger: GitHub Actions UTC Cron (17 0,8,16 * * *) or workflow_dispatch"] --> EnvLoad["Load Secrets: SUPABASE_STAGING_URL & SUPABASE_STAGING_ANON_KEY"]
+    EnvLoad --> HostLock{"Strict Target Locking:<br>scheme == https AND<br>hostname == mzpkdmaxsuhwezsooidu.supabase.co?"}
+
+    HostLock -->|"NO (Mismatch / Production URL / Insecure)"| FailClosed["Fail Closed (ValueError)<br>Abort Immediately with Exit Code 1<br>(Zero Network Request)"]
+    HostLock -->|"YES (Exact Match)"| KeyCheck{"Key Validated?<br>(len >= 20, non-empty)"}
+
+    KeyCheck -->|"NO (Missing / Empty)"| FailKey["Fail Closed (ValueError)<br>Exit Code 1 (Zero Request)"]
+    KeyCheck -->|"YES"| QueryBuild["Build PostgREST Query:<br>GET /rest/v1/extractions?select=id&limit=1<br>Headers: apikey, Authorization: Bearer, User-Agent"]
+
+    QueryBuild --> ExecuteProbe["Execute HTTP GET via requests<br>(Timeout: 15s)"]
+    ExecuteProbe --> SupabaseStaging["Supabase Staging PostgREST Gateway<br>(https://mzpkdmaxsuhwezsooidu.supabase.co)"]
+    SupabaseStaging --> Evaluation{"HTTP Status Code Evaluation"}
+
+    Evaluation -->|"200 OK (Row array or empty [])"| SuccessLog["Log Success (JSON):<br>status=ok, environment=staging, http_status=200, duration_ms<br>(Zero Secrets / Zero Row Data Logged)<br>Exit Code 0"]
+    Evaluation -->|"4xx / 5xx / Timeout / Network Error"| FailureLog["Log Failure (JSON):<br>status=error, environment=staging, error_type, duration_ms<br>(Zero Secrets Logged)<br>Exit Code 1"]
+```
+
 ---
 
 ## 4. SUBSYSTEM CALL HIERARCHY & DEPENDENCY MAP
@@ -448,3 +471,4 @@ flowchart LR
 | E2E Evidence Artifact Isolation | `frontend/e2e/reporters/evidence-manifest-reporter.ts` & `frontend/e2e/helpers/evidence-tracker.ts` | `EVIDENCE_OUTPUT_DIR`, `DISABLE_SECONDARY_MANIFEST_WRITE`, `E2E_SECONDARY_EVIDENCE_DIR`, `EVIDENCE_MANIFEST_FILENAME`, `PLAYWRIGHT_HTML_REPORT_DIR`, `verify_evidence_manifest` | Isolated output directories | Falls back to default `test-results` and `e2e-evidence` paths; protects historical evidence manifests |
 | Database Grant & Parity Suite | `tests/test_database_grants.py` & `tests/test_database_schema.py` | Explicit grants check, directory parity check (`backend/database/` vs `database/`), RLS assertion, search-path protection, zero sequences | PostgreSQL Schema Migrations | Block CI if table grants or parity fail |
 | Definitive Rule 16 CI Pipeline | `scripts/ci_check.py` | `npx tsc`, `npm run lint`, `npm test`, `npm run build`, `pytest tests/test_database_grants.py`, `pytest tests/` | Immutable Rule 16 Contract | Zero-defect promotion blocker |
+| Staging Supabase Keep-Alive Probe | `scripts/staging_supabase_keep_alive.py` & `.github/workflows/staging_supabase_keep_alive.yml` | `requests`, `urllib.parse`, `SUPABASE_STAGING_URL`, `SUPABASE_STAGING_ANON_KEY`, target lock `mzpkdmaxsuhwezsooidu.supabase.co` | Supabase Staging `extractions` (Read-Only) | Exit non-zero on failure; logs error without secret leakage |

@@ -161,6 +161,28 @@ Universal Pro AI implements a strict multi-tier testing framework separating off
   - *Fresh database*: Apply migrations sequentially from `001` through `012`.
   - *Existing deployed database*: Apply only subsequent unapplied migrations (e.g. `011` and `012`), as `011` idempotently hardens table grants and function search paths on pre-existing tables.
 
+### 1c. Supabase Staging Free-Tier Inactivity Keep-Alive Operations (UPA-1409)
+- **Operational Purpose**: Under Supabase platform rules, Free-tier projects are paused after 7 consecutive days of zero database activity. The Staging keep-alive workflow issues periodic, lightweight read-only queries to generate database activity and mitigate inactivity pause risk on Staging project `Universal Pro AI — Staging` (`mzpkdmaxsuhwezsooidu`).
+- **Architectural Distinction — Activity Probing vs Disaster Recovery**:
+  - Keep-alive activity probing is an operational availability safeguard, **NOT** a backup or disaster recovery mechanism.
+  - Probing generates ordinary API/database activity to reduce inactivity pausing risk, but does not guarantee that Supabase will never pause the project under its platform policies.
+  - In the event of schema corruption or data loss, refer to canonical migration replay (`docs/architecture/DISASTER_RECOVERY.md` Runbook 26 Step 3) and independent logical backups (`pg_dump`).
+  - If the Staging database becomes paused, follow the unpause runbook in `docs/architecture/DISASTER_RECOVERY.md` Runbook 27.
+- **Dedicated Staging Probe Script**:
+  - `python scripts/staging_supabase_keep_alive.py`
+  - Enforces strict target locking to `mzpkdmaxsuhwezsooidu.supabase.co` (fails closed on unexpected hostname or Production URL).
+  - Queries `GET /rest/v1/extractions?select=id&limit=1` via PostgREST using the least-privilege `anon` key.
+  - Enforces 15-second request timeout; accepts both rows and empty array `[]` as successful database activity; fails closed on HTTP errors.
+  - Structured logging emits execution timestamp, environment (`staging`), HTTP status, and duration without ever logging secrets, bearer tokens, or database row contents.
+- **Dedicated GitHub Actions Workflow**:
+  - File: `.github/workflows/staging_supabase_keep_alive.yml`
+  - Schedule: 3 times daily at UTC cron `17 0,8,16 * * *` plus `workflow_dispatch` for manual execution.
+  - Permissions: Minimal `contents: read`; bounded 5-minute job timeout.
+  - Required Secrets: `SUPABASE_STAGING_URL` and `SUPABASE_STAGING_ANON_KEY`. Must be provisioned in GitHub repository secrets before the workflow can succeed.
+- **Platform Invariant on Scheduled Workflows**:
+  - Scheduled GitHub Actions workflows (`schedule` trigger) only run automatically from the repository's **default branch** (`main`).
+  - The workflow on `Dev` or `staging` branches can be verified manually via `workflow_dispatch` once secrets are provisioned, but automated 8-hour background probing takes effect post-promotion to the default branch.
+
 ### 2. Live Staging Release Gates (`staging` Branch)
 - **Commit-Bound Manifest & Source-Aware Promotion Preflight**:
   - **Dev → Staging Preflight**: `python scripts/promote.py --to staging --ticket <ticket>` executes preflight verification (`verify_evidence_manifest`) on the source `Dev` evidence manifest using `--env dev`, checking `manifest.commitSha === expectedDevSha` and accepting Dev-appropriate classification (`mocked` or `live`).
