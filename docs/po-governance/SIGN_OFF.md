@@ -247,3 +247,30 @@
 - **Verdict:** Pending PO (Staging Retest Required)
 - **Status:** 🟠 **PENDING-PO (Live Staging Gate: FAIL)**
 - **Date:** 2026-10-20
+
+---
+
+## Product Owner Staging Verification Audit — UPA-1403
+
+### 1. Scope of Review & Dev Implementation Status
+- **Ticket**: UPA-1403 (E2E Evidence Artifact Isolation & Non-Destructive Multi-Run Framework)
+- **Objective**: Eliminate evidence overwrite collision hazards during multi-run live Staging smoke tests by dynamically routing Playwright traces, step screenshots, videos, and `evidence-manifest.json` into custom isolated output directories (`EVIDENCE_OUTPUT_DIR`), while suppressing secondary mirror writes into `frontend/e2e-evidence/` unless explicitly requested.
+- **Implementation on Dev Sandbox (`scratch/worktrees/dev`)**:
+  1. `frontend/e2e/reporters/evidence-manifest-reporter.ts`: Added dynamic output directory resolution via `EVIDENCE_OUTPUT_DIR`, secondary write suppression via `DISABLE_SECONDARY_MANIFEST_WRITE=true`, custom manifest filename via `EVIDENCE_MANIFEST_FILENAME`, and HTML report directory via `PLAYWRIGHT_HTML_REPORT_DIR`.
+  2. `frontend/e2e/helpers/evidence-tracker.ts`: Updated `captureStepScreenshot` to resolve destination directory against `EVIDENCE_OUTPUT_DIR`.
+  3. `frontend/playwright.config.ts`: Added `outputDir: process.env.EVIDENCE_OUTPUT_DIR || 'test-results'` and `outputFolder: process.env.PLAYWRIGHT_HTML_REPORT_DIR || 'playwright-report'`.
+  4. `scripts/verify_promotion.py`: Added automatic detection of `EVIDENCE_OUTPUT_DIR` and `EVIDENCE_MANIFEST_PATH`.
+  5. Regression Tests (Rule 1 Compliant): Added `frontend/src/lib/__tests__/evidenceIsolation.test.ts` (8 Vitest tests) and `tests/test_evidence_isolation.py` (6 pytest tests).
+- **Offline Dev Verification Pipeline [MEASURED]**:
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run lint`: 0 errors.
+  - `npm test`: 70/70 passed in 2.17s.
+  - `npm run build`: Compiled successfully.
+  - `pytest tests/`: 405 passed in 49.61s.
+- **Production Isolation**: Production environment and databases remain 100% untouched.
+
+### 2. Human Product Owner / Repository Owner Verdict
+- **Owner Decision**: Pending Product Owner Review & Staging Promotion Sign-Off.
+- **Verdict:** Pending PO (Dev Verification Complete)
+- **Status:** 🟠 **PENDING-PO**
+- **Date:** 2026-10-20

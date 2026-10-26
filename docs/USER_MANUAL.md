@@ -163,6 +163,10 @@ Universal Pro AI implements a strict multi-tier testing framework separating off
 - **Tier 2 — Conditional Live Extraction E2E Gate**:
   - `npx playwright test --project=staging-live` (mandatory when changes touch media extraction, request routing, or background workers).
   - Runs with `ALLOW_DB_WRITES=false` ensuring zero dirty rows in PostgreSQL.
+- **Evidence Artifact Isolation Framework (`UPA-1403`)**:
+  - To prevent clobbering historical evidence manifests or test screenshots during repeated Staging or Dev test runs, pass `EVIDENCE_OUTPUT_DIR=test-results/staging-smoke-<timestamp>` and `DISABLE_SECONDARY_MANIFEST_WRITE=true`.
+  - All Playwright attachments, traces, step screenshots, and `evidence-manifest.json` are isolated to that specified directory without mutating `frontend/e2e-evidence/`.
+  - Manifest verification via `python scripts/verify_promotion.py --verify-manifest --env staging --expected-sha <sha>` automatically detects `EVIDENCE_OUTPUT_DIR` or `EVIDENCE_MANIFEST_PATH`.
 - **Deployed Health Audit**:
   - `python scripts/verify_promotion.py --deployed staging` (verifies deployed Vercel frontend and OCI backend `http://129.225.86.241/health`).
 

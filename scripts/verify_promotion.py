@@ -225,7 +225,34 @@ def check_deployed_environment(target_env: str) -> bool:
 def verify_evidence_manifest(target_env: str, manifest_path: Path = None, expected_sha: str = None) -> bool:
     log_step(f"Verifying Commit-Bound Evidence Manifest for {target_env.upper()}")
     if manifest_path is None:
-        manifest_path = ROOT_DIR / "frontend" / "test-results" / "evidence-manifest.json"
+        manifest_env = os.environ.get("EVIDENCE_MANIFEST_PATH")
+        if manifest_env:
+            candidate = Path(manifest_env)
+            if candidate.is_absolute() or candidate.exists():
+                manifest_path = candidate
+            else:
+                candidate_frontend = ROOT_DIR / "frontend" / candidate
+                if candidate_frontend.exists():
+                    manifest_path = candidate_frontend
+                else:
+                    manifest_path = candidate
+        else:
+            output_dir_env = os.environ.get("EVIDENCE_OUTPUT_DIR")
+            manifest_filename = os.environ.get("EVIDENCE_MANIFEST_FILENAME", "evidence-manifest.json")
+            if output_dir_env:
+                candidate_frontend = ROOT_DIR / "frontend" / output_dir_env / manifest_filename
+                candidate_cwd = Path.cwd() / output_dir_env / manifest_filename
+                candidate_raw = Path(output_dir_env) / manifest_filename
+                if candidate_frontend.exists():
+                    manifest_path = candidate_frontend
+                elif candidate_cwd.exists():
+                    manifest_path = candidate_cwd
+                elif candidate_raw.exists():
+                    manifest_path = candidate_raw
+                else:
+                    manifest_path = candidate_frontend
+            else:
+                manifest_path = ROOT_DIR / "frontend" / "test-results" / "evidence-manifest.json"
 
     if not manifest_path.exists():
         print(f"  ❌ Missing evidence manifest artifact: {manifest_path}")

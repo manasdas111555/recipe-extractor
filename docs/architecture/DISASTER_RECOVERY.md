@@ -707,6 +707,7 @@ If `npm run test:e2e:staging:smoke` fails:
 6. Check navigation guard: `validateNavigationResponse` asserts non-null navigation response and `response.ok()`.
 7. Check DOM assertions: single docked video player contract (`video` count $\le 1$), hero input visibility, theme tokens (`globals.css`), and responsive layout.
 8. If UI failed to boot or returns HTTP 401/403/500, check Vercel deployment build logs and stop promotion immediately.
+9. **Evidence Artifact Isolation (`UPA-1403`)**: To prevent overwriting historical evidence manifests or screenshots across multi-run Staging validations, specify `EVIDENCE_OUTPUT_DIR=test-results/staging-smoke-<timestamp>` and `DISABLE_SECONDARY_MANIFEST_WRITE=true` (or pass `EVIDENCE_MANIFEST_PATH`). Playwright attachments, traces, step screenshots, and `evidence-manifest.json` are isolated to that folder without clobbering root artifacts or `frontend/e2e-evidence/`. Manifest verification via `python scripts/verify_promotion.py --verify-manifest --env staging --expected-sha <deployed-staging-sha>` automatically resolves from `EVIDENCE_OUTPUT_DIR`.
 
 #### Step 3: Tier 2 Conditional Live Extraction E2E Triage (`staging.live.e2e.ts`)
 If conditional un-mocked live extraction fails:
