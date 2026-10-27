@@ -247,7 +247,7 @@ Every sprint MUST be structured using the following standard template:
 
 ## 📌 Sprint 13 Kanban Board (Planned)
 
-| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (3 pts) |
+| 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (0 pts) |
 | :--- | :--- | :--- | :--- |
 | `UPA-1240` AI Provider Runtime Failover & Universal Schema Validation<br>`UPA-1301` Staging & Production Administrative Access Hardening<br>`UPA-1302` Universal Routing Architecture & End-to-End Path Verification<br>`UPA-1303` Celery Worker Non-Root Runtime Hardening<br>`UPA-1304` Production API DNS & FQDN Provisioning | None | `UPA-1305` Media Downloader yt-dlp Assignment & Security Regression Hardening<br>`UPA-1306` Auditable Browser E2E Evidence Framework<br>`UPA-1307` [Discovered] Docker Build-Context Secret Exclusion<br>`UPA-1308` Architecture Governance Baseline & Living Execution Maps<br>`UPA-1310` [Discovered] Instagram Portrait/Landscape Format Selection & Dual-Dimension Bounds<br>`UPA-1311` Living Document Governance Contract Assertion Hardening | None |
 
@@ -301,7 +301,7 @@ Every sprint MUST be structured using the following standard template:
 
 | 📝 To Do | 🔨 In Progress | 🧪 Testing / Review | ✅ Done (3 pts) |
 | :--- | :--- | :--- | :--- |
-| `UPA-1402` Tier 1 Staging Smoke Assertion Alignment & Evidence Classification Hygiene | None | `UPA-1401` Operational Workflow Phase Streamlining & Mandatory Playwright Release Gates<br>`UPA-1403` E2E Evidence Artifact Isolation & Non-Destructive Multi-Run Framework | None |
+| `UPA-1402` Tier 1 Staging Smoke Assertion Alignment & Evidence Classification Hygiene | None | `UPA-1401` Operational Workflow Phase Streamlining & Mandatory Playwright Release Gates | `UPA-1403` E2E Evidence Artifact Isolation & Non-Destructive Multi-Run Framework (PO Approved / Ready for Production) |
 
 ## 📌 Sprint 10 Kanban Board (Completed)
 
