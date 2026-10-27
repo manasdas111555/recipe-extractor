@@ -252,7 +252,7 @@
 
 ## Product Owner Staging Verification Audit — UPA-1403
 
-### 1. Scope of Review & Dev Implementation Status
+### 1. Scope of Review & Staging Verification Status
 - **Ticket**: UPA-1403 (E2E Evidence Artifact Isolation & Non-Destructive Multi-Run Framework)
 - **Objective**: Eliminate evidence overwrite collision hazards during multi-run live Staging smoke tests by dynamically routing Playwright traces, step screenshots, videos, and `evidence-manifest.json` into custom isolated output directories (`EVIDENCE_OUTPUT_DIR`), while suppressing secondary mirror writes into `frontend/e2e-evidence/` unless explicitly requested.
 - **Implementation on Dev Sandbox (`scratch/worktrees/dev`)**:
@@ -267,10 +267,32 @@
   - `npm test`: 70/70 passed in 2.17s.
   - `npm run build`: Compiled successfully.
   - `pytest tests/`: 405 passed in 49.61s.
-- **Production Isolation**: Production environment and databases remain 100% untouched.
+- **Governed Staging Promotion & Remote Verification**:
+  1. Promotion Branch: `promotion/upa-1403-staging` (commit `35a43a4dbd613244e8735381ec5120403bf5167f`).
+  2. Promotion Pull Request: PR #9 ([#9](https://github.com/manasdas111555/recipe-extractor/pull/9)) reviewed and merged into `staging` by repository owner `manasdas111555`.
+  3. Remote CI on PR #9: GitHub Actions run `40282027054` completed with **SUCCESS** (349 pytest passed, 70 Vitest passed, Next.js build clean).
+  4. Remote CI on Staging Merge: GitHub Actions run `40282586678` on `staging` completed with **SUCCESS**.
+  5. Authoritative Staging Merge Commit: `6c497ebc0b3da3c40ff1449129f3791f55bcaa60` (tree SHA `a44b56b6618bda824ad3fd1c5288af0086927775` identical to promotion commit `35a43a4dbd613244e8735381ec5120403bf5167f`).
+- **Live Staging Deployment & Infrastructure Readiness**:
+  1. Vercel Preview Staging Deployment: Deployment `dpl_7325891143` (`https://universal-pro-9d0b6oqwp-manasprasannadas-projects.vercel.app` & branch alias `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`), state **READY**.
+  2. OCI Staging Backend Health: `GET http://129.225.86.241/health` returned HTTP 200 OK (`{"status":"healthy","version":"1.0.0","environment":"staging","redis":"connected","workers":4,"db_connected":true,"model_configured":true,"model_id":"gemini-2.5-flash"}`).
+- **Tier 1 Mandatory Live Browser Smoke Gate Execution [MEASURED]**:
+  1. Target Origin: `https://universal-pro-ai-git-staging-manasprasannadas-projects.vercel.app`.
+  2. Command: `npx playwright test e2e/specs/smoke.staging.e2e.ts --project=chromium` with `ALLOW_LIVE_STAGING_SMOKE=true`, `TEST_ENV=staging`, `DEPLOYED_STAGING_SHA=6c497ebc0b3da3c40ff1449129f3791f55bcaa60`, `EVIDENCE_OUTPUT_DIR=test-results/staging-upa1403`, and `DISABLE_SECONDARY_MANIFEST_WRITE=true`.
+  3. Execution Outcome: **1 passed (5.6s)** (total runner: 7.6s).
+  4. Assertions: **8/8 PASSED** (Base URL reachability, hero heading text, video URL input visibility/accessibility, disabled submit button on empty input, enabled submit button on valid fixture URL, input clearing and disable restoration, single docked video player contract, and design system tokens).
+  5. Telemetry & Console Health: 0 console errors, 0 failed HTTP requests, 0 layout shifts (CLS: 0).
+  6. Artifacts Captured: Screenshots (`staging-boot.png`, `hero-cta-interactive.png` in `frontend/test-results/staging-upa1403/screenshots/`), video, and trace file (`trace.zip`).
+- **Commit-Bound Evidence Manifest Verification [MEASURED]**:
+  1. Manifest Location: `frontend/test-results/staging-upa1403/evidence-manifest.json`.
+  2. Manifest Invariants: `executionClassification: "live"`, `environment: "staging"`, `commitSha: "6c497ebc0b3da3c40ff1449129f3791f55bcaa60"`, `overallStatus: "PASS"`.
+  3. Verification Command: `python scripts/verify_promotion.py --verify-manifest --manifest frontend/test-results/staging-upa1403/evidence-manifest.json --expected-sha 6c497ebc0b3da3c40ff1449129f3791f55bcaa60 --env staging`.
+  4. Evaluated Release Gate Verdict: **PASSED** (exit code 0).
+  5. Evidence Isolation Verification: Pre-existing root manifest `frontend/e2e-evidence/evidence-manifest.json` remained 100% untouched and un-clobbered, verifying non-destructive isolation in practice.
+- **Production Isolation**: Production environment (`https://universal-pro-ai.vercel.app`), VM `140.245.214.28`, and `main` branch remained strictly unauthorized, isolated, and 100% untouched. Phase 6 remains unstarted.
 
 ### 2. Human Product Owner / Repository Owner Verdict
-- **Owner Decision**: Pending Product Owner Review & Staging Promotion Sign-Off.
-- **Verdict:** Pending PO (Dev Verification Complete)
-- **Status:** 🟠 **PENDING-PO**
-- **Date:** 2026-10-20
+- **Owner Decision**: Approved by repository owner per live Staging smoke verification.
+- **Verdict:** PO Approved
+- **Status:** 🟢 **PO-APPROVED (Live Staging Gate: PASS / Ready for Production)**
+- **Date:** 2026-10-26
