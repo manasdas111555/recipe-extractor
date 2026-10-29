@@ -330,9 +330,12 @@
   - Full CI check: `python scripts/ci_check.py` -> **Exit code 0**.
   - Whitespace check: `git diff --check` -> **Exit code 0**.
 - **Remote CI & Gate 2 Verification Status**:
-  - Remote CI workflow run `39403691187` failed on the prior Dev commit `40df9f1f1a252df4010e97f2420d0f13e8ce5756`.
-  - Gate 2 overall verdict remains **FAIL** / pending publication of the verified fix commit.
-  - No post-fix remote CI run exists yet. Remote CI validation and Gate 2 clearance remain pending next push.
+  - Historical failure: Remote CI workflow run `39403691187` failed on prior Dev commit `40df9f1f1a252df4010e97f2420d0f13e8ce5756` due to un-mocked branch resolution on a single-branch checkout runner.
+  - Published post-fix commits: `6e525011724d22fa7bb452c745605ec489378eee` (implementation) and `4435d3349a0e6d32f1bde6be6fc2dd7de94431db` (Dev backlog synchronization / CI evidence) published to `origin/Dev`.
+  - Remote CI Quality Gate Validation run `40721904180` on head SHA `4435d3349a0e6d32f1bde6be6fc2dd7de94431db` completed with conclusion **SUCCESS** [MEASURED].
+  - Verified remote CI job steps: `Run CI Validation Suite` (success), `Run Mocked Browser E2E Test Suite` (success), `Validate Mandatory E2E Evidence Artifacts` (success), and `Upload Browser E2E Evidence Artifacts` (success).
+  - Dev remote CI validation has passed.
+  - Staging promotion and live Staging verification (Tier 1 smoke and Tier 2 live extraction) remain **NOT RUN**.
 - **Production Isolation**: Production environment (`https://universal-pro-ai.vercel.app`, VM `140.245.214.28`) and databases remain 100% untouched. Phase 6 remains unstarted.
 
 ### 2. Human Product Owner / Repository Owner Verdict

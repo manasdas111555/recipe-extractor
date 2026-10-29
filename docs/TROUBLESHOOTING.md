@@ -48,7 +48,7 @@ Whenever an issue occurs, we log it here in simple English along with the root c
 | **ISSUE-052** | 2026-10-19 | Governance & CI/CD | Operational Workflow Streamlining & Mandatory Two-Tier Playwright Release Gates (UPA-1401) | ✅ Resolved on Dev |
 | **ISSUE-053** | 2026-10-19 | Quality Assurance & E2E | Tier 1 Staging Smoke Submit CTA Assertion Failure & Environment Classification Audit (UPA-1401) | 🟡 Resolved on Dev / Staging Retest Pending |
 | **ISSUE-054** | 2026-10-20 | Quality Assurance & E2E | E2E Evidence Overwrite Collision Risk During Multi-Run Live Staging Releases (UPA-1403) | ✅ Resolved on Dev |
-| **ISSUE-055** | 2026-10-20 | Testing & CI/CD | Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404) | 🟡 Resolved on Dev / Remote CI Pending |
+| **ISSUE-055** | 2026-10-20 | Testing & CI/CD | Remote Single-Branch CI Checkout Branch-Resolution Test Failure (UPA-1404) | ✅ Resolved on Dev (Remote CI Passed) |
 | **ISSUE-056** | 2026-10-20 | Quality Assurance & E2E | Tier 2 Live Staging Extraction Cache-Hit Bypass & Worker Stage Validation Gap (UPA-1405) | ✅ Resolved on Dev |
 | **ISSUE-057** | 2026-10-21 | Database & Security | Supabase PostgREST Data API Grant-Readiness, Function Hardening & Migration Directory Parity (UPA-1406) | ✅ Resolved on Dev |
 | **ISSUE-058** | 2026-10-21 | Database & DevOps | Supabase Free-Tier Project Dormancy Risk & Staging Keep-Alive Monitoring (UPA-1409) | ✅ Resolved on Dev |
@@ -1738,7 +1738,7 @@ In `tests/test_verify_promotion_manifest.py`:
 - **Next.js Production Build**: `npm run build` -> **Compiled successfully [MEASURED]**.
 - **Full CI Pipeline**: `python scripts/ci_check.py` -> **Exit code 0 [MEASURED]**.
 - **Syntax & Whitespace Check**: `git diff --check` -> **Exit code 0 [MEASURED]**.
-- **Status**: **Resolved locally on Dev; Remote CI verification pending publication**.
+- **Status**: **Resolved and verified on Dev; Remote CI Quality Gate Validation run 40721904180 completed with SUCCESS on commit 4435d3349a0e6d32f1bde6be6fc2dd7de94431db [MEASURED]**.
 
 ---
 
